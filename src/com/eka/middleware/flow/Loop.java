@@ -1,0 +1,245 @@
+package com.eka.middleware.flow;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.template.SnippetException;
+
+public class Loop {
+	private boolean disabled = false;
+	private String inputArrayPath;
+	private String outPutArrayPath;
+	private String condition;
+	private JsonObject loop;
+	private String label;
+	private String comment;
+	private JsonObject data;
+	private String indexVar = "*index";
+	private String outArrayType = "document";
+	private String snapshot=null;
+	private String snapCondition=null;
+	public Loop(JsonObject jo) {
+		loop = jo;
+		data = loop.get("data").asJsonObject();
+		setCondition(data.getString("condition", null));
+		String status = data.getString("status", null);
+		disabled = "disabled".equals(status);
+		setLabel(data.getString("label", null));
+		comment = data.getString("comment", null);
+		inputArrayPath = data.getString("inArray", null);
+		outPutArrayPath = data.getString("outArray", null);
+		snapshot=data.getString("snap",null);
+		if(snapshot!=null && snapshot.equals("disabled"))
+			snapshot=null;
+		snapCondition=data.getString("snapCondition",null);
+		indexVar = data.getString("indexVar", "*index");
+		outArrayType = data.getString("outArrayType", "document");
+	}
+
+	public void process(DataPipeline dp) throws SnippetException {
+		if(dp.isDestroyed())
+			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+		if (disabled || inputArrayPath == null)
+			return;
+		
+		String snap=dp.getString("*snapshot");
+		boolean canSnap = false;
+		if(snap!=null || snapshot!=null) {
+			canSnap = true;
+			//snap=snapshot;
+			if(snapshot!=null && snapshot.equals("conditional") && snapCondition!=null){
+				canSnap =FlowUtils.evaluateCondition(snapCondition,dp);
+				if(canSnap)
+					dp.put("*snapshot","enabled");
+			}else
+				dp.put("*snapshot","enabled");
+		}
+		if(!canSnap)
+			dp.drop("*snapshot");
+		if(canSnap && snap==null) {
+			dp.snap(comment);
+		}
+		
+		inputArrayPath = ("//" + inputArrayPath + "//").replace("///", "").replace("//", "");
+		String outKey = null;
+		List<Object> outputList = null;
+		String outTypePath = "";
+		String outputArrayParent = "";
+		Object outVar = null;
+		if (outPutArrayPath != null && outPutArrayPath.trim().length()>0) {
+			outPutArrayPath = ("//" + outPutArrayPath + "//").replace("///", "").replace("//", "");
+			String outTokens[] = outPutArrayPath.split("/");
+			outTypePath = "";
+			for (String string : outTokens) {
+				outTypePath += "/document";
+			}
+			outKey = outTokens[outTokens.length - 1];
+			outputArrayParent = (outPutArrayPath + "_#").replace(outKey + "_#", "");
+			outputList = new ArrayList<>();
+
+			if (outputArrayParent.trim().length() > 0) {
+				switch (outArrayType) {
+				case "document":
+					outVar = dp.getAsMap(outputArrayParent);
+					break;
+				case "string":
+					outVar = dp.getAsString(outputArrayParent);
+					break;
+				case "integer":
+					outVar = dp.getAsInteger(outputArrayParent);
+					break;
+				case "number":
+					outVar = dp.getAsNumber(outputArrayParent);
+					break;
+				case "boolean":
+					outVar = dp.getAsBoolean(outputArrayParent);
+					break;
+				case "byte":
+					outVar = dp.getAsByte(outputArrayParent);
+					break;
+				case "date":
+					outVar = dp.getAsDate(outputArrayParent);
+					break;
+				case "object":
+					outVar = dp.getValueByPointer(outputArrayParent);
+					break;
+
+				default:
+					break;
+				}
+
+			}
+		}
+
+		List<Object> list = dp.getAsList(inputArrayPath);
+		if (list == null)
+			return;
+
+		String tokens[] = inputArrayPath.split("/");
+		String key = tokens[tokens.length - 1];
+		String inputArrayParent = (inputArrayPath + "_#").replace(key + "_#", "");
+		Map<String, Object> map = null;
+		if (inputArrayParent.trim().length() > 0)
+			map = (Map<String, Object>) dp.getAsMap(inputArrayParent);
+//		if(map==null && dpM)
+//			throw new SnippetException(dp, "Path pointer '"+inputArrayParent+"'. Please loop over parent array first", null);
+		long index = 0;
+		for (Object object : list) {
+			dp.put(indexVar, index + "");
+			index++;
+			if (map != null)
+				map.put(key, object);
+			else
+			  dp.put(key, object);
+			JsonArray flows = loop.getJsonArray("children");
+			for (JsonValue jsonValue : flows) {
+				final String type = jsonValue.asJsonObject().getString("type");
+				switch (type) {
+				case "try-catch":
+					TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
+					tcfBlock.process(dp);
+					break;
+				case "sequence":
+					Scope scope = new Scope(jsonValue.asJsonObject());
+					scope.process(dp);
+					break;
+				case "switch":
+					Switch swich = new Switch(jsonValue.asJsonObject());
+					swich.process(dp);
+					break;
+				case "loop":
+					Loop loop = new Loop(jsonValue.asJsonObject());
+					loop.process(dp);
+					break;
+				case "repeat":
+					Repeat repeat = new Repeat(jsonValue.asJsonObject());
+					repeat.process(dp);
+					break;
+				case "invoke":
+					Invoke invoke = new Invoke(jsonValue.asJsonObject());
+					invoke.process(dp);
+					break;
+				case "map":
+					Transformer transformer = new Transformer(jsonValue.asJsonObject());
+					transformer.process(dp);
+					break;
+				}
+			}
+			
+			if(outKey!=null) {
+				Object append=dp.get(outKey);
+				if(append!=null && outputList!=null) {
+					outputList.add(append);
+					dp.put(outKey,null);
+				}
+			}
+			if(dp.isDestroyed())
+				throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+		}
+//		map.put(key, list);
+
+		if (map != null)
+			map.put(key, list);
+		else
+			dp.put(key, list);
+		if (outPutArrayPath != null && outPutArrayPath.trim().length()>0 && outputList!=null && outputList.size()>0) {
+			if (outVar != null && outArrayType.equals("document"))
+				((Map<String,Object>)outVar).put(outKey, outputList);
+			else
+				dp.put(outKey, outputList);
+		}
+		if(canSnap) {
+			dp.snap(comment);
+			dp.drop("*snapshot");
+		}else if(snap!=null)
+			dp.put("*snapshot",snap);
+	}
+
+	public boolean isDisabled() {
+		return disabled;
+	}
+
+	public void setDisabled(boolean disabled) {
+		this.disabled = disabled;
+	}
+
+	public String getInputArrayPath() {
+		return inputArrayPath;
+	}
+
+	public void setInputArrayPath(String inputArrayPath) {
+		this.inputArrayPath = inputArrayPath;
+	}
+
+	public String getOutPutArrayPath() {
+		return outPutArrayPath;
+	}
+
+	public void setOutPutArrayPath(String outPutArrayPath) {
+		this.outPutArrayPath = outPutArrayPath;
+	}
+
+	public String getCondition() {
+		return condition;
+	}
+
+	public void setCondition(String condition) {
+		this.condition = condition;
+	}
+
+	public String getLabel() {
+		return label;
+	}
+
+	public void setLabel(String label) {
+		this.label = label;
+	}
+}
