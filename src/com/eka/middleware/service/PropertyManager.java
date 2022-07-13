@@ -38,6 +38,9 @@ public class PropertyManager {
         Properties props = propertiesMap.get(key);
         try {
             File uriFile = new File(ServiceManager.packagePath + "packages/" + path);
+            if (!uriFile.exists()) {
+                return new Properties();
+            }
             byte[] bytes = readConfigurationFile(packageName, uriFile.toURI());
             if (bytes != null) {
                 ByteArrayInputStream bais = new ByteArrayInputStream(bytes);

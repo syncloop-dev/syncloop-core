@@ -47,7 +47,7 @@ public class ServiceManager {
 		File file = new File(path);
 		if (!file.exists()) {
 			throw new SnippetException(dataPipeLine,
-					"Resource not found\n" + file.getAbsolutePath(), null);
+					"Resource not found\n" + file.getAbsolutePath(), new Exception("Resource not found\n" + file.getAbsolutePath()));
 		}
 		String classID = fqn ;//+ "." + lastChangedTime;
 		Class cls = classMap.get(classID);
