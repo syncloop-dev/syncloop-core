@@ -51,6 +51,9 @@ public class FlowUtils {
 	}
 
 	public static boolean evaluateCondition(String condition, DataPipeline dp) throws SnippetException {
+		if (StringUtils.isBlank(condition) || Boolean.parseBoolean(condition)) {
+			return true;
+		}
 		String con = null;
 		try {
 			con = placeXPathValue(condition, dp);

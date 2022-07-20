@@ -151,7 +151,7 @@ public class ServiceUtils {
 			om.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
 			Map<String, Object> map = om.readValue(json, Map.class);
 			return map;
-		} catch (JsonProcessingException e) {
+		} catch (Exception e) {
 			printException("Could not convert json to map", e);
 		}
 		return null;
@@ -245,7 +245,12 @@ public class ServiceUtils {
 		Map<String, Object> lastErrorDump=new HashMap<>();
 		if(e==null)
 			e=new SystemException("EKA_MWS_1007", new Exception("Exception thrown is null but it's not clear if it's null pointer exception"));
-		lastErrorDump.put("lastErrorDump", e);
+		if (e instanceof SnippetException) {
+			lastErrorDump.put("lastErrorDump", (SnippetException)e);
+		} else {
+			lastErrorDump.put("lastErrorDump", e);
+		}
+
 		String json=null;
 		try {
 			json=ServiceUtils.toJson(lastErrorDump);
