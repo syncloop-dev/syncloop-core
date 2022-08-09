@@ -141,6 +141,8 @@ public class AWS4SignerForChunkedUpload extends AWS4SignerBase {
                 + signedHeadersAuthorizationHeader + ", "
                 + signatureAuthorizationHeader;
 
+        System.out.println(authorizationHeader);
+
         return authorizationHeader;
     }
     

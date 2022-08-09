@@ -29,7 +29,8 @@ public static List<Map<String,Object>> DQL(String sqlCode, List<Map<String,Objec
 			
 			for (String k : map.keySet()) {
 				String v=map.get(k)+"";
-				query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				//query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				query=ServiceUtils.replaceAllIgnoreRegx(query, "{"+k+"}", v);
 			}
 			if(logQuery)
 				dp.log(query);
@@ -59,7 +60,8 @@ public static int DML(String sqlCode, List<Map<String,Object>> sqlParameters,Con
 			String query=sqlCode;
 			for (String k : map.keySet()) {
 				String v=map.get(k)+"";
-				query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				//query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				query= ServiceUtils.replaceAllIgnoreRegx(query, "{"+k+"}", v);
 			}
 			if(logQuery)
 				dp.log(query);
@@ -80,7 +82,8 @@ public static String[] DML_RGKs(String sqlCode, List<Map<String,Object>> sqlPara
 			String query=sqlCode;
 			for (String k : map.keySet()) {
 				String v=map.get(k)+"";
-				query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				//query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				query = ServiceUtils.replaceAllIgnoreRegx(query, "{"+k+"}", v);
 			}
 			if(logQuery)
 				dp.log(query);
@@ -120,7 +123,8 @@ public static Boolean DDL(String sqlCode, List<Map<String,Object>> sqlParameters
 			
 			for (String k : map.keySet()) {
 				String v=map.get(k)+"";
-				query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				//query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+				query=ServiceUtils.replaceAllIgnoreRegx(query, "{"+k+"}", v);
 			}
 			if(logQuery)
 				dp.log(query);
@@ -188,7 +192,5 @@ private static List<Map<String, Object>> resultSetToList(ResultSet rs) throws SQ
     }
     return rows;
 }
-
-
 
 }

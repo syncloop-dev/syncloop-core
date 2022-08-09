@@ -18,10 +18,12 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -818,5 +820,16 @@ public class ServiceUtils {
 			zipOut.write(bytes, 0, length);
 		}
 		fis.close();
+	}
+
+	/**
+	 * @param source
+	 * @param search
+	 * @param replace
+	 * @return
+	 */
+	public static String replaceAllIgnoreRegx(String source, String search, String replace) {
+
+		return StringUtils.join(source.split(Pattern.quote(search)), replace);
 	}
 }

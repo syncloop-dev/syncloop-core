@@ -12,6 +12,7 @@
 		<java.version>17</java.version>
 	</properties>
 	<build>
+		<finalName>ekamw.jar</finalName>
 		<sourceDirectory>src</sourceDirectory>
 		<resources>
 			<resource>
@@ -189,6 +190,22 @@
 			<artifactId>saaj-impl</artifactId>
 			<version>3.0.0-M2</version>
 		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.cronutils/cron-utils -->
+		<dependency>
+			<groupId>com.cronutils</groupId>
+			<artifactId>cron-utils</artifactId>
+			<version>9.1.6</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>8.0.30</version>
+		</dependency>
+
+
 
 	</dependencies>
 
