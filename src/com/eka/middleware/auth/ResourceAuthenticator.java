@@ -8,6 +8,7 @@ import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.service.ServiceUtils;
 
 import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 
 public class ResourceAuthenticator {
@@ -17,9 +18,9 @@ public static boolean isAllowed(final HttpServerExchange exchange) {
 
 public static boolean isPublic(final HttpServerExchange exchange) {
 	final SecurityContext context = exchange.getSecurityContext();
-	AuthAccount authAccount= null;
+	Account authAccount= null;
 	if(context!=null)
-		authAccount=(AuthAccount) context.getAuthenticatedAccount();
+		authAccount=context.getAuthenticatedAccount();
 	if(authAccount!=null)
 		return true;
 	String path=exchange.getRequestPath();
@@ -30,7 +31,7 @@ public static boolean isPublic(final HttpServerExchange exchange) {
 
 public static boolean isConsumerAllowed(String resource, AuthAccount authAccount) {
 	if(authAccount==null)
-		return true;
+		return false;
 	String userID=authAccount.getUserId();
 	boolean canConsume=false;
 	try {
@@ -50,7 +51,7 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
 			byte[] json=ServiceUtils.readAllBytes(file);
 			Map<String, Object> map=ServiceUtils.jsonToMap(new String(json));
 			String consumers=(String)map.get("consumers");
-			Map<String, Object> profile = authAccount.getProfile();
+			Map<String, Object> profile = authAccount.getAuthProfile();
             List<String> userGroups=(List<String>)profile.get("groups");
   			
             if(consumers==null || consumers.trim().length()==0) {
@@ -70,8 +71,17 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
                    }
               }
             }
-		}else
-			canConsume=true;
+		}else {
+			Map<String, Object> profile = authAccount.getAuthProfile();
+            List<String> userGroups=(List<String>)profile.get("groups");
+            for(String group: userGroups){
+                    if("administrators".equals(group)){
+                      canConsume=true;
+                      break;
+                    }
+               }
+			canConsume=false;
+		}
 	} catch (Exception e) {
 		e.printStackTrace();
 	}

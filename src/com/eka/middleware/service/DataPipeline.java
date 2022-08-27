@@ -20,11 +20,14 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.pac4j.core.profile.UserProfile;
 
 import com.eka.middleware.auth.AuthAccount;
+import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.template.SystemException;
 
 public class DataPipeline {
 	private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
@@ -778,7 +781,11 @@ public class DataPipeline {
 	}
 
 	public AuthAccount getCurrentRuntimeAccount() throws SnippetException {
-		return rp.getCurrentRuntimeAccount();
+		return UserProfileManager.getUserProfileManager().getAccount(rp.getCurrentLoggedInUserProfile());
+	}
+	
+	public UserProfile getCurrentUserProfile() throws SnippetException {
+		return rp.getCurrentLoggedInUserProfile();
 	}
 
 	public void clearUserSession() throws SnippetException {

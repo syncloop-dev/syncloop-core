@@ -1,18 +1,14 @@
 package com.eka.middleware.auth;
 
-import java.io.File;
-import java.net.URL;
-import java.security.Principal;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.eka.middleware.server.MiddlewareServer;
+import org.pac4j.core.profile.UserProfile;
+
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
-import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
 
 import io.undertow.security.idm.Account;
@@ -22,10 +18,11 @@ import io.undertow.security.idm.PasswordCredential;
 
 public class UserProfileManager implements IdentityManager {
 	private static final Map<String, Object> users = new ConcurrentHashMap<String, Object>();
+	private static UserProfileManager upm=null;
 	
 	public static final Map<String, Object> getUsers() throws SystemException {
 		try {
-			byte bytes[] = MiddlewareServer.readConfigurationFile("profiles.json");
+			byte bytes[] = PropertyManager.readConfigurationFile("profiles.json");
 			if (bytes!=null) {
 				String json = new String(bytes);
 				final Map<String, Object> map = ServiceUtils.jsonToMap(json);
@@ -40,7 +37,7 @@ public class UserProfileManager implements IdentityManager {
 				});
 				users.putAll(map);
 				json=ServiceUtils.toPrettyJson(users);
-				MiddlewareServer.writeConfigurationFile("profiles.json", json.getBytes());
+				PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
 			}
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1001", e);
@@ -48,7 +45,19 @@ public class UserProfileManager implements IdentityManager {
 		return users;
 	}
 	
-	public UserProfileManager() throws SystemException {
+	
+	
+	public static UserProfileManager create() throws SystemException{
+		if(upm==null)
+			upm=new UserProfileManager();
+		return upm;
+	}
+	
+	public static UserProfileManager getUserProfileManager() {
+		return upm;
+	}
+	
+	private UserProfileManager() throws SystemException {
 		getUsers();
 	}
 
@@ -59,8 +68,8 @@ public class UserProfileManager implements IdentityManager {
 	}
 
 	@Override
-	public Account verify(String id, Credential credential) {
-		Account account = getAccount(id);
+	public AuthAccount verify(String id, Credential credential) {
+		AuthAccount account = getAccount(id);
 		if (account != null && verifyCredential(account, credential)) {
 			return account;
 		}
@@ -91,7 +100,12 @@ public class UserProfileManager implements IdentityManager {
 		return false;
 	}
 
-	private Account getAccount(final String id) {
+	public AuthAccount getAccount(UserProfile up) {
+		final String id=up.getId();
+		return getAccount(id);
+	}
+	
+	private AuthAccount getAccount(final String id) {
 		final Map<String, Object> tanent = (Map<String, Object>) users.get("dev");
 		Map<String, Object> user = (Map<String, Object>) tanent.get(id);
 		
@@ -100,7 +114,18 @@ public class UserProfileManager implements IdentityManager {
 			AuthAccount authAccount=new AuthAccount(id);
 			authAccount.setProfile(profile);
 			return authAccount;
+		}else {
+			final Map<String, Object> profile=createDefaultProfile();
+			AuthAccount authAccount=new AuthAccount(id);
+			authAccount.setProfile(profile);
+			return authAccount;
 		}
-		return null;
+	}
+	
+	private Map<String, Object> createDefaultProfile(){
+		Map<String, Object> profile=new HashMap<String, Object>();
+		String groups[]= {"Guest"};
+		profile.put("groups", groups);
+		return profile;
 	}
 }

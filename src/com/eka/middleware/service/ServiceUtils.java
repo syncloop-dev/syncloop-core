@@ -52,7 +52,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
 public class ServiceUtils {
-	private static final Properties serverProperties = new Properties();
+	//private static final Properties serverProperties = new Properties();
 	private static final Properties urlMappings = new Properties();
 	private static final Map<String, UriTemplate> parameterResolverMap = new ConcurrentHashMap<String, UriTemplate>();
 	private static final ObjectMapper om = new ObjectMapper();
@@ -219,30 +219,6 @@ public class ServiceUtils {
 		//System.out.println(json);
 	}
 
-	public static final boolean loadServerProperties(String propFileName, Properties properties)
-			throws SystemException {
-		byte[] bytes = MiddlewareServer.readConfigurationFile(propFileName);
-		if (bytes != null) {
-			ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-
-			try {
-				boolean isNewLoaded = loadServerProperties(bais, properties);
-				return isNewLoaded;
-			} catch (SystemException e) {
-				throw e;
-			} finally {
-				try {
-					bais.close();
-				} catch (Exception e) {
-					throw new SystemException("EKA_MWS_1006", e);
-				}
-			}
-
-		}
-
-		return false;
-	}
-
 	public static Object getExceptionMap(Exception e){
 		Map<String, Object> lastErrorDump=new HashMap<>();
 		if(e==null)
@@ -279,17 +255,6 @@ public class ServiceUtils {
 		}
 	}
 
-	public static final boolean loadServerProperties(ByteArrayInputStream bais, Properties properties)
-			throws SystemException {
-		try {
-			properties.clear();
-			properties.load(bais);
-		} catch (Exception e) {
-			throw new SystemException("EKA_MWS_1005", e);
-		}
-		return true;
-	}
-
 	public static final void printException(String msg, Exception e) {
 		StringBuilder sb = new StringBuilder();
 		StackTraceElement[] stackTrace = e.getStackTrace();
@@ -308,13 +273,15 @@ public class ServiceUtils {
 	}
 
 	public static final String getServerProperty(String key) {
+		String val = null;
 		try {
-			loadServerProperties("server.properties", serverProperties);
-		} catch (Exception e) {
-			printException("Exception while reading property '" + key + "'", e);
+			Properties props = PropertyManager.getServerProperties("server.properties");
+			val = props.getProperty(key);
+		} catch (SystemException e) {
+			e.printStackTrace();
 		}
-		String val = serverProperties.getProperty(key);
-		return serverProperties.getProperty(key);
+		
+		return val;
 	}
 
 	public static final String getPathService(String requestPath, Map<String, Object> payload) {
@@ -328,12 +295,25 @@ public class ServiceUtils {
 				requestPath = requestPath.replace("/$$^%@#", "");
 			}
 			Map<String, String> pathParams = new HashMap<String, String>();
-			boolean reloaded = loadServerProperties("URLAliasMapping.properties", urlMappings);
-			if (reloaded) {
-				Set<Object> keys = urlMappings.keySet();
+			boolean reload = PropertyManager.hasfileChanged("URLAliasMapping.properties");
+			if (reload) {
+				Properties props=PropertyManager.getServerProperties("URLAliasMapping.properties");
+				Set<Object> keys = props.keySet();
+				//Add keys
 				for (Object keyStr : keys) {
-					UriTemplate parameterResolver = new UriTemplate(keyStr.toString());
-					parameterResolverMap.put(keyStr.toString(), parameterResolver);
+					String key=keyStr.toString();
+					urlMappings.put(key, props.get(key));
+					UriTemplate parameterResolver = new UriTemplate(key);
+					parameterResolverMap.put(key, parameterResolver);
+				}
+				//Remove Keys
+				keys = urlMappings.keySet();
+				for (Object keyStr : keys) {
+					String key=keyStr.toString();
+					if(props.get(key)==null) {
+						urlMappings.remove(key);
+						parameterResolverMap.remove(key);
+					}
 				}
 			}
 			String serviceName = urlMappings.getProperty(requestPath + "/*");

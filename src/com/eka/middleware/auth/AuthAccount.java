@@ -39,7 +39,7 @@ public class AuthAccount implements Account{
 		return Collections.emptySet();
 	}
 
-	public Map<String, Object> getProfile() {
+	public Map<String, Object> getAuthProfile() {
 		return profile;
 	}
 

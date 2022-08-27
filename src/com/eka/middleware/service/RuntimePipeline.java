@@ -11,9 +11,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.pac4j.core.profile.UserProfile;
+import org.pac4j.undertow.account.Pac4jAccount;
+
 import com.eka.middleware.auth.AuthAccount;
+import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.template.SystemException;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
@@ -87,12 +92,11 @@ public class RuntimePipeline {
 		dataPipeLine = new DataPipeline(this, resource, urlPath);
 	}
 
-	public AuthAccount getCurrentRuntimeAccount() throws SnippetException {
+	public UserProfile getCurrentLoggedInUserProfile() throws SnippetException {
 		final SecurityContext context = getExchange().getSecurityContext();
-		AuthAccount authAccount = null;
 		if (context != null)
-			authAccount = (AuthAccount) context.getAuthenticatedAccount();
-		return authAccount;
+			return ((Pac4jAccount)context.getAuthenticatedAccount()).getProfile();
+		return null;
 	}
 
 	public void logOut() throws SnippetException {
@@ -105,14 +109,7 @@ public class RuntimePipeline {
 	}
 
 	private void clearSession() {
-
 		Map<String, String> sessionManager = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
-//		ServletRequestContext.current().getServletRequest();
-
-		// AuthenticatedSessionManager sessionManager =
-		// exchange.getAttachment(AuthenticatedSessionManager.ATTACHMENT_KEY);
-		// Object obj=System.getSecurityManager().getSecurityContext();
-		// exchange.REQUEST_ATTRIBUTES
 		Map<String, Cookie> cookieMap = exchange.getRequestCookies();
 		exchange.getConnection().terminateRequestChannel(exchange);
 		Set<String> keys = cookieMap.keySet();

@@ -13,11 +13,15 @@ import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.ResourceAuthenticator;
+import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.auth.manager.AuthorizationRequest;
 import com.eka.middleware.service.RuntimePipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.template.SystemException;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -55,8 +59,16 @@ public class ThreadManager {
 
 			if (resource == null) {
 				exchange.getResponseHeaders().clear();
-				exchange.getResponseHeaders().add(Headers.STATUS, 404);
-				exchange.getResponseSender().send("Server is up and running but it could not find the resource.");
+				
+				String content=AuthorizationRequest.getContent(exchange,requestPath.toUpperCase());
+				
+				if(content!=null) {
+					exchange.getResponseHeaders().add(Headers.STATUS, 200);
+					exchange.getResponseSender().send(content);
+				}else {
+					exchange.getResponseHeaders().add(Headers.STATUS, 404);
+					exchange.getResponseSender().send("Server is up and running but it could not find the resource.");
+				}
 				return;
 			}
 
@@ -70,12 +82,15 @@ public class ThreadManager {
 				String uuid = ServiceUtils.generateUUID(requestAddress + "" + System.nanoTime());
 
 				rp = RuntimePipeline.create(uuid, null, exchange, resource, requestPath);
-
-				boolean isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, rp.getCurrentRuntimeAccount());
+				AuthAccount account=null;
+				account = UserProfileManager.getUserProfileManager().getAccount(rp.getCurrentLoggedInUserProfile());
+				boolean isAllowed = false;
+				//if(account.getAuthProfile().get("groups"))
+				isAllowed=ResourceAuthenticator.isConsumerAllowed(resource,account);
 				if (!isAllowed) {
 					if(logTransaction==true)
 						LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), resource, "resource"));
-					String userId = rp.getCurrentRuntimeAccount().getUserId();
+					String userId = rp.getCurrentLoggedInUserProfile().getId();
 					if(logTransaction==true)
 						LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(),
 							"User(" + userId + ") is not in a consumer group.", "permission"));
@@ -140,6 +155,9 @@ public class ThreadManager {
 				}
 
 				ServiceManager.invokeJavaMethod(resource, rp.dataPipeLine);
+				exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Origin"),"*");//  new HttpString("Access-Control-Allow-Origin"), "*");
+				exchange.getResponseHeaders().put(HttpString.tryFromString("X-Frame-Options"),"SAMEORIGIN");
+				exchange.getResponseHeaders().put(HttpString.tryFromString("X-Xss-Protection"),"0");
 				if (rp.payload.get("*multiPart") != null) {
 					try {
 						MultiPart mp = (MultiPart) rp.payload.get("*multiPart");
