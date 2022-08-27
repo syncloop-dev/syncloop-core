@@ -10,9 +10,12 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<java.version>17</java.version>
+		<pac4j.version>5.4.5</pac4j.version>
+		<undertow-pac4j.version>5.0.0</undertow-pac4j.version>
+		<undertow.version>2.2.19.Final</undertow.version>
 	</properties>
 	<build>
-		<finalName>ekamw.jar</finalName>
+		<finalName>ekamw</finalName>
 		<sourceDirectory>src</sourceDirectory>
 		<resources>
 			<resource>
@@ -110,7 +113,7 @@
 		<dependency>
 			<groupId>io.undertow</groupId>
 			<artifactId>undertow-core</artifactId>
-			<version>2.2.17.Final</version>
+			<version>${undertow.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.errorprone</groupId>
@@ -205,7 +208,78 @@
 			<version>8.0.30</version>
 		</dependency>
 
-
+	<!-- Pac4j-->
+	<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>undertow-pac4j</artifactId>
+			<version>${undertow-pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-core</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-oauth</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-cas</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-saml</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-oidc</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-http</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-jwt</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-sql</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-ldap</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-mongo</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+                <dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-couch</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+                <dependency>
+			<groupId>org.pac4j</groupId>
+			<artifactId>pac4j-kerberos</artifactId>
+			<version>${pac4j.version}</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
+		<dependency>
+		    <groupId>commons-codec</groupId>
+		    <artifactId>commons-codec</artifactId>
+		    <version>1.15</version>
+		</dependency>
 
 	</dependencies>
 
