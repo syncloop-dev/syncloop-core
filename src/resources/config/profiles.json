@@ -1,0 +1,43 @@
+{
+	"admin": {
+		"password": "admin",
+		"profile": {
+			"name": "Administrator",
+			"lastName": "User",
+			"email": {
+				"id": "service@account.com",
+				"verified": true
+			},
+			"phone": {
+				"number": "0000000000",
+				"verified": true
+			},
+			"groups": [
+				"developers",
+				"administrators"
+			],
+			"tenant": "dev"
+		}
+	},
+	"ekaDev": {
+		"password": "developer",
+		"profile": {
+			"name": "Eka",
+			"lastName": "Dev",
+			"email": {
+				"id": "service@account.com",
+				"verified": true
+			},
+			"phone": {
+				"number": "0000000000",
+				"verified": true
+			},
+			"groups": [
+				"developers",
+				"administrators",
+				"rnd"
+			],
+			"tenant": "dev"
+		}
+	}
+}
