@@ -67,8 +67,20 @@ public class FlowUtils {
 	}
 
 	public static void map(JsonArray transformers, DataPipeline dp) throws SnippetException {
+		map(transformers, dp, null);
+	}
+	
+	public static void mapBefore(JsonArray transformers, DataPipeline dp) throws SnippetException {
+		map(transformers, dp, "in");
+	}
+	
+	public static void mapAfter(JsonArray transformers, DataPipeline dp) throws SnippetException {
+		map(transformers, dp, "out");
+	}
+	
+	private static void map(JsonArray transformers, DataPipeline dp, String direction) throws SnippetException {
 		try {
-			Map<String, List<JsonOp>> map = split(transformers);
+			Map<String, List<JsonOp>> map = split(transformers,direction);
 			List<JsonOp> leaders = map.get("leaders");
 			List<JsonOp> followers = map.get("followers");
 			List<JsonOp> follows = new ArrayList<JsonOp>();
@@ -266,16 +278,22 @@ public class FlowUtils {
 		}
 	}
 
-	private static Map<String, List<JsonOp>> split(JsonArray transformers) throws Exception {
+	private static Map<String, List<JsonOp>> split(JsonArray transformers,String direction) throws Exception {
 		String follow = "";
 		List<JsonOp> leaders = new ArrayList<>();
 		List<JsonOp> followers = new ArrayList<>();
 		for (JsonValue jsonValue : transformers) {
 			follow = jsonValue.asJsonObject().getString("follow", null);
-			if (follow != null && follow.startsWith("loop_id"))
-				followers.add(new JsonOp(jsonValue));
-			else
-				leaders.add(new JsonOp(jsonValue));
+			boolean canProceed=true;
+			String direct=jsonValue.asJsonObject().getString("direction", null);
+			if(direction!=null && direction.trim().length()>0 && direct!=null && direct.trim().length()>0 && !direction.equals(direct))
+				canProceed=false;
+			if(canProceed) {
+				if (follow != null && follow.startsWith("loop_id"))
+					followers.add(new JsonOp(jsonValue));
+				else
+					leaders.add(new JsonOp(jsonValue));
+			}
 		}
 		Map<String, List<JsonOp>> map = new HashMap<>();
 		map.put("leaders", leaders);

@@ -74,15 +74,15 @@ public class Invoke {
 		//if(createList!=null)
 		//FlowUtils.setValue(createList, dp);
 		if(transformers!=null)
-			FlowUtils.map(transformers, dp);
-		String text=invoke.getString("text",null);
-		if(text!=null && text.trim().length()>8) {
+			FlowUtils.mapBefore(transformers, dp);
+		String serviceFqn=invoke.getString("text",null);
+		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
 			if("async".equals(requestMethod))
-				dp.applyAsync(text.trim()+".main");
+				dp.applyAsync(serviceFqn.trim()+".main");
 			else
-				dp.apply(text.trim()+".main");
+				dp.apply(serviceFqn.trim()+".main");
 			if(transformers!=null)
-				FlowUtils.map(transformers, dp);
+				FlowUtils.mapAfter(transformers, dp);
 		}
 		if(createList!=null)
 			FlowUtils.setValue(createList, dp);

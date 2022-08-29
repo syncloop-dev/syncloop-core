@@ -295,7 +295,7 @@ public class DataPipeline {
 		pointer=pointer.trim();
 		Object obj = null;
 		pointer = "//" + pointer;
-		pointer = pointer.replace("///", "").replace("//", "");
+		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
 		Map<String, Object> map = null;
 		List<Object> arrayList = null;
 		boolean isNumeric = false;
@@ -304,7 +304,7 @@ public class DataPipeline {
 			isNumeric = NumberUtils.isCreatable(key);
 			if (obj != null && !isNumeric)
 				map = (Map<String, Object>) obj;
-			else if (isNumeric)
+			else if (isNumeric && (obj instanceof List || obj instanceof ArrayList))
 				arrayList = (List<Object>) obj;
 			if (map != null)
 				obj = map.get(key);
@@ -314,7 +314,10 @@ public class DataPipeline {
 					obj = arrayList.get(index);
 				else
 					obj = null;
-			} else
+			} else if(isNumeric) {
+				int index = Integer.parseInt(key);
+				obj= ((Object[])obj)[index];
+			}else
 				obj = get(key);
 
 			map = null;
@@ -381,7 +384,8 @@ public class DataPipeline {
 						list.add(map);
 					obj = map;
 					preObj = obj;
-				} else if (typeTokens[typeIndex].contains("List")) {
+				}
+				else if (typeTokens[typeIndex].contains("documentList")) {
 					List<Object> list = new ArrayList<Object>();
 					if (preObj.getClass().toString().contains("DataPipeline")) {
 						DataPipeline dp = (DataPipeline) preObj;
@@ -400,6 +404,9 @@ public class DataPipeline {
 					} else
 						((Map) preObj).put(key, obj);
 					preObj = obj;
+				}else {
+					preObj=new Object[1];
+					this.put(key, preObj);
 				}
 			} else {
 				preObj = obj;
@@ -408,7 +415,37 @@ public class DataPipeline {
 				typeIndex++;
 		}
 		key = pointerTokens[tokenCount - 1];
-		((Map) preObj).put(key, value);
+		isNumeric = NumberUtils.isCreatable(key);
+		if(isNumeric) {
+			Object[] newObject=null;
+
+			int index=Integer.parseInt(key);
+			key = pointerTokens[tokenCount - 2];
+			if(preObj!=null && ((Object[])preObj).length>index) {
+				newObject=((Object[])preObj);
+			}else {
+				switch (valueType) {
+					case "integerlist":
+						newObject=new Integer[index+1];
+						break;
+					case "numberlist":
+						newObject=new Double[index+1];
+						break;
+					case "booleanlist":
+						newObject=new Boolean[index+1];
+						break;
+					case "stringlist":
+						newObject=new String[index+1];
+						break;
+					case "objectlist":
+						newObject=new Object[index+1];
+						break;
+				}
+			}
+			newObject[index]=value;
+			preObj = newObject;
+		}else
+			((Map) preObj).put(key, value);
 	}
 
 	public String toJson() {
