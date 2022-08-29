@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +42,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 
 import io.undertow.io.Receiver.FullBytesCallback;
 import io.undertow.server.HttpServerExchange;
@@ -802,12 +805,24 @@ public class ServiceUtils {
 		fis.close();
 	}
 
-	/**
-	 * @param source
-	 * @param search
-	 * @param replace
-	 * @return
-	 */
+	public static OIDCProviderMetadata fetchMetadata(String discoveryUrl,JWSAlgorithm jwsAlgo) throws Exception {
+        URI issuerURI = new URI(discoveryUrl);
+        URL providerConfigurationURL = issuerURI.toURL();
+        InputStream stream = providerConfigurationURL.openStream();
+        // Read all data from URL
+        String providerInfo = null;
+        try (java.util.Scanner s = new java.util.Scanner(stream)) {
+            providerInfo = s.useDelimiter("\\A").hasNext() ? s.next() : "";
+        }
+        OIDCProviderMetadata oidcPM=OIDCProviderMetadata.parse(providerInfo);
+        List<JWSAlgorithm> jwsArr=oidcPM.getIDTokenJWSAlgs();
+        if(jwsArr==null)
+        	jwsArr=new ArrayList<>();
+        jwsArr.add(jwsAlgo);
+        oidcPM.setIDTokenJWSAlgs(jwsArr);
+        return oidcPM;
+    }
+	
 	public static String replaceAllIgnoreRegx(String source, String search, String replace) {
 
 		return StringUtils.join(source.split(Pattern.quote(search)), replace);
