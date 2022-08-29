@@ -22,7 +22,9 @@ import org.pac4j.oidc.config.OidcConfiguration;
 import com.eka.middleware.auth.manager.BasicAuthenticator;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.PropertyManager;
+import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
+import com.nimbusds.jose.JWSAlgorithm;
 
 public class AuthConfigFactory implements ConfigFactory {
 
@@ -73,36 +75,51 @@ public class AuthConfigFactory implements ConfigFactory {
     private static Config OIDCAuthClientConfig;
     
     public static Config getOIDCAuthClientConfig() throws SystemException {
-    	boolean reload=PropertyManager.hasfileChanged("auth/oidc.properties");
-    	OidcConfiguration oidcConfiguration = null;
-    	if(OIDCAuthClientConfig==null || reload)
-    		oidcConfiguration = new OidcConfiguration();
-    	if(oidcConfiguration!=null) synchronized (oidcConfiguration){
-    		if(reload) {
-    			reload=false;
-    		Properties props=PropertyManager.getServerProperties("auth/oidc.properties");
-            oidcConfiguration.setClientId(props.getProperty("clientId"));
-            oidcConfiguration.setSecret(props.getProperty("secret"));
-            oidcConfiguration.setDiscoveryURI(props.getProperty("discoveryURI"));
-            //oidcConfiguration.setUseNonce(true);
-            //oidcConfiguration.setPreferredJwsAlgorithm(JWSAlgorithm.RS256);
-            Set<Object> keys = props.keySet();
-			for (Object keyStr : keys) {
-				String key=keyStr.toString();
-				if(key.startsWith("customParam")) {
-					String customKey=key.replace("customParam.", "");
-					String val=props.getProperty(key);
-					oidcConfiguration.addCustomParam(customKey, val);
+		boolean reload = PropertyManager.hasfileChanged("auth/oidc.properties");
+		OidcConfiguration oidcConfiguration = null;
+		if (OIDCAuthClientConfig == null || reload)
+			oidcConfiguration = new OidcConfiguration();
+		if (oidcConfiguration != null)
+			synchronized (oidcConfiguration) {
+				if (reload) {
+					reload = false;
+					Properties props = PropertyManager.getServerProperties("auth/oidc.properties");
+					oidcConfiguration.setClientId(props.getProperty("clientId"));
+					oidcConfiguration.setSecret(props.getProperty("secret"));
+					oidcConfiguration.setDiscoveryURI(props.getProperty("discoveryURI"));
+					oidcConfiguration.setUseNonce(true);
+					String preferedJwsAlgo=props.getProperty("preferredJwsAlgorithm");
+					if(preferedJwsAlgo!=null)
+					try {
+						JWSAlgorithm jwsAlgo=new JWSAlgorithm(preferedJwsAlgo);
+						oidcConfiguration.setPreferredJwsAlgorithm(jwsAlgo);
+						oidcConfiguration.setProviderMetadata(ServiceUtils.fetchMetadata(props.getProperty("discoveryURI"),jwsAlgo));
+					} catch (Exception e) {
+						System.err.println("Failed to validate Bearer token: " + e.getMessage());
+						e.printStackTrace();
+					}
+					
+					Set<Object> keys = props.keySet();
+					for (Object keyStr : keys) {
+						String key = keyStr.toString();
+						if (key.startsWith("customParam")) {
+							String customKey = key.replace("customParam.", "");
+							String val = props.getProperty(key);
+							oidcConfiguration.addCustomParam(customKey, val);
+						}
+					}
+					final OidcClient oidcClient = new OidcClient(oidcConfiguration);
+					oidcClient.setAuthorizationGenerator((ctx, session, profile) -> {
+						profile.addRole("ROLE_ADMIN");
+						return Optional.of(profile);
+
+					});
+					final Clients clients = new Clients("http://localhost:8080/callback", oidcClient);// ,headerClient);
+					OIDCAuthClientConfig = newConfig(clients);
 				}
 			}
-            final OidcClient oidcClient = new OidcClient(oidcConfiguration);
-            oidcClient.setAuthorizationGenerator((ctx, session, profile) -> { profile.addRole("ROLE_ADMIN"); return Optional.of(profile); });
-            final Clients clients = new Clients("http://localhost:8080/callback", oidcClient);
-            OIDCAuthClientConfig = newConfig(clients);
-    		}
-    	}
-        return OIDCAuthClientConfig;
-    }
+		return OIDCAuthClientConfig;
+	}
     
     private static Config AnonymousConfig;
     
