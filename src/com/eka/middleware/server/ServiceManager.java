@@ -87,7 +87,9 @@ public class ServiceManager {
 			} else
 				throw new Exception("Method not found '" + funcName + "'");
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			if(e.getMessage().contains("packages.middleware.pub.service.exitRepeat")) {
+				throw new SnippetException(dataPipeLine, e.getMessage(), e);
+			}else
 			if (e instanceof SnippetException)
 				throw (SnippetException) e;
 			else if (e.getCause() instanceof SnippetException)

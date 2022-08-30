@@ -12,72 +12,83 @@ import org.apache.logging.log4j.Logger;
 
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
 public class Function {
 	public static final Logger LOGGER = LogManager.getLogger(Function.class);
 	public static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
 
-	public static boolean isRequired(DataPipeline dp, String pointer, Map<String, String> data) throws SnippetException {
+	public static boolean isRequired(DataPipeline dp, String pointer, Map<String, String> data)
+			throws SnippetException {
 		Object obj = dp.getValueByPointer(pointer);
-		if(data==null)
+		if (data == null)
 			return false;
 		Boolean isRequired = Boolean.parseBoolean(data.get("isRequiredField"));
 		if (obj == null && isRequired != null && isRequired == true) {
-			String description=data.get("fieldDescription");
-			if(description!=null && description.length()>0)
-				description=new String(Base64.getDecoder().decode(description));
-			throw new SnippetException(dp,"Required validation failure", new ValidationException("Required field('" + pointer + "') missing. " + description));
+			String description = data.get("fieldDescription");
+			if (description != null && description.length() > 0)
+				description = new String(Base64.getDecoder().decode(description));
+			throw new SnippetException(dp, "Required validation failure",
+					new ValidationException("Required field('" + pointer + "') missing. " + description));
 		}
 		return isRequired;
 	}
 
-	public static void validate(DataPipeline dp, String pointer, String typePath, Map<String, String> data) throws SnippetException {
-		Object object = dp.getValueByPointer(pointer);
-		boolean required = isRequired(dp, pointer, data);
-		if (object == null)
-			return;
-		
-		String type = typePath.substring(typePath.lastIndexOf("/") + 1);
+	public static void validate(DataPipeline dp, String pointer, String typePath, Map<String, String> data)
+			throws SnippetException {
+		try {
+			Object object = dp.getValueByPointer(pointer);
+			boolean required = isRequired(dp, pointer, data);
+			if (object == null)
+				return;
 
-		LOGGER.trace("TypePath: " + typePath);
-		LOGGER.trace("Type: " + type);
-		String response = null;
-		switch (type) {
+			String type = typePath.substring(typePath.lastIndexOf("/") + 1);
 
-		case "string": {
-			String value = (String) object;
-			response = applyStringValidations(value, data);
-			break;
+			LOGGER.trace("TypePath: " + typePath);
+			LOGGER.trace("Type: " + type);
+			String response = null;
+			switch (type) {
+
+			case "string": {
+				String value = (String) object;
+				response = applyStringValidations(value, data);
+				break;
+			}
+			case "integer": {
+				int value = Integer.parseInt(object+"");
+				response = applyIntegerValidations(value, data);
+				break;
+			}
+			case "number": {
+				double value = Double.parseDouble(object+"");
+				response = applyNumberValidations(dp, pointer, typePath, value, data);
+				break;
+			}
+			case "date": {
+				String value = (String) object;
+				response = applyDateValidations(dp, pointer, typePath, value, data);
+				break;
+			}
+			default:
+				dp.log("Unexpected value: " + type, Level.WARN);
+			}
+
+			String description = data.get("fieldDescription");
+			if (description != null)
+				description = new String(Base64.getDecoder().decode(description));
+
+			if (required && response != null) {
+				throw new SnippetException(dp, "Validation error",
+						new Exception("Pointer : " + pointer + " :" + response + " : " + description));
+			} else if (response != null)
+				dp.log("Pointer : " + pointer + " :" + response + " : " + description, Level.WARN);
+
+		} catch (Exception e) {
+			ServiceUtils.printException("Exception while validating "+pointer+" of type "+typePath, e);
+			throw new SnippetException(dp, "Exception while validating "+pointer+" of type "+typePath, e);
 		}
-		case "integer": {
-			int value = (Integer) object;
-			response = applyIntegerValidations(value, data);
-			break;
-		}
-		case "number": {
-			double value = (Double) object;
-			response = applyNumberValidations(dp, pointer, typePath, value, data);
-			break;
-		}
-		case "date": {
-			String value = (String) object;
-			response = applyDateValidations(dp, pointer, typePath, value, data);
-			break;
-		}
-		default:
-			dp.log("Unexpected value: " + type, Level.WARN);
-		}
-		
-		String description=data.get("fieldDescription");
-		if(description!=null)
-			description=new String(Base64.getDecoder().decode(description));
-		
-		
-		if(required && response!=null) {
-			throw new SnippetException(dp,"Validation error", new Exception("Pointer : "+pointer+" :"+ response+" : "+description));
-		}else if(response!=null)
-			dp.log("Pointer : "+pointer+" :"+ response+" : "+description, Level.WARN);
+
 	}
 
 	public static String applyIntegerValidations(int value, Map<String, String> data) {
@@ -135,7 +146,7 @@ public class Function {
 		return null;
 	}
 
-	public static String applyStringValidations(String value, Map<String, String>  data) {
+	public static String applyStringValidations(String value, Map<String, String> data) {
 
 		if (data == null)
 			return null;
@@ -177,7 +188,7 @@ public class Function {
 	}
 
 	public static String applyDateValidations(DataPipeline dp, String pointer, String typePath, String value,
-			Map<String, String>  data) {
+			Map<String, String> data) {
 
 		if (data == null)
 			return null;
@@ -196,12 +207,12 @@ public class Function {
 			DateTimeFormatter dateformatter = DateTimeFormatter.ofPattern(dateFormat);// "yyyy-MM-dd HH:mm:ss z");
 			ZonedDateTime inDateTime = null;
 			try {
-				inDateTime=ZonedDateTime.parse(value.trim(), dateformatter);
+				inDateTime = ZonedDateTime.parse(value.trim(), dateformatter);
 			} catch (Exception e) {
 				dp.setValueByPointer(pointer, null, typePath);
-				return "Datetime format incorrect: "+e.getMessage();
+				return "Datetime format incorrect: " + e.getMessage();
 			}
-					
+
 			ZonedDateTime startDateTime = null;
 			ZonedDateTime endDateTime = null;
 			if (startDate != null) {

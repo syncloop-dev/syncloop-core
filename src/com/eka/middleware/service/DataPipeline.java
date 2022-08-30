@@ -52,6 +52,7 @@ public class DataPipeline {
 	public boolean isDestroyed() {
 		return rp.isDestroyed();
 	}
+
 	public Object get(String key) {
 		String currentResource = getCurrentResource();
 		Map<String, Object> map = payloadStack.get(currentResource);
@@ -63,7 +64,7 @@ public class DataPipeline {
 
 		if (hasDroppedPrevious.get(currentResource) != null && hasDroppedPrevious.get(currentResource)
 				|| (hasDroppedPrevious.get(currentResource + "-" + key) != null
-				&& hasDroppedPrevious.get(currentResource + "-" + key))) {
+						&& hasDroppedPrevious.get(currentResource + "-" + key))) {
 			return null;
 		}
 
@@ -190,11 +191,12 @@ public class DataPipeline {
 	}
 
 	public void setResponseStatus(int statusCode) throws SnippetException {
-		if(rp.isExchangeInitialized()) {
+		if (rp.isExchangeInitialized()) {
 			rp.getExchange().setStatusCode(statusCode);
-		} else{
-			put("httpErrorCode",statusCode);
-			// Ignore this exception. It's normally happens on async calls as exchange object is not initialized.
+		} else {
+			put("httpErrorCode", statusCode);
+			// Ignore this exception. It's normally happens on async calls as exchange
+			// object is not initialized.
 		}
 	}
 
@@ -206,13 +208,13 @@ public class DataPipeline {
 			payloadStack.put(currentResource, map);
 			// resourceStack.add(currentResource);
 		}
-		if(value==null)
+		if (value == null)
 			map.remove(key);
 		else {
 			map.put(key, value);
 			hasDroppedPrevious.put(resource + "-" + key, false);
 		}
-		
+
 	}
 
 	public void putAll(Map<String, Object> value) {
@@ -297,9 +299,9 @@ public class DataPipeline {
 	}
 
 	public Object getValueByPointer(String pointer) {
-		if(pointer==null || pointer.trim().length()==0)
+		if (pointer == null || pointer.trim().length() == 0)
 			return null;
-		pointer=pointer.trim();
+		pointer = pointer.trim();
 		Object obj = null;
 		pointer = "//" + pointer;
 		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
@@ -321,10 +323,10 @@ public class DataPipeline {
 					obj = arrayList.get(index);
 				else
 					obj = null;
-			} else if(isNumeric) {
+			} else if (isNumeric) {
 				int index = Integer.parseInt(key);
-				obj= ((Object[])obj)[index];
-			}else
+				obj = ((Object[]) obj)[index];
+			} else
 				obj = get(key);
 
 			map = null;
@@ -356,15 +358,15 @@ public class DataPipeline {
 
 		String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
 		switch (valueType) {
-			case "integer":
-				value = Integer.parseInt(value + "");
-				break;
-			case "number":
-				value = Double.parseDouble(value + "");
-				break;
-			case "boolean":
-				value = Boolean.parseBoolean(value + "");
-				break;
+		case "integer":
+			value = Integer.parseInt(value + "");
+			break;
+		case "number":
+			value = Double.parseDouble(value + "");
+			break;
+		case "boolean":
+			value = Boolean.parseBoolean(value + "");
+			break;
 		}
 
 		if (tokenCount == 1) {
@@ -391,8 +393,7 @@ public class DataPipeline {
 						list.add(map);
 					obj = map;
 					preObj = obj;
-				}
-				else if (typeTokens[typeIndex].contains("documentList")) {
+				} else if (typeTokens[typeIndex].contains("documentList")) {
 					List<Object> list = new ArrayList<Object>();
 					if (preObj.getClass().toString().contains("DataPipeline")) {
 						DataPipeline dp = (DataPipeline) preObj;
@@ -411,8 +412,8 @@ public class DataPipeline {
 					} else
 						((Map) preObj).put(key, obj);
 					preObj = obj;
-				}else {
-					preObj=new Object[1];
+				} else {
+					preObj = new Object[1];
 					this.put(key, preObj);
 				}
 			} else {
@@ -423,35 +424,35 @@ public class DataPipeline {
 		}
 		key = pointerTokens[tokenCount - 1];
 		isNumeric = NumberUtils.isCreatable(key);
-		if(isNumeric) {
-			Object[] newObject=null;
+		if (isNumeric) {
+			Object[] newObject = null;
 
-			int index=Integer.parseInt(key);
+			int index = Integer.parseInt(key);
 			key = pointerTokens[tokenCount - 2];
-			if(preObj!=null && ((Object[])preObj).length>index) {
-				newObject=((Object[])preObj);
-			}else {
+			if (preObj != null && ((Object[]) preObj).length > index) {
+				newObject = ((Object[]) preObj);
+			} else {
 				switch (valueType) {
-					case "integerlist":
-						newObject=new Integer[index+1];
-						break;
-					case "numberlist":
-						newObject=new Double[index+1];
-						break;
-					case "booleanlist":
-						newObject=new Boolean[index+1];
-						break;
-					case "stringlist":
-						newObject=new String[index+1];
-						break;
-					case "objectlist":
-						newObject=new Object[index+1];
-						break;
+				case "integerlist":
+					newObject = new Integer[index + 1];
+					break;
+				case "numberlist":
+					newObject = new Double[index + 1];
+					break;
+				case "booleanlist":
+					newObject = new Boolean[index + 1];
+					break;
+				case "stringlist":
+					newObject = new String[index + 1];
+					break;
+				case "objectlist":
+					newObject = new Object[index + 1];
+					break;
 				}
 			}
-			newObject[index]=value;
+			newObject[index] = value;
 			preObj = newObject;
-		}else
+		} else
 			((Map) preObj).put(key, value);
 	}
 
@@ -546,9 +547,9 @@ public class DataPipeline {
 
 	public void snap(String comment) {
 		try {
-			HashMap<String,Object> map=new HashMap<>();
-			if(comment==null)
-				comment="Commentless step";
+			HashMap<String, Object> map = new HashMap<>();
+			if (comment == null)
+				comment = "Commentless step";
 			map.put("comment", comment);
 			map.put(currentResource, payloadStack);
 			String json = ServiceUtils.toPrettyJson(map);
@@ -557,7 +558,6 @@ public class DataPipeline {
 			ServiceUtils.printException("Exception while taking snapshot.", e);
 		}
 	}
-
 
 	public InputStream getBodyAsStream() throws SnippetException {
 		return ServiceUtils.getBodyAsStream(this);
@@ -639,7 +639,7 @@ public class DataPipeline {
 	public String getUniqueThreadName() {
 		return "cb_" + (getCurrentResource().hashCode() & 0xfffffff);
 	}
-	
+
 	public String getCurrentResource() {
 		// StackTraceElement[] ste = Thread.currentThread().getStackTrace();
 		// Since its a private method it will be called
@@ -661,29 +661,34 @@ public class DataPipeline {
 	}
 
 	public void apply(String fqnOfMethod) throws SnippetException {
-		fqnOfMethod = fqnOfMethod.replace("/", ".");
-		if (!fqnOfMethod.endsWith(".main"))
-			fqnOfMethod += ".main";
-		if (payloadStack.get(fqnOfMethod) != null) {
-			Exception e = new Exception("Can not apply method.");
-			e.setStackTrace(Thread.currentThread().getStackTrace());
-			throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
-		}
-		String curResourceBkp = currentResource;
-		currentResource = fqnOfMethod;
-		resourceStack.add(currentResource);
-		put("*currentResource", currentResource);
 		try {
-			ServiceUtils.execute(fqnOfMethod, this);
-		} catch (SnippetException e) {
-			// currentResource = curResourceBkp;
-			// refresh();
-			throw e;
-			// ServiceUtils.printException("Error caused by "+fqnOfMethod, new
-			// Exception(e));
-		} finally {
-			currentResource = curResourceBkp;
-			refresh();
+
+			fqnOfMethod = fqnOfMethod.replace("/", ".");
+			if (!fqnOfMethod.endsWith(".main"))
+				fqnOfMethod += ".main";
+			if (payloadStack.get(fqnOfMethod) != null) {
+				Exception e = new Exception("Can not apply method.");
+				e.setStackTrace(Thread.currentThread().getStackTrace());
+				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
+			}
+			String curResourceBkp = currentResource;
+			currentResource = fqnOfMethod;
+			resourceStack.add(currentResource);
+			put("*currentResource", currentResource);
+			try {
+				ServiceUtils.execute(fqnOfMethod, this);
+			} catch (SnippetException e) {
+				// currentResource = curResourceBkp;
+				// refresh();
+				throw e;
+				// ServiceUtils.printException("Error caused by "+fqnOfMethod, new
+				// Exception(e));
+			} finally {
+				currentResource = curResourceBkp;
+				refresh();
+			}
+		} catch (Exception e) {
+			throw new SnippetException(this,"Something went wrong with fqnOfMethod: "+fqnOfMethod , e);
 		}
 	}
 
@@ -692,17 +697,16 @@ public class DataPipeline {
 		if (!fqnOfMethod.endsWith(".main"))
 			fqnOfMethod += ".main";
 		final String fqnOfFunction = fqnOfMethod;
-		//String curResourceBkp = currentResource;
-		//currentResource = fqnOfFunction;
-		//resourceStack.add(currentResource);
-		//put("*currentResource", currentResource);
+		// String curResourceBkp = currentResource;
+		// currentResource = fqnOfFunction;
+		// resourceStack.add(currentResource);
+		// put("*currentResource", currentResource);
 		final String correlationID = this.getCorrelationId();
 		final Map<String, Object> asyncInputDoc = this.getAsMap("asyncInputDoc");
 		final Map<String, Object> asyncOutputDoc = new HashMap<String, Object>();
 		final Map<String, String> metaData = new HashMap<String, String>();
 		asyncOutputDoc.put("*metaData", metaData);
-		final String uuidAsync = ServiceUtils
-				.generateUUID("Async operation: " + fqnOfFunction + System.nanoTime());
+		final String uuidAsync = ServiceUtils.generateUUID("Async operation: " + fqnOfFunction + System.nanoTime());
 		metaData.put("batchId", uuidAsync);
 		metaData.put("status", "Active");
 		ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -722,20 +726,19 @@ public class DataPipeline {
 									metaData.put(k, v);
 							});
 						}
-					}/*//Don't delete this code it will required later at some point of time.
-					json = ServiceUtils.toJson(asyncInputDoc);
-					Map<String, Object> mapIn = ServiceUtils.jsonToMap(json);
-					if (mapIn != null && mapIn.size() > 0)
-						mapIn.forEach((k, v) -> {
-							dpAsync.put(k, v);
-						});*/
+					} /*
+						 * //Don't delete this code it will required later at some point of time. json =
+						 * ServiceUtils.toJson(asyncInputDoc); Map<String, Object> mapIn =
+						 * ServiceUtils.jsonToMap(json); if (mapIn != null && mapIn.size() > 0)
+						 * mapIn.forEach((k, v) -> { dpAsync.put(k, v); });
+						 */
 					asyncInputDoc.forEach((k, v) -> {
-						if(v!=null)
+						if (v != null)
 							dpAsync.put(k, v);
 					});
 				}
-				//dpAsync.put("asyncInputDoc", asyncInputDoc);
-				//ServiceUtils.execute(fqnOfFunction, dpAsync);
+				// dpAsync.put("asyncInputDoc", asyncInputDoc);
+				// ServiceUtils.execute(fqnOfFunction, dpAsync);
 				ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
 				Map<String, Object> asyncOut = dpAsync.getMap();
 				asyncOut.forEach((k, v) -> {
@@ -753,8 +756,8 @@ public class DataPipeline {
 				asyncOutputDoc.put("*metaData", metaData);
 			}
 		});
-		//currentResource = curResourceBkp;
-		//refresh();
+		// currentResource = curResourceBkp;
+		// refresh();
 		put("asyncOutputDoc", asyncOutputDoc);
 	}
 
@@ -831,7 +834,7 @@ public class DataPipeline {
 	public AuthAccount getCurrentRuntimeAccount() throws SnippetException {
 		return UserProfileManager.getUserProfileManager().getAccount(rp.getCurrentLoggedInUserProfile());
 	}
-	
+
 	public UserProfile getCurrentUserProfile() throws SnippetException {
 		return rp.getCurrentLoggedInUserProfile();
 	}
