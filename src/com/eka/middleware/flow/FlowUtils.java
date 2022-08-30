@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
@@ -17,7 +18,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.graalvm.polyglot.Context;
 
+import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.pub.util.document.Function;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
@@ -57,7 +60,8 @@ public class FlowUtils {
 		String con = null;
 		try {
 			con = placeXPathValue(condition, dp);
-			return (boolean) eval(con);
+			String threadSafeName=dp.getUniqueThreadName();
+			return (boolean) eval(con,threadSafeName,"boolean");
 		} catch (Exception e) {
 			ServiceUtils.printException("Something went wrong while parsing condition(" + condition + "), " + con, e);
 			throw new SnippetException(dp, "Something went wrong while parsing condition(" + condition + "), " + con,
@@ -149,7 +153,19 @@ public class FlowUtils {
 					value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
 				}
 			}
-			dp.setValueByPointer(path, value, typePath);
+			
+			String tokens[] =typePath.split(Pattern.quote("/"));
+			String typeOfVariable=tokens[tokens.length-1];
+			if(!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string")) {
+				try {
+					String threadSafeName=dp.getUniqueThreadName();
+					Object typeVal=eval(value,threadSafeName,typeOfVariable);
+					dp.setValueByPointer(path, typeVal, typePath);
+				} catch (Exception e) {
+					throw new SnippetException(dp, "Could not evaluate: value='"+value+"' and Type='"+typeOfVariable+"'", e);
+				}
+			}else				
+				dp.setValueByPointer(path, value, typePath);
 		}
 	}
 
@@ -201,33 +217,16 @@ public class FlowUtils {
 			if (canCopy) {
 				String expressions[] = null;
 				String function = leader.getJsFunction();
-				/*String applyFunction=leader.getApplyFunction();
-				/*if(applyFunction!=null && applyFunction.trim().length()>0 && !applyFunction.trim().equals("none")) {
-					switch (applyFunction) {
-					case "":
-						
-						break;
-
-					default:
-						break;
-					}
-				}else*/ 
 				if (function != null && function.trim().length() > 0) {
-					String jsClass = "cb_" + (dp.getCurrentResource().hashCode() & 0xfffffff);
-					boolean isCBAvailable = false;
-					try {
-						isCBAvailable = (boolean) eval("(" + jsClass + "!=null);");
-					} catch (Exception e) {
-						isCBAvailable = false;
-					}
-					if (!isCBAvailable) {
-						String varObj = "var " + jsClass + "={}";
-						eval(varObj);
-					}
-					String functionName = jsClass + ".jsFunc_" + leader.getId() + "_applyLogic";
+					String threadSafeName=dp.getUniqueThreadName();
+					String typePath=leader.getOutTypePath();
+					String tokens[] =typePath.split(Pattern.quote("/"));
+					String typeOfVariable=tokens[tokens.length-1];
+					// Each mapping line can have a different function but will never be executed in concurrently. So we create a new function for each map using leader line id.
+					String functionName = "jsFunc_" + leader.getId() + "_applyLogic";
 					boolean isFunctionAvailable = false;
 					try {
-						isFunctionAvailable = (boolean) eval("(" + functionName + "!=null);");
+						isFunctionAvailable = (boolean) eval("(" + functionName + "!=null);",threadSafeName,"boolean");
 					} catch (Exception e) {
 						isFunctionAvailable = false;
 					}
@@ -237,17 +236,20 @@ public class FlowUtils {
 						if (expressions != null)
 							for (String expressionKey : expressions)
 								function = function.replace("#{" + expressionKey + "}", ""+dp.getValueByPointer(expressionKey));
-						function = functionName + "=function(val){" + function + "};";
-						eval(function);
+						function ="var "+functionName + "=function(val){" + function + "};";
+						
+						//if(!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string"))
+						
+						eval(function,threadSafeName);
 					}
 					Object val = dp.getValueByPointer(leader.getFrom());
 					// System.out.println(val.getClass());
 					if(val==null)
-						val = eval(functionName + "();");
-					else if (val.getClass().toString().contains("String"))
-						val = eval(functionName + "('" + val + "');");
+						val = eval(functionName + "();",threadSafeName,typeOfVariable);
+					else if (typeOfVariable.equals("string"))
+						val = eval(functionName + "('" + val + "');",threadSafeName,typeOfVariable);
 					else
-						val = eval(functionName + "(" + val + ");");
+						val = eval(functionName + "(" + val + ");",threadSafeName,typeOfVariable);
 
 					if (val != null)
 						dp.setValueByPointer(leader.getTo(), val, leader.getOutTypePath());
@@ -261,18 +263,48 @@ public class FlowUtils {
 		return successful;
 	}
 
-	private static Object eval(String js) throws Exception {
-		//ScriptEngine engine = factory.getEngineByName("graal.js");
-		synchronized (engine) {
-			return engine.eval(js);
-		}
+	private static Object eval(String js, String name) throws Exception {
+		return eval(js,name,"string");
+	}
+	
+	private static Object eval(String js, String name, String returnType) throws Exception {
+		
+		if(name!=null) {
+			try {
+				Context ctx=ScriptEngineContextManager.getContext(name);
+				synchronized (ctx) {
+					switch (returnType) {
+					case "string":
+						return ctx.eval("js",js).asString();
+					case "integer":
+						return ctx.eval("js",js).asInt();
+					case "number":
+						return ctx.eval("js",js).asDouble();
+					case "boolean":
+						return ctx.eval("js",js).asBoolean();
+					case "byte":
+						return ctx.eval("js",js).asByte();
+					case "object":
+						return ctx.eval("js",js);
+					default:
+						return ctx.eval("js",js);
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
+			}
+		}else
+		return engine.eval(js);
 	}
 	
 	public static void resetJSCB(String resource) throws SystemException {
 		try {
 			String jsClass = "cb_" + (resource.hashCode() & 0xfffffff);
-			String varObj = "var " + jsClass + "={}";
-			eval(varObj);
+			ScriptEngineContextManager.getContext(jsClass);
+			//String varObj = "var " + jsClass + "={}";
+			//ScriptEngineContextManager.removeContext(jsClass);
+			//eval(varObj);
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1003", e);
 		}
