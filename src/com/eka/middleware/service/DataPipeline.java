@@ -160,6 +160,8 @@ public class DataPipeline {
 						mapPrev.forEach((k, v) -> {
 							if (v != null)
 								mapCur.put(k, v);
+							else
+								mapCur.remove(k);
 						});
 						payloadStack.remove(prevResource);
 					}
@@ -204,8 +206,13 @@ public class DataPipeline {
 			payloadStack.put(currentResource, map);
 			// resourceStack.add(currentResource);
 		}
-		map.put(key, value);
-		hasDroppedPrevious.put(resource + "-" + key, false);
+		if(value==null)
+			map.remove(key);
+		else {
+			map.put(key, value);
+			hasDroppedPrevious.put(resource + "-" + key, false);
+		}
+		
 	}
 
 	public void putAll(Map<String, Object> value) {
@@ -629,6 +636,10 @@ public class DataPipeline {
 		return mp;
 	}
 
+	public String getUniqueThreadName() {
+		return "cb_" + (getCurrentResource().hashCode() & 0xfffffff);
+	}
+	
 	public String getCurrentResource() {
 		// StackTraceElement[] ste = Thread.currentThread().getStackTrace();
 		// Since its a private method it will be called
@@ -723,7 +734,7 @@ public class DataPipeline {
 							dpAsync.put(k, v);
 					});
 				}
-				// dpAsync.put("asyncInputDoc", asyncInputDoc);
+				//dpAsync.put("asyncInputDoc", asyncInputDoc);
 				//ServiceUtils.execute(fqnOfFunction, dpAsync);
 				ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
 				Map<String, Object> asyncOut = dpAsync.getMap();

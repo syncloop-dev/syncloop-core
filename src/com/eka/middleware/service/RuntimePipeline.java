@@ -16,6 +16,7 @@ import org.pac4j.undertow.account.Pac4jAccount;
 
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
@@ -160,6 +161,8 @@ public class RuntimePipeline {
 			ServiceUtils.printException("Exception while closing snapshot file.", e);
 		}
 		RuntimePipeline rtp = pipelines.get(sessionId);
+		ScriptEngineContextManager.removeContext(dataPipeLine.getUniqueThreadName());
+		ScriptEngineContextManager.removeContext(rtp.dataPipeLine.getUniqueThreadName());
 		rtp.currentThread.interrupt();
 		rtp.setDestroyed(true);
 		pipelines.get(sessionId).payload.clear();

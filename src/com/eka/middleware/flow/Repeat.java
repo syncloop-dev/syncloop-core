@@ -91,6 +91,9 @@ public class Repeat {
 				if ("error".equals(repeatOn))
 					repeatOn = null;
 			} catch (Throwable e) {
+				String msg=e.getMessage();
+				if(msg.contains("packages.middleware.pub.service.exitRepeat"))
+					break;
 				if ("success".equals(repeatOn)) {
 					repeatOn = null;
 					SnippetException se=null;
