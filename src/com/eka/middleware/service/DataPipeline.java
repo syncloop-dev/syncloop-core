@@ -661,6 +661,8 @@ public class DataPipeline {
 	}
 
 	public void apply(String fqnOfMethod) throws SnippetException {
+		if(fqnOfMethod==null)
+			return;
 		try {
 
 			fqnOfMethod = fqnOfMethod.replace("/", ".");
@@ -688,11 +690,17 @@ public class DataPipeline {
 				refresh();
 			}
 		} catch (Exception e) {
-			throw new SnippetException(this,"Something went wrong with fqnOfMethod: "+fqnOfMethod , e);
+//			this.logDataPipeline();
+			if(!e.getMessage().contains("packages.middleware.pub.service.exitRepeat"))
+				throw new SnippetException(this,"Something went wrong with fqnOfMethod: "+fqnOfMethod , e);
+			else
+				throw new SnippetException(this,e.getMessage() , e);
 		}
 	}
 
 	public void applyAsync(String fqnOfMethod) throws SnippetException {
+		if(fqnOfMethod==null)
+			return;
 		fqnOfMethod = fqnOfMethod.replace("/", ".");
 		if (!fqnOfMethod.endsWith(".main"))
 			fqnOfMethod += ".main";

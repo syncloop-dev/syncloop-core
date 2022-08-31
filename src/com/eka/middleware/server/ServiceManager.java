@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.RTCompile;
 import com.eka.middleware.service.ServiceUtils;
@@ -62,6 +63,7 @@ public class ServiceManager {
 		if (cls == null)
 			synchronized (classMap) {
 				try {
+					ScriptEngineContextManager.clear();
 					cls = compileJava(fqn, dataPipeLine);
 				} catch (Throwable e) {
 					e.printStackTrace();

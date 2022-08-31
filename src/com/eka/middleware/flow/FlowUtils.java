@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,16 +37,16 @@ public class FlowUtils {
 		try {
 			String xPathValues = xPaths;
 			String params[] = extractExpressions(xPaths);// xPaths.split(Pattern.quote("}"));
-			if(params!=null)
-			for (String param : params) {
-				// if (param.contains("#{")) {
-				// param = param.split(Pattern.quote("#{"))[1];// replace("#{", "");
-				String val = dp.getValueByPointer(param) + "";
-				String value = val.replace("\"", "");
-				// System.out.println(value);
-				xPathValues = xPathValues.replace("#{" + param + "}", value);// cond=evaluatedParam+"="+value;
-				// }
-			}
+			if (params != null)
+				for (String param : params) {
+					// if (param.contains("#{")) {
+					// param = param.split(Pattern.quote("#{"))[1];// replace("#{", "");
+					String val = dp.getValueByPointer(param) + "";
+					String value = val.replace("\"", "");
+					// System.out.println(value);
+					xPathValues = xPathValues.replace("#{" + param + "}", value);// cond=evaluatedParam+"="+value;
+					// }
+				}
 			return xPathValues;
 		} catch (Exception e) {
 			ServiceUtils.printException("Something went wrong while parsing xpath(" + xPaths + ")", e);
@@ -60,8 +61,8 @@ public class FlowUtils {
 		String con = null;
 		try {
 			con = placeXPathValue(condition, dp);
-			String threadSafeName=dp.getUniqueThreadName();
-			return (boolean) eval(con,threadSafeName,"boolean");
+			String threadSafeName = dp.getUniqueThreadName();
+			return (boolean) eval(con, threadSafeName, "boolean");
 		} catch (Exception e) {
 			ServiceUtils.printException("Something went wrong while parsing condition(" + condition + "), " + con, e);
 			throw new SnippetException(dp, "Something went wrong while parsing condition(" + condition + "), " + con,
@@ -73,18 +74,18 @@ public class FlowUtils {
 	public static void map(JsonArray transformers, DataPipeline dp) throws SnippetException {
 		map(transformers, dp, null);
 	}
-	
+
 	public static void mapBefore(JsonArray transformers, DataPipeline dp) throws SnippetException {
 		map(transformers, dp, "in");
 	}
-	
+
 	public static void mapAfter(JsonArray transformers, DataPipeline dp) throws SnippetException {
 		map(transformers, dp, "out");
 	}
-	
+
 	private static void map(JsonArray transformers, DataPipeline dp, String direction) throws SnippetException {
 		try {
-			Map<String, List<JsonOp>> map = split(transformers,direction);
+			Map<String, List<JsonOp>> map = split(transformers, direction);
 			List<JsonOp> leaders = map.get("leaders");
 			List<JsonOp> followers = map.get("followers");
 			List<JsonOp> follows = new ArrayList<JsonOp>();
@@ -138,7 +139,7 @@ public class FlowUtils {
 					break;
 				case "EEV": // Evaluate Expression Variable
 					for (String expressionKey : expressions) {
-						String expressionValue = dp.getValueByPointer(expressionKey)+"";
+						String expressionValue = dp.getValueByPointer(expressionKey) + "";
 						map.put(expressionKey, expressionValue);
 					}
 					break;
@@ -153,18 +154,19 @@ public class FlowUtils {
 					value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
 				}
 			}
-			
-			String tokens[] =typePath.split(Pattern.quote("/"));
-			String typeOfVariable=tokens[tokens.length-1];
-			if(!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string")) {
+
+			String tokens[] = typePath.split(Pattern.quote("/"));
+			String typeOfVariable = tokens[tokens.length - 1];
+			if (!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string")) {
 				try {
-					String threadSafeName=dp.getUniqueThreadName();
-					Object typeVal=eval(value,threadSafeName,typeOfVariable);
+					String threadSafeName = dp.getUniqueThreadName();
+					Object typeVal = eval(value, threadSafeName, typeOfVariable);
 					dp.setValueByPointer(path, typeVal, typePath);
 				} catch (Exception e) {
-					throw new SnippetException(dp, "Could not evaluate: value='"+value+"' and Type='"+typeOfVariable+"'", e);
+					throw new SnippetException(dp,
+							"Could not evaluate: value='" + value + "' and Type='" + typeOfVariable + "'", e);
 				}
-			}else				
+			} else
 				dp.setValueByPointer(path, value, typePath);
 		}
 	}
@@ -217,46 +219,71 @@ public class FlowUtils {
 			if (canCopy) {
 				String expressions[] = null;
 				String function = leader.getJsFunction();
+
 				if (function != null && function.trim().length() > 0) {
-					String threadSafeName=dp.getUniqueThreadName();
-					String typePath=leader.getOutTypePath();
-					String tokens[] =typePath.split(Pattern.quote("/"));
-					String typeOfVariable=tokens[tokens.length-1];
-					// Each mapping line can have a different function but will never be executed in concurrently. So we create a new function for each map using leader line id.
+					String threadSafeName = dp.getUniqueThreadName();
+					try {
+						function = new String(Base64.getDecoder().decode(function));
+						function = function.replaceAll("[\\r\\n]+", "");
+					} catch (Exception e) {
+						ServiceUtils.printException(function, e);
+						throw e;
+					}
+					
+					String typePath = leader.getOutTypePath();
+					String tokens[] = typePath.split(Pattern.quote("/"));
+					String typeOfVariable = tokens[tokens.length - 1];
+					// Each mapping line can have a different function but will never be executed in
+					// concurrently. So we create a new function for each map using leader line id.
 					String functionName = "jsFunc_" + leader.getId() + "_applyLogic";
 					boolean isFunctionAvailable = false;
+					
+					String jsFunction = function;
+					expressions = extractExpressions(function);
 					try {
-						isFunctionAvailable = (boolean) eval("(" + functionName + "!=null);",threadSafeName,"boolean");
+						Context ctx = ScriptEngineContextManager.findContext(threadSafeName);
+						if(ctx==null)
+							ctx=ScriptEngineContextManager.getContext(threadSafeName);
+						synchronized (ctx) {
+							try {
+								isFunctionAvailable = (boolean) eval("(" + functionName + "!=null);", ctx, "boolean");
+							} catch (Exception e) {
+								isFunctionAvailable = false;
+							}
+							if (!isFunctionAvailable || expressions != null) {
+								if (expressions != null)
+									for (String expressionKey : expressions)
+										jsFunction = function.replace("#{" + expressionKey + "}",
+												"" + dp.getValueByPointer(expressionKey));
+								jsFunction = "var " + functionName + "=function(val){" + jsFunction + "};";
+
+								// if(!typeOfVariable.toUpperCase().contains("LIST") &&
+								// !typeOfVariable.equals("string"))
+
+								eval(jsFunction, ctx, "string");
+							}
+							Object val = dp.getValueByPointer(leader.getFrom());
+							// System.out.println(val.getClass());
+							if (val == null)
+								val = eval(functionName + "();", ctx, typeOfVariable);
+							else if (typeOfVariable.equals("string"))
+								val = eval(functionName + "('" + val + "');", ctx, typeOfVariable);
+							else
+								val = eval(functionName + "(" + val + ");", ctx, typeOfVariable);
+
+							if (val != null)
+								dp.setValueByPointer(leader.getTo(), val, leader.getOutTypePath());
+						}
 					} catch (Exception e) {
-						isFunctionAvailable = false;
+						ServiceUtils.printException("Some problem executing this javascript: "+function, e);
+						throw e;
 					}
-
-					if (!isFunctionAvailable) {
-						expressions = extractExpressions(leader.getJsFunction());
-						if (expressions != null)
-							for (String expressionKey : expressions)
-								function = function.replace("#{" + expressionKey + "}", ""+dp.getValueByPointer(expressionKey));
-						function ="var "+functionName + "=function(val){" + function + "};";
-						
-						//if(!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string"))
-						
-						eval(function,threadSafeName);
-					}
-					Object val = dp.getValueByPointer(leader.getFrom());
-					// System.out.println(val.getClass());
-					if(val==null)
-						val = eval(functionName + "();",threadSafeName,typeOfVariable);
-					else if (typeOfVariable.equals("string"))
-						val = eval(functionName + "('" + val + "');",threadSafeName,typeOfVariable);
-					else
-						val = eval(functionName + "(" + val + ");",threadSafeName,typeOfVariable);
-
-					if (val != null)
-						dp.setValueByPointer(leader.getTo(), val, leader.getOutTypePath());
 				} else
 					successful = copy(leader.getFrom(), leader.getTo(), leader.getOutTypePath(), dp);
 			}
 		} catch (Exception e) {
+			ServiceUtils.printException(
+					"Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'", e);
 			throw new Exception(
 					"Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'");
 		}
@@ -264,63 +291,70 @@ public class FlowUtils {
 	}
 
 	private static Object eval(String js, String name) throws Exception {
-		return eval(js,name,"string");
+		return eval(js, name, "string");
 	}
-	
+
 	private static Object eval(String js, String name, String returnType) throws Exception {
-		
-		if(name!=null) {
-			try {
-				Context ctx=ScriptEngineContextManager.getContext(name);
-				synchronized (ctx) {
-					switch (returnType) {
-					case "string":
-						return ctx.eval("js",js).asString();
-					case "integer":
-						return ctx.eval("js",js).asInt();
-					case "number":
-						return ctx.eval("js",js).asDouble();
-					case "boolean":
-						return ctx.eval("js",js).asBoolean();
-					case "byte":
-						return ctx.eval("js",js).asByte();
-					case "object":
-						return ctx.eval("js",js);
-					default:
-						return ctx.eval("js",js);
-					}
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-				return null;
+
+		if (name != null) {
+			Context ctx = ScriptEngineContextManager.getContext(name);
+			synchronized (ctx) {
+				return eval(js, ctx, returnType);
 			}
-		}else
-		return engine.eval(js);
+		} else
+			return null;
 	}
-	
+
+	private static Object eval(String js, Context ctx, String returnType) {
+		try {
+			switch (returnType) {
+			case "string":
+				return ctx.eval("js", js).asString();
+			case "integer":
+				return ctx.eval("js", js).asInt();
+			case "number":
+				return ctx.eval("js", js).asDouble();
+			case "boolean":
+				return ctx.eval("js", js).asBoolean();
+			case "byte":
+				return ctx.eval("js", js).asByte();
+			case "object":
+				return ctx.eval("js", js);
+			default:
+				return ctx.eval("js", js);
+			}
+		} catch (Exception e) {
+			// System.out.println(e.getMessage());
+			if (!e.getMessage().contains("applyLogic is not defined"))
+				e.printStackTrace();
+			return null;
+		}
+	}
+
 	public static void resetJSCB(String resource) throws SystemException {
 		try {
 			String jsClass = "cb_" + (resource.hashCode() & 0xfffffff);
 			ScriptEngineContextManager.getContext(jsClass);
-			//String varObj = "var " + jsClass + "={}";
-			//ScriptEngineContextManager.removeContext(jsClass);
-			//eval(varObj);
+			// String varObj = "var " + jsClass + "={}";
+			// ScriptEngineContextManager.removeContext(jsClass);
+			// eval(varObj);
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1003", e);
 		}
 	}
 
-	private static Map<String, List<JsonOp>> split(JsonArray transformers,String direction) throws Exception {
+	private static Map<String, List<JsonOp>> split(JsonArray transformers, String direction) throws Exception {
 		String follow = "";
 		List<JsonOp> leaders = new ArrayList<>();
 		List<JsonOp> followers = new ArrayList<>();
 		for (JsonValue jsonValue : transformers) {
 			follow = jsonValue.asJsonObject().getString("follow", null);
-			boolean canProceed=true;
-			String direct=jsonValue.asJsonObject().getString("direction", null);
-			if(direction!=null && direction.trim().length()>0 && direct!=null && direct.trim().length()>0 && !direction.equals(direct))
-				canProceed=false;
-			if(canProceed) {
+			boolean canProceed = true;
+			String direct = jsonValue.asJsonObject().getString("direction", null);
+			if (direction != null && direction.trim().length() > 0 && direct != null && direct.trim().length() > 0
+					&& !direction.equals(direct))
+				canProceed = false;
+			if (canProceed) {
 				if (follow != null && follow.startsWith("loop_id"))
 					followers.add(new JsonOp(jsonValue));
 				else
@@ -364,52 +398,57 @@ public class FlowUtils {
 		if (jva.isEmpty())
 			return;
 
-		/*Exception e=new Exception("Service document validation is enabled but Input/Output document is null or empty");
-		ServiceUtils.printException("Service document validation is enabled but Input/Output document is null or empty", e);
-		throw new SnippetException(dp, "Service document validation is enabled but Input/Output document is null or empty", e);*/
+		/*
+		 * Exception e=new
+		 * Exception("Service document validation is enabled but Input/Output document is null or empty"
+		 * ); ServiceUtils.
+		 * printException("Service document validation is enabled but Input/Output document is null or empty"
+		 * , e); throw new SnippetException(dp,
+		 * "Service document validation is enabled but Input/Output document is null or empty"
+		 * , e);
+		 */
 
-		
 		final Map<String, String> mapPointers = new HashMap<>();
 		final Map<String, JsonObject> mapPointerData = new HashMap<>();
 		if (jva != null) {
 			// outPutData=
 			for (JsonValue jsonValue : jva) {
-				getKeyTypePair(jsonValue, null,null, mapPointers, mapPointerData);
+				getKeyTypePair(jsonValue, null, null, mapPointers, mapPointerData);
 
 			}
 		}
-		dp.log("Document pointers:-",Level.TRACE);
-		mapPointers.forEach((k, v) -> dp.log(k + " : " + v,Level.TRACE));
-		dp.log("Document data:-",Level.TRACE);
-		mapPointerData.forEach((k, v) -> dp.log(k + " : " + v.toString(),Level.TRACE));
-		
-		Set<String> keys=mapPointers.keySet();
+		dp.log("Document pointers:-", Level.TRACE);
+		mapPointers.forEach((k, v) -> dp.log(k + " : " + v, Level.TRACE));
+		dp.log("Document data:-", Level.TRACE);
+		mapPointerData.forEach((k, v) -> dp.log(k + " : " + v.toString(), Level.TRACE));
+
+		Set<String> keys = mapPointers.keySet();
 		for (String key : keys) {
-			String typePath=mapPointers.get(key);
-			JsonObject data=mapPointerData.get(key);
-			if(data!=null && !data.isEmpty()) {
-				Map<String,Object> m=ServiceUtils.jsonToMap(data.toString());
-				final Map<String,String> dataMap=new HashMap<String,String>();
-				m.forEach((k,v)->{
-					if(v!=null && (v+"").trim().length()>0)
-						dataMap.put(k, v+"");
+			String typePath = mapPointers.get(key);
+			JsonObject data = mapPointerData.get(key);
+			if (data != null && !data.isEmpty()) {
+				Map<String, Object> m = ServiceUtils.jsonToMap(data.toString());
+				final Map<String, String> dataMap = new HashMap<String, String>();
+				m.forEach((k, v) -> {
+					if (v != null && (v + "").trim().length() > 0)
+						dataMap.put(k, v + "");
 				});
 				Function.validate(dp, key, typePath, dataMap);
 			}
-		}	
+		}
 	}
 
-	private static void getKeyTypePair(JsonValue jsonValue, String key,String typePath, Map<String, String> mapPointers,
-			Map<String, JsonObject> mapPointerData) {
+	private static void getKeyTypePair(JsonValue jsonValue, String key, String typePath,
+			Map<String, String> mapPointers, Map<String, JsonObject> mapPointerData) {
 		if (key == null)
 			key = jsonValue.asJsonObject().getString("text");
 		else
 			key += "/" + jsonValue.asJsonObject().getString("text");
-		if(typePath==null)
+		if (typePath == null)
 			typePath = jsonValue.asJsonObject().getString("type");
 		else
-			typePath += "/"+jsonValue.asJsonObject().getString("type");
-		
+			typePath += "/" + jsonValue.asJsonObject().getString("type");
+
 		JsonObject data = jsonValue.asJsonObject().getJsonObject("data");
 		mapPointers.put(key, typePath);
 		mapPointerData.put(key, data);
@@ -417,10 +456,11 @@ public class FlowUtils {
 		if (jv != null) {
 			JsonArray jva = jv.asJsonArray();
 			for (JsonValue jsonVal : jva) {
-				getKeyTypePair(jsonVal, key,typePath, mapPointers, mapPointerData);
+				getKeyTypePair(jsonVal, key, typePath, mapPointers, mapPointerData);
 			}
 		}
 	}
+
 	public static boolean patternMatches(String text, String regexPattern) {
 		return Pattern.compile(regexPattern).matcher(text).matches();
 	}
