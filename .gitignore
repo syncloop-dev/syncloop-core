@@ -2,3 +2,4 @@
 *.prefs
 .classpath
 .project
+*.log
