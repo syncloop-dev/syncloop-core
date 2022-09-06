@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javax.json.JsonArray;
+
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -24,6 +26,8 @@ import org.pac4j.core.profile.UserProfile;
 
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.flow.JsonOp;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
@@ -299,162 +303,14 @@ public class DataPipeline {
 	}
 
 	public Object getValueByPointer(String pointer) {
-		if (pointer == null || pointer.trim().length() == 0)
-			return null;
-		pointer = pointer.trim();
-		Object obj = null;
-		pointer = "//" + pointer;
-		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
-		Map<String, Object> map = null;
-		List<Object> arrayList = null;
-		boolean isNumeric = false;
-		String[] tokenize = pointer.split("/");
-		for (String key : tokenize) {
-			isNumeric = NumberUtils.isCreatable(key);
-			if (obj != null && !isNumeric)
-				map = (Map<String, Object>) obj;
-			else if (isNumeric && (obj instanceof List || obj instanceof ArrayList))
-				arrayList = (List<Object>) obj;
-			if (map != null)
-				obj = map.get(key);
-			else if (arrayList != null) {
-				int index = Integer.parseInt(key);
-				if (arrayList.size() > index)
-					obj = arrayList.get(index);
-				else
-					obj = null;
-			} else if (isNumeric) {
-				int index = Integer.parseInt(key);
-				obj = ((Object[]) obj)[index];
-			} else
-				obj = get(key);
-
-			map = null;
-			arrayList = null;
-			if (obj == null)
-				return null;
-		}
-		try {
-			ArrayDeque dVal = (ArrayDeque) obj;
-			if (dVal.size() > 0)
-				return dVal.getFirst();
-		} catch (Exception e) {
-			return obj;
-		}
-		return null;
+		return MapUtils.getValueByPointer(pointer, this);
 	}
-
+	
 	public void setValueByPointer(String pointer, Object value, String outTypePath) {
-		Object obj = null;
-		String path = "";
-		Object preObj = this;
-		pointer = "//" + pointer;
-		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
-		boolean isNumeric = false;
-		String[] pointerTokens = pointer.split("/");
-		String[] typeTokens = outTypePath.split("/");
-		int tokenCount = pointerTokens.length;
-		int typeIndex = 0;
-
-		String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
-		switch (valueType) {
-		case "integer":
-			value = Integer.parseInt(value + "");
-			break;
-		case "number":
-			value = Double.parseDouble(value + "");
-			break;
-		case "boolean":
-			value = Boolean.parseBoolean(value + "");
-			break;
-		}
-
-		if (tokenCount == 1) {
-			put(pointerTokens[0], value);
-			return;
-		}
-		String key;
-		for (int i = 0; i < tokenCount - 1; i++) {
-			key = pointerTokens[i];
-			isNumeric = NumberUtils.isCreatable(key);
-			if (i == 0)
-				path = key;
-			else
-				path += "/" + key;
-			obj = getValueByPointer(path);
-			if (obj == null) {
-				if (preObj.getClass().toString().contains("ArrayList") && isNumeric) {
-					int index = Integer.parseInt(key);
-					List<Object> list = (List) preObj;
-					Map<String, Object> map = new HashMap<String, Object>();
-					if (list.size() > index)
-						list.add(index, map);
-					else
-						list.add(map);
-					obj = map;
-					preObj = obj;
-				} else if (typeTokens[typeIndex].contains("documentList")) {
-					List<Object> list = new ArrayList<Object>();
-					if (preObj.getClass().toString().contains("DataPipeline")) {
-						DataPipeline dp = (DataPipeline) preObj;
-						dp.put(key, list);
-						preObj = list;
-					} else {
-						Map<String, Object> map = (Map<String, Object>) preObj;
-						map.put(key, list);
-						preObj = list;
-					}
-				} else if (typeTokens[typeIndex].endsWith("document")) {
-					obj = new HashMap<String, Object>();
-					if (preObj.getClass().toString().contains("DataPipeline")) {
-						DataPipeline dp = (DataPipeline) preObj;
-						dp.put(key, obj);
-					} else
-						((Map) preObj).put(key, obj);
-					preObj = obj;
-				} else {
-					preObj = new Object[1];
-					this.put(key, preObj);
-				}
-			} else {
-				preObj = obj;
-			}
-			if (!isNumeric)
-				typeIndex++;
-		}
-		key = pointerTokens[tokenCount - 1];
-		isNumeric = NumberUtils.isCreatable(key);
-		if (isNumeric) {
-			Object[] newObject = null;
-
-			int index = Integer.parseInt(key);
-			key = pointerTokens[tokenCount - 2];
-			if (preObj != null && ((Object[]) preObj).length > index) {
-				newObject = ((Object[]) preObj);
-			} else {
-				switch (valueType) {
-				case "integerlist":
-					newObject = new Integer[index + 1];
-					break;
-				case "numberlist":
-					newObject = new Double[index + 1];
-					break;
-				case "booleanlist":
-					newObject = new Boolean[index + 1];
-					break;
-				case "stringlist":
-					newObject = new String[index + 1];
-					break;
-				case "objectlist":
-					newObject = new Object[index + 1];
-					break;
-				}
-			}
-			newObject[index] = value;
-			preObj = newObject;
-		} else
-			((Map) preObj).put(key, value);
+		MapUtils.setValueByPointer(pointer,value,outTypePath, this);
 	}
+
+	
 
 	public String toJson() {
 		try {
@@ -698,7 +554,8 @@ public class DataPipeline {
 		}
 	}
 
-	public void applyAsync(String fqnOfMethod) throws SnippetException {
+	
+	public void applyAsync(String fqnOfMethod,final JsonArray transformers) throws SnippetException {
 		if(fqnOfMethod==null)
 			return;
 		fqnOfMethod = fqnOfMethod.replace("/", ".");
@@ -718,6 +575,43 @@ public class DataPipeline {
 		metaData.put("batchId", uuidAsync);
 		metaData.put("status", "Active");
 		ExecutorService executor = Executors.newSingleThreadExecutor();
+		
+		try {
+			if(transformers!=null) {
+				Map<String, List<JsonOp>> map = FlowUtils.split(transformers, "out");
+				List<JsonOp> leaders = map.get("leaders");
+				for (JsonOp jsonValue : leaders) {
+					String srcPath=jsonValue.getFrom();
+					if(srcPath.contains("*metaData") || srcPath.equals("/asyncOutputDoc"))
+						continue;
+					String keyPath=srcPath.replace("/asyncOutputDoc", "");
+					srcPath=keyPath;
+					//Object val = dpAsync.getValueByPointer(srcPath);
+					///
+					//String[] keyTokens = key.split("/");
+					//String actualKey = (keyTokens[keyTokens.length - 1]);
+					
+					String typePath=jsonValue.getInTypePath();
+					Object value=null;
+					String[] typeTokens = typePath.split("/");
+					String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
+					switch (valueType) {
+					case "documentlist":
+						value=new ArrayList<Object>();
+						break;
+					case "document":
+						value=new HashMap<>();
+						break;
+					}
+					if(value!=null) {
+						final Object newFinalObj=value;
+						MapUtils.setValueByPointer(srcPath, newFinalObj, typePath,asyncOutputDoc);
+					}
+				}
+			}
+		} catch (Exception e) {
+			throw new SnippetException(this, uuidAsync, e);
+		}
 		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(uuidAsync, correlationID, null, fqnOfFunction,
@@ -747,10 +641,34 @@ public class DataPipeline {
 				}
 				// dpAsync.put("asyncInputDoc", asyncInputDoc);
 				// ServiceUtils.execute(fqnOfFunction, dpAsync);
+				
 				ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+				
+				
+				
 				Map<String, Object> asyncOut = dpAsync.getMap();
 				asyncOut.forEach((k, v) -> {
-					asyncOutputDoc.put(k, v);
+					if(transformers!=null) {
+					Object obj=dpAsync.get(k);
+					Object outObj=asyncOutputDoc.get(k);
+					if(outObj!=null ) {
+						if(obj instanceof Map) {
+							Map<String, Object> objMap=(Map)obj;
+							Map<String, Object> outObjMap=(Map)outObj;
+							objMap.forEach((mk, mv) -> {
+								outObjMap.put(mk,mv);
+							});
+						}else if(obj instanceof List) {
+							List objLst=(List)obj;
+							List outObjLst=(List)outObj;
+							objLst.forEach((o)->{
+								outObjLst.add(o);
+							});
+						}
+					}else
+						asyncOutputDoc.put(k, v);
+					}else
+						asyncOutputDoc.put(k, v);
 				});
 				metaData.put("status", "Completed");
 				return asyncOutputDoc;
@@ -767,6 +685,10 @@ public class DataPipeline {
 		// currentResource = curResourceBkp;
 		// refresh();
 		put("asyncOutputDoc", asyncOutputDoc);
+	}
+	
+	public void applyAsync(String fqnOfMethod) throws SnippetException {
+		applyAsync(fqnOfMethod, null);
 	}
 
 	public String getMyConfig(String key) throws SnippetException {

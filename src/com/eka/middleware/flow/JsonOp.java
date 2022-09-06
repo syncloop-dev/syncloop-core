@@ -31,6 +31,8 @@ public class JsonOp {
       	setJsFunctionSig(jsonop.getString("jsFunctionSig",null));
 		if(!jsonop.isNull("outTypePath"))
 			outTypePath = jsonop.getString("outTypePath",null);
+		if(!jsonop.isNull("inTypePath"))
+			inTypePath = jsonop.getString("inTypePath",null);
 		id=((from+" to "+to).hashCode() & 0xfffffff);
 	}
 	
@@ -44,6 +46,7 @@ public class JsonOp {
 		jsFunction = jsonValue.getJsFunction();
 		follow = jsonValue.getFollow();
 		outTypePath=jsonValue.getOutTypePath();
+		inTypePath=jsonValue.getInTypePath();
 		setApplyFunction(jsonValue.getApplyFunction());
       	setJsFunctionSig(jsonValue.getJsFunctionSig());
       	id=jsonValue.getId();

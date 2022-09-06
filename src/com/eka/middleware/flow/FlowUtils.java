@@ -343,7 +343,7 @@ public class FlowUtils {
 		}
 	}
 
-	private static Map<String, List<JsonOp>> split(JsonArray transformers, String direction) throws Exception {
+	public static Map<String, List<JsonOp>> split(JsonArray transformers, String direction) throws Exception {
 		String follow = "";
 		List<JsonOp> leaders = new ArrayList<>();
 		List<JsonOp> followers = new ArrayList<>();

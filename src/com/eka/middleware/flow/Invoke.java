@@ -78,7 +78,7 @@ public class Invoke {
 		String serviceFqn=invoke.getString("text",null);
 		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
 			if("async".equals(requestMethod))
-				dp.applyAsync(serviceFqn.trim()+".main");
+				dp.applyAsync(serviceFqn.trim()+".main",transformers);
 			else
 				dp.apply(serviceFqn.trim()+".main");
 			if(transformers!=null)
