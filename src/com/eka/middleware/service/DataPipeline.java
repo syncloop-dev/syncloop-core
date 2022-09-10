@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -266,8 +267,14 @@ public class DataPipeline {
 
 	public List getAsList(String pointer) {
 		Object list = getValueByPointer(pointer);
-		if (list == null || list.getClass() != ArrayList.class)
-			return null;
+		if (list == null || list.getClass() != ArrayList.class) {
+			
+			if(list instanceof Object[]) {
+				return Arrays.asList((Object[])list);
+			}
+			else
+				return null;
+		}
 		List<Object> arrayList = (List<Object>) list;
 		return arrayList;
 	}
