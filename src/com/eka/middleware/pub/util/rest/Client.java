@@ -63,7 +63,8 @@ public class Client {
         
         if (formData != null) {
         	payloadBytes=getFormData(formData, headers);
-        }
+        }else if(payload!=null)
+        	payloadBytes=payload.getBytes();
         
         if(payloadBytes!=null || payloadIS!=null) {
         	OutputStream os= conn.getOutputStream();

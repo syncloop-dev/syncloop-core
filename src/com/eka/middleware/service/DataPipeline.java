@@ -515,7 +515,7 @@ public class DataPipeline {
 		if (map != null)
 			map.clear();
 	}
-
+	private String callingResource = null;
 	public void apply(String fqnOfMethod) throws SnippetException {
 		if(fqnOfMethod==null)
 			return;
@@ -529,7 +529,8 @@ public class DataPipeline {
 				e.setStackTrace(Thread.currentThread().getStackTrace());
 				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
 			}
-			String curResourceBkp = currentResource;
+			String callingResource = currentResource;
+			this.callingResource=callingResource;
 			currentResource = fqnOfMethod;
 			resourceStack.add(currentResource);
 			put("*currentResource", currentResource);
@@ -542,7 +543,8 @@ public class DataPipeline {
 				// ServiceUtils.printException("Error caused by "+fqnOfMethod, new
 				// Exception(e));
 			} finally {
-				currentResource = curResourceBkp;
+				currentResource = callingResource;
+				this.callingResource=null;
 				refresh();
 			}
 		} catch (Exception e) {
@@ -612,6 +614,7 @@ public class DataPipeline {
 		} catch (Exception e) {
 			throw new SnippetException(this, uuidAsync, e);
 		}
+		final String currResrc=currentResource;
 		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(uuidAsync, correlationID, null, fqnOfFunction,
@@ -641,7 +644,7 @@ public class DataPipeline {
 				}
 				// dpAsync.put("asyncInputDoc", asyncInputDoc);
 				// ServiceUtils.execute(fqnOfFunction, dpAsync);
-				
+				dpAsync.callingResource=currResrc;
 				ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
 				
 				
@@ -744,7 +747,10 @@ public class DataPipeline {
 	public void log(String msg, Level level) {
 		if (level == null)
 			level = Level.INFO;
-		String log = ServiceUtils.getFormattedLogLine(getCorrelationId(), currentResource, msg);
+		String resource=callingResource;
+		if(resource==null)
+			resource=currentResource;
+		String log = ServiceUtils.getFormattedLogLine(getCorrelationId(), resource, msg);
 		LOGGER.log(level, log);
 	}
 
@@ -762,7 +768,9 @@ public class DataPipeline {
 	}
 
 	public AuthAccount getCurrentRuntimeAccount() throws SnippetException {
-		return UserProfileManager.getUserProfileManager().getAccount(rp.getCurrentLoggedInUserProfile());
+		if(getCurrentUserProfile()==null)
+			return null;
+		return UserProfileManager.getUserProfileManager().getAccount(getCurrentUserProfile());
 	}
 
 	public UserProfile getCurrentUserProfile() throws SnippetException {
