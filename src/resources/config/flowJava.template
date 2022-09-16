@@ -11,6 +11,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import java.util.*;
+import java.net.*;
 
 public final class #className {
 
@@ -75,6 +76,19 @@ public final class #className {
 				auditLog.put("request",requestJson);
 				auditLog.put("response",responseJson);
 				auditLog.put("nanoInstance",nanoSec+"");
+
+				try {
+                    auditLog.put("hostName", InetAddress.getLocalHost().getHostName());
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+                String nodeName = dataPipeline.getGlobalConfig("nodeName");
+                auditLog.put("nodeName", nodeName);
+
+                auditLog.put("remoteAddr", dataPipeline.getRemoteIpAddr());
+                auditLog.put("userId", dataPipeline.getCurrentUserProfile().getId());
+                auditLog.put("urlPath", dataPipeline.getUrlPath());
+
 				Map<String,Object> asyncInputDoc=new HashMap();
 				asyncInputDoc.put("auditLog",auditLog);
 				asyncInputDoc.put("stopRecursiveLogging","true");

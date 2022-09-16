@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -16,6 +17,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javax.json.JsonArray;
+
+import io.undertow.server.HttpServerExchange;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -24,6 +28,8 @@ import org.pac4j.core.profile.UserProfile;
 
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.flow.JsonOp;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
@@ -52,6 +58,7 @@ public class DataPipeline {
 	public boolean isDestroyed() {
 		return rp.isDestroyed();
 	}
+
 	public Object get(String key) {
 		String currentResource = getCurrentResource();
 		Map<String, Object> map = payloadStack.get(currentResource);
@@ -63,7 +70,7 @@ public class DataPipeline {
 
 		if (hasDroppedPrevious.get(currentResource) != null && hasDroppedPrevious.get(currentResource)
 				|| (hasDroppedPrevious.get(currentResource + "-" + key) != null
-				&& hasDroppedPrevious.get(currentResource + "-" + key))) {
+						&& hasDroppedPrevious.get(currentResource + "-" + key))) {
 			return null;
 		}
 
@@ -160,6 +167,8 @@ public class DataPipeline {
 						mapPrev.forEach((k, v) -> {
 							if (v != null)
 								mapCur.put(k, v);
+							else
+								mapCur.remove(k);
 						});
 						payloadStack.remove(prevResource);
 					}
@@ -188,11 +197,12 @@ public class DataPipeline {
 	}
 
 	public void setResponseStatus(int statusCode) throws SnippetException {
-		if(rp.isExchangeInitialized()) {
+		if (rp.isExchangeInitialized()) {
 			rp.getExchange().setStatusCode(statusCode);
-		} else{
-			put("httpErrorCode",statusCode);
-			// Ignore this exception. It's normally happens on async calls as exchange object is not initialized.
+		} else {
+			put("httpErrorCode", statusCode);
+			// Ignore this exception. It's normally happens on async calls as exchange
+			// object is not initialized.
 		}
 	}
 
@@ -204,8 +214,13 @@ public class DataPipeline {
 			payloadStack.put(currentResource, map);
 			// resourceStack.add(currentResource);
 		}
-		map.put(key, value);
-		hasDroppedPrevious.put(resource + "-" + key, false);
+		if (value == null)
+			map.remove(key);
+		else {
+			map.put(key, value);
+			hasDroppedPrevious.put(resource + "-" + key, false);
+		}
+
 	}
 
 	public void putAll(Map<String, Object> value) {
@@ -253,8 +268,14 @@ public class DataPipeline {
 
 	public List getAsList(String pointer) {
 		Object list = getValueByPointer(pointer);
-		if (list == null || list.getClass() != ArrayList.class)
-			return null;
+		if (list == null || list.getClass() != ArrayList.class) {
+			
+			if(list instanceof Object[]) {
+				return Arrays.asList((Object[])list);
+			}
+			else
+				return null;
+		}
 		List<Object> arrayList = (List<Object>) list;
 		return arrayList;
 	}
@@ -290,163 +311,14 @@ public class DataPipeline {
 	}
 
 	public Object getValueByPointer(String pointer) {
-		if(pointer==null || pointer.trim().length()==0)
-			return null;
-		pointer=pointer.trim();
-		Object obj = null;
-		pointer = "//" + pointer;
-		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
-		Map<String, Object> map = null;
-		List<Object> arrayList = null;
-		boolean isNumeric = false;
-		String[] tokenize = pointer.split("/");
-		for (String key : tokenize) {
-			isNumeric = NumberUtils.isCreatable(key);
-			if (obj != null && !isNumeric)
-				map = (Map<String, Object>) obj;
-			else if (isNumeric && (obj instanceof List || obj instanceof ArrayList))
-				arrayList = (List<Object>) obj;
-			if (map != null)
-				obj = map.get(key);
-			else if (arrayList != null) {
-				int index = Integer.parseInt(key);
-				if (arrayList.size() > index)
-					obj = arrayList.get(index);
-				else
-					obj = null;
-			} else if(isNumeric) {
-				int index = Integer.parseInt(key);
-				obj= ((Object[])obj)[index];
-			}else
-				obj = get(key);
-
-			map = null;
-			arrayList = null;
-			if (obj == null)
-				return null;
-		}
-		try {
-			ArrayDeque dVal = (ArrayDeque) obj;
-			if (dVal.size() > 0)
-				return dVal.getFirst();
-		} catch (Exception e) {
-			return obj;
-		}
-		return null;
+		return MapUtils.getValueByPointer(pointer, this);
 	}
-
+	
 	public void setValueByPointer(String pointer, Object value, String outTypePath) {
-		Object obj = null;
-		String path = "";
-		Object preObj = this;
-		pointer = "//" + pointer;
-		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
-		boolean isNumeric = false;
-		String[] pointerTokens = pointer.split("/");
-		String[] typeTokens = outTypePath.split("/");
-		int tokenCount = pointerTokens.length;
-		int typeIndex = 0;
-
-		String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
-		switch (valueType) {
-			case "integer":
-				value = Integer.parseInt(value + "");
-				break;
-			case "number":
-				value = Double.parseDouble(value + "");
-				break;
-			case "boolean":
-				value = Boolean.parseBoolean(value + "");
-				break;
-		}
-
-		if (tokenCount == 1) {
-			put(pointerTokens[0], value);
-			return;
-		}
-		String key;
-		for (int i = 0; i < tokenCount - 1; i++) {
-			key = pointerTokens[i];
-			isNumeric = NumberUtils.isCreatable(key);
-			if (i == 0)
-				path = key;
-			else
-				path += "/" + key;
-			obj = getValueByPointer(path);
-			if (obj == null) {
-				if (preObj.getClass().toString().contains("ArrayList") && isNumeric) {
-					int index = Integer.parseInt(key);
-					List<Object> list = (List) preObj;
-					Map<String, Object> map = new HashMap<String, Object>();
-					if (list.size() > index)
-						list.add(index, map);
-					else
-						list.add(map);
-					obj = map;
-					preObj = obj;
-				}
-				else if (typeTokens[typeIndex].contains("documentList")) {
-					List<Object> list = new ArrayList<Object>();
-					if (preObj.getClass().toString().contains("DataPipeline")) {
-						DataPipeline dp = (DataPipeline) preObj;
-						dp.put(key, list);
-						preObj = list;
-					} else {
-						Map<String, Object> map = (Map<String, Object>) preObj;
-						map.put(key, list);
-						preObj = list;
-					}
-				} else if (typeTokens[typeIndex].endsWith("document")) {
-					obj = new HashMap<String, Object>();
-					if (preObj.getClass().toString().contains("DataPipeline")) {
-						DataPipeline dp = (DataPipeline) preObj;
-						dp.put(key, obj);
-					} else
-						((Map) preObj).put(key, obj);
-					preObj = obj;
-				}else {
-					preObj=new Object[1];
-					this.put(key, preObj);
-				}
-			} else {
-				preObj = obj;
-			}
-			if (!isNumeric)
-				typeIndex++;
-		}
-		key = pointerTokens[tokenCount - 1];
-		isNumeric = NumberUtils.isCreatable(key);
-		if(isNumeric) {
-			Object[] newObject=null;
-
-			int index=Integer.parseInt(key);
-			key = pointerTokens[tokenCount - 2];
-			if(preObj!=null && ((Object[])preObj).length>index) {
-				newObject=((Object[])preObj);
-			}else {
-				switch (valueType) {
-					case "integerlist":
-						newObject=new Integer[index+1];
-						break;
-					case "numberlist":
-						newObject=new Double[index+1];
-						break;
-					case "booleanlist":
-						newObject=new Boolean[index+1];
-						break;
-					case "stringlist":
-						newObject=new String[index+1];
-						break;
-					case "objectlist":
-						newObject=new Object[index+1];
-						break;
-				}
-			}
-			newObject[index]=value;
-			preObj = newObject;
-		}else
-			((Map) preObj).put(key, value);
+		MapUtils.setValueByPointer(pointer,value,outTypePath, this);
 	}
+
+	
 
 	public String toJson() {
 		try {
@@ -539,9 +411,9 @@ public class DataPipeline {
 
 	public void snap(String comment) {
 		try {
-			HashMap<String,Object> map=new HashMap<>();
-			if(comment==null)
-				comment="Commentless step";
+			HashMap<String, Object> map = new HashMap<>();
+			if (comment == null)
+				comment = "Commentless step";
 			map.put("comment", comment);
 			map.put(currentResource, payloadStack);
 			String json = ServiceUtils.toPrettyJson(map);
@@ -550,7 +422,6 @@ public class DataPipeline {
 			ServiceUtils.printException("Exception while taking snapshot.", e);
 		}
 	}
-
 
 	public InputStream getBodyAsStream() throws SnippetException {
 		return ServiceUtils.getBodyAsStream(this);
@@ -629,6 +500,10 @@ public class DataPipeline {
 		return mp;
 	}
 
+	public String getUniqueThreadName() {
+		return "cb_" + (getCurrentResource().hashCode() & 0xfffffff);
+	}
+
 	public String getCurrentResource() {
 		// StackTraceElement[] ste = Thread.currentThread().getStackTrace();
 		// Since its a private method it will be called
@@ -648,53 +523,106 @@ public class DataPipeline {
 		if (map != null)
 			map.clear();
 	}
-
+	private String callingResource = null;
 	public void apply(String fqnOfMethod) throws SnippetException {
-		fqnOfMethod = fqnOfMethod.replace("/", ".");
-		if (!fqnOfMethod.endsWith(".main"))
-			fqnOfMethod += ".main";
-		if (payloadStack.get(fqnOfMethod) != null) {
-			Exception e = new Exception("Can not apply method.");
-			e.setStackTrace(Thread.currentThread().getStackTrace());
-			throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
-		}
-		String curResourceBkp = currentResource;
-		currentResource = fqnOfMethod;
-		resourceStack.add(currentResource);
-		put("*currentResource", currentResource);
+		if(fqnOfMethod==null)
+			return;
 		try {
-			ServiceUtils.execute(fqnOfMethod, this);
-		} catch (SnippetException e) {
-			// currentResource = curResourceBkp;
-			// refresh();
-			throw e;
-			// ServiceUtils.printException("Error caused by "+fqnOfMethod, new
-			// Exception(e));
-		} finally {
-			currentResource = curResourceBkp;
-			refresh();
+
+			fqnOfMethod = fqnOfMethod.replace("/", ".");
+			if (!fqnOfMethod.endsWith(".main"))
+				fqnOfMethod += ".main";
+			if (payloadStack.get(fqnOfMethod) != null) {
+				Exception e = new Exception("Can not apply method.");
+				e.setStackTrace(Thread.currentThread().getStackTrace());
+				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
+			}
+			String callingResource = currentResource;
+			this.callingResource=callingResource;
+			currentResource = fqnOfMethod;
+			resourceStack.add(currentResource);
+			put("*currentResource", currentResource);
+			try {
+				ServiceUtils.execute(fqnOfMethod, this);
+			} catch (SnippetException e) {
+				// currentResource = curResourceBkp;
+				// refresh();
+				throw e;
+				// ServiceUtils.printException("Error caused by "+fqnOfMethod, new
+				// Exception(e));
+			} finally {
+				currentResource = callingResource;
+				this.callingResource=null;
+				refresh();
+			}
+		} catch (Exception e) {
+//			this.logDataPipeline();
+			if(!e.getMessage().contains("packages.middleware.pub.service.exitRepeat"))
+				throw new SnippetException(this,"Something went wrong with fqnOfMethod: "+fqnOfMethod , e);
+			else
+				throw new SnippetException(this,e.getMessage() , e);
 		}
 	}
 
-	public void applyAsync(String fqnOfMethod) throws SnippetException {
+	
+	public void applyAsync(String fqnOfMethod,final JsonArray transformers) throws SnippetException {
+		if(fqnOfMethod==null)
+			return;
 		fqnOfMethod = fqnOfMethod.replace("/", ".");
 		if (!fqnOfMethod.endsWith(".main"))
 			fqnOfMethod += ".main";
 		final String fqnOfFunction = fqnOfMethod;
-		//String curResourceBkp = currentResource;
-		//currentResource = fqnOfFunction;
-		//resourceStack.add(currentResource);
-		//put("*currentResource", currentResource);
+		// String curResourceBkp = currentResource;
+		// currentResource = fqnOfFunction;
+		// resourceStack.add(currentResource);
+		// put("*currentResource", currentResource);
 		final String correlationID = this.getCorrelationId();
 		final Map<String, Object> asyncInputDoc = this.getAsMap("asyncInputDoc");
 		final Map<String, Object> asyncOutputDoc = new HashMap<String, Object>();
 		final Map<String, String> metaData = new HashMap<String, String>();
 		asyncOutputDoc.put("*metaData", metaData);
-		final String uuidAsync = ServiceUtils
-				.generateUUID("Async operation: " + fqnOfFunction + System.nanoTime());
+		final String uuidAsync = ServiceUtils.generateUUID("Async operation: " + fqnOfFunction + System.nanoTime());
 		metaData.put("batchId", uuidAsync);
 		metaData.put("status", "Active");
 		ExecutorService executor = Executors.newSingleThreadExecutor();
+		
+		try {
+			if(transformers!=null) {
+				Map<String, List<JsonOp>> map = FlowUtils.split(transformers, "out");
+				List<JsonOp> leaders = map.get("leaders");
+				for (JsonOp jsonValue : leaders) {
+					String srcPath=jsonValue.getFrom();
+					if(srcPath.contains("*metaData") || srcPath.equals("/asyncOutputDoc"))
+						continue;
+					String keyPath=srcPath.replace("/asyncOutputDoc", "");
+					srcPath=keyPath;
+					//Object val = dpAsync.getValueByPointer(srcPath);
+					///
+					//String[] keyTokens = key.split("/");
+					//String actualKey = (keyTokens[keyTokens.length - 1]);
+					
+					String typePath=jsonValue.getInTypePath();
+					Object value=null;
+					String[] typeTokens = typePath.split("/");
+					String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
+					switch (valueType) {
+					case "documentlist":
+						value=new ArrayList<Object>();
+						break;
+					case "document":
+						value=new HashMap<>();
+						break;
+					}
+					if(value!=null) {
+						final Object newFinalObj=value;
+						MapUtils.setValueByPointer(srcPath, newFinalObj, typePath,asyncOutputDoc);
+					}
+				}
+			}
+		} catch (Exception e) {
+			throw new SnippetException(this, uuidAsync, e);
+		}
+		final String currResrc=currentResource;
 		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(uuidAsync, correlationID, null, fqnOfFunction,
@@ -711,24 +639,47 @@ public class DataPipeline {
 									metaData.put(k, v);
 							});
 						}
-					}/*//Don't delete this code it will required later at some point of time.
-					json = ServiceUtils.toJson(asyncInputDoc);
-					Map<String, Object> mapIn = ServiceUtils.jsonToMap(json);
-					if (mapIn != null && mapIn.size() > 0)
-						mapIn.forEach((k, v) -> {
-							dpAsync.put(k, v);
-						});*/
+					} /*
+						 * //Don't delete this code it will required later at some point of time. json =
+						 * ServiceUtils.toJson(asyncInputDoc); Map<String, Object> mapIn =
+						 * ServiceUtils.jsonToMap(json); if (mapIn != null && mapIn.size() > 0)
+						 * mapIn.forEach((k, v) -> { dpAsync.put(k, v); });
+						 */
 					asyncInputDoc.forEach((k, v) -> {
-						if(v!=null)
+						if (v != null)
 							dpAsync.put(k, v);
 					});
 				}
 				// dpAsync.put("asyncInputDoc", asyncInputDoc);
-				//ServiceUtils.execute(fqnOfFunction, dpAsync);
+				// ServiceUtils.execute(fqnOfFunction, dpAsync);
+				dpAsync.callingResource=currResrc;
 				ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+				
+				
+				
 				Map<String, Object> asyncOut = dpAsync.getMap();
 				asyncOut.forEach((k, v) -> {
-					asyncOutputDoc.put(k, v);
+					if(transformers!=null) {
+					Object obj=dpAsync.get(k);
+					Object outObj=asyncOutputDoc.get(k);
+					if(outObj!=null ) {
+						if(obj instanceof Map) {
+							Map<String, Object> objMap=(Map)obj;
+							Map<String, Object> outObjMap=(Map)outObj;
+							objMap.forEach((mk, mv) -> {
+								outObjMap.put(mk,mv);
+							});
+						}else if(obj instanceof List) {
+							List objLst=(List)obj;
+							List outObjLst=(List)outObj;
+							objLst.forEach((o)->{
+								outObjLst.add(o);
+							});
+						}
+					}else
+						asyncOutputDoc.put(k, v);
+					}else
+						asyncOutputDoc.put(k, v);
 				});
 				metaData.put("status", "Completed");
 				return asyncOutputDoc;
@@ -742,9 +693,13 @@ public class DataPipeline {
 				asyncOutputDoc.put("*metaData", metaData);
 			}
 		});
-		//currentResource = curResourceBkp;
-		//refresh();
+		// currentResource = curResourceBkp;
+		// refresh();
 		put("asyncOutputDoc", asyncOutputDoc);
+	}
+	
+	public void applyAsync(String fqnOfMethod) throws SnippetException {
+		applyAsync(fqnOfMethod, null);
 	}
 
 	public String getMyConfig(String key) throws SnippetException {
@@ -800,7 +755,10 @@ public class DataPipeline {
 	public void log(String msg, Level level) {
 		if (level == null)
 			level = Level.INFO;
-		String log = ServiceUtils.getFormattedLogLine(getCorrelationId(), currentResource, msg);
+		String resource=callingResource;
+		if(resource==null)
+			resource=currentResource;
+		String log = ServiceUtils.getFormattedLogLine(getCorrelationId(), resource, msg);
 		LOGGER.log(level, log);
 	}
 
@@ -818,14 +776,28 @@ public class DataPipeline {
 	}
 
 	public AuthAccount getCurrentRuntimeAccount() throws SnippetException {
-		return UserProfileManager.getUserProfileManager().getAccount(rp.getCurrentLoggedInUserProfile());
+		if(getCurrentUserProfile()==null)
+			return null;
+		return UserProfileManager.getUserProfileManager().getAccount(getCurrentUserProfile());
 	}
-	
+
 	public UserProfile getCurrentUserProfile() throws SnippetException {
 		return rp.getCurrentLoggedInUserProfile();
 	}
 
 	public void clearUserSession() throws SnippetException {
 		rp.logOut();
+	}
+
+	public String getRemoteIpAddr() {
+		try {
+			HttpServerExchange httpServerExchange = rp.getExchange();
+			if (null != httpServerExchange) {
+				return httpServerExchange.getHostAndPort();
+			}
+		} catch (SnippetException e) {
+			e.printStackTrace();
+		}
+		return "localhost";
 	}
 }
