@@ -84,7 +84,8 @@ public class Switch {
 					Object objLablVal=dp.getValueByPointer(pointer);// FlowUtils.placeXPathValue(switchXpath, dp);
 					if(objLablVal!=null)
 						xVal=objLablVal+"";
-				}
+				}else
+					xVal=caseLabel;
 			}else
 				xVal=caseLabel;
 			
@@ -102,7 +103,8 @@ public class Switch {
 				return;
 			}else if(xPathValue!=null && caseLabel.toLowerCase().startsWith("#regex:")) {
 				caseLabel=caseLabel.substring(7);
-				boolean match=FlowUtils.patternMatches(xPathValue,caseLabel);
+				String label=FlowUtils.placeXPathValue(caseLabel, dp);
+				boolean match=FlowUtils.patternMatches(xPathValue,label);
 				if(match) {
 					Scope scope=new Scope(jsonValue.asJsonObject());
 					scope.process(dp);

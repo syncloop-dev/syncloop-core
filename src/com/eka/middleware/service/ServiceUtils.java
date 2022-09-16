@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
@@ -252,6 +253,7 @@ public class ServiceUtils {
 
 	public static final void compileJavaCode(String fqn, DataPipeline dataPipeLine) throws SnippetException {
 		try {
+			ScriptEngineContextManager.clear();
 			ServiceManager.compileJava(fqn, dataPipeLine);
 		} catch (Throwable e) {
 			throw new SnippetException(dataPipeLine, "Error during compilation", new Exception(e));

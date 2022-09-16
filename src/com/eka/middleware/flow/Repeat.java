@@ -38,7 +38,7 @@ public class Repeat {
 		condition = data.getString("condition", null);
 		String status = data.getString("status", null);
 		disabled = "disabled".equals(status);
-		String rt = data.getString("repeat", null);
+		String rt = data.getString("repeat", "0");
 		if(rt.startsWith("#{")) {
 			rt=FlowUtils.extractExpressions(rt)[0];
 		}
@@ -91,6 +91,9 @@ public class Repeat {
 				if ("error".equals(repeatOn))
 					repeatOn = null;
 			} catch (Throwable e) {
+				String msg=e.getMessage();
+				if(msg.contains("packages.middleware.pub.service.exitRepeat"))
+					break;
 				if ("success".equals(repeatOn)) {
 					repeatOn = null;
 					SnippetException se=null;
