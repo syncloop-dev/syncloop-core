@@ -17,32 +17,34 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 
 public class UserProfileManager implements IdentityManager {
-	private static final Map<String, Object> users = new ConcurrentHashMap<String, Object>();
+	private static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
 	private static UserProfileManager upm=null;
 	
 	public static final Map<String, Object> getUsers() throws SystemException {
-		try {
-			byte bytes[] = PropertyManager.readConfigurationFile("profiles.json");
-			if (bytes!=null) {
-				String json = new String(bytes);
-				final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-				final Map<String, Object> usersMap = ((Map<String, Object>)map.get("users"));
-				usersMap.forEach((k,v)->{
-					Map<String, Object> user = (Map<String, Object>) v;
-					String pass=user.get("password").toString();
-					if(!pass.startsWith("[#]")) {
-						String passHash="[#]"+ServiceUtils.generateUUID(pass+k);
-						user.put("password", passHash);
-					}
-				});
-				users.putAll(map);
-				json=ServiceUtils.toPrettyJson(users);
-				PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+		if(PropertyManager.hasfileChanged("profiles.json") || usersMap.size()==0) {
+			try {
+				byte bytes[] = PropertyManager.readConfigurationFile("profiles.json");
+				if (bytes != null) {
+					String json = new String(bytes);
+					final Map<String, Object> map = ServiceUtils.jsonToMap(json);
+					final Map<String, Object> usersMap = ((Map<String, Object>) map.get("users"));
+					usersMap.forEach((k, v) -> {
+						Map<String, Object> user = (Map<String, Object>) v;
+						String pass = user.get("password").toString();
+						if (!pass.startsWith("[#]")) {
+							String passHash = "[#]" + ServiceUtils.generateUUID(pass + k);
+							user.put("password", passHash);
+						}
+					});
+					usersMap.putAll(map);
+					json = ServiceUtils.toPrettyJson(usersMap);
+					PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+				}
+			} catch (Exception e) {
+				throw new SystemException("EKA_MWS_1001", e);
 			}
-		} catch (Exception e) {
-			throw new SystemException("EKA_MWS_1001", e);
 		}
-		return users;
+		return usersMap;
 	}
 	
 	
@@ -70,8 +72,12 @@ public class UserProfileManager implements IdentityManager {
 	@Override
 	public AuthAccount verify(String id, Credential credential) {
 		AuthAccount account = getAccount(id);
-		if (account != null && verifyCredential(account, credential)) {
-			return account;
+		try {
+			if (account != null && verifyCredential(account, credential)) {
+				return account;
+			}
+		} catch (SystemException e) {
+			ServiceUtils.printException("Login exception for "+id, e);
 		}
 
 		return null;
@@ -83,10 +89,10 @@ public class UserProfileManager implements IdentityManager {
 		return null;
 	}
 
-	private boolean verifyCredential(Account account, Credential credential) {
+	private boolean verifyCredential(Account account, Credential credential) throws SystemException {
 		if (credential instanceof PasswordCredential) {
 			char[] password = ((PasswordCredential) credential).getPassword();
-			Map<String, Object> usersMap = (Map<String, Object>) users.get("users");
+			Map<String, Object> usersMap = (Map<String, Object>) getUsers();
 			String userId=account.getPrincipal().getName();
 			Map<String, Object> user = (Map<String, Object>) usersMap.get(userId);
 			if (user == null) {
@@ -105,8 +111,14 @@ public class UserProfileManager implements IdentityManager {
 		return getAccount(id);
 	}
 	
-	private AuthAccount getAccount(final String id) {
-		final Map<String, Object> usersMap = (Map<String, Object>) users.get("users");
+	private AuthAccount getAccount(final String id){
+		Map<String, Object> usersMap=null;
+		try {
+			usersMap = (Map<String, Object>) getUsers();
+		} catch (SystemException e) {
+			ServiceUtils.printException("Could not load users list: "+id, e);
+			return null;
+		}
 		Map<String, Object> user = (Map<String, Object>) usersMap.get(id);
 		
 		if (user!=null) {

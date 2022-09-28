@@ -133,8 +133,10 @@ public class PropertyManager {
     	String absoluteFilePath = getConfigFolderPath() + filePath;
     	File file = new File(absoluteFilePath);
     	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
-    	if (lastModified == null || lastModified < file.lastModified())
+    	if (lastModified == null || lastModified < file.lastModified()) {
+    		lastModifiedMap.put(absoluteFilePath, lastModified);
     		return true;
+    	}
     	return false;
     }
     
@@ -142,8 +144,10 @@ public class PropertyManager {
     	//String absoluteFilePath = getConfigFolderPath() + filePath;
     	File file = new File(filePath);
     	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
-    	if (lastModified == null || lastModified < file.lastModified())
+    	if (lastModified == null || lastModified < file.lastModified()) {
+    		lastModifiedMap.put(filePath, lastModified);
     		return true;
+    	}
     	return false;
     }
 
