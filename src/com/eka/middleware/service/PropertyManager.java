@@ -20,6 +20,7 @@ import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
 
 public class PropertyManager {
     private static final Map<String, Properties> propertiesMap = new ConcurrentHashMap<String, Properties>();
@@ -28,8 +29,23 @@ public class PropertyManager {
     private static String configFolderPath;
     private static String local_IP="localhost";
     
-    public static final Properties getProperties(DataPipeline dataPipeLine, String fileName) throws SnippetException {
+    public static Properties getProperties(String key) {
+    	return propertiesMap.get(key);
+    }
+    
+    public static String getPackagePath(Tenant tenant) {
+    	String tenantName=tenant.getName();
+    	if(tenantName==null || tenantName.trim().length()==0)
+    		return ServiceUtils.getServerProperty("middleware.server.home.dir");
+    	String tenantDir=tenantName;
+    	//if(tenantName.equals("dev"))
+    		//tenantDir="";
+    	return ServiceUtils.getServerProperty("middleware.server.home.dir")+"tenants/"+tenantDir+"/";
+    }
+    
+     public static final Properties getProperties(DataPipeline dataPipeLine, String fileName) throws SnippetException {
         String packageName = dataPipeLine.getCurrentResource();
+        String packagePath=PropertyManager.getPackagePath(dataPipeLine.rp.getTenant());
         if (fileName.startsWith("global"))
             packageName = "global";
         else {
@@ -45,7 +61,7 @@ public class PropertyManager {
         String path = packageName + "/dependency/config/" + fileName;
         Properties props = propertiesMap.get(key);
         try {
-            File uriFile = new File(ServiceManager.packagePath + "packages/" + path);
+            File uriFile = new File(packagePath + "/" + path);
             if (!uriFile.exists()) {
                 return new Properties();
             }
@@ -116,6 +132,15 @@ public class PropertyManager {
     public static boolean hasfileChanged(String filePath) {
     	String absoluteFilePath = getConfigFolderPath() + filePath;
     	File file = new File(absoluteFilePath);
+    	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
+    	if (lastModified == null || lastModified < file.lastModified())
+    		return true;
+    	return false;
+    }
+    
+    public static boolean hasTenantFileChanged(String filePath) {
+    	//String absoluteFilePath = getConfigFolderPath() + filePath;
+    	File file = new File(filePath);
     	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
     	if (lastModified == null || lastModified < file.lastModified())
     		return true;

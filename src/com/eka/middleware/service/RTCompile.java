@@ -36,7 +36,7 @@ public class RTCompile {
 	public static Logger LOGGER = LogManager.getLogger(RTCompile.class);
 	//public static final Map<String, CustomClassLoader> classLoaderMap=new ConcurrentHashMap<>();
 
-	public static Class getClassRef(String fqn, String path, boolean compile) throws Throwable {
+	public static Class getClassRef(String fqn, String path, boolean compile, DataPipeline dp) throws Throwable {
 		List<String> options = new ArrayList<String>();
 		options.add("-cp");
 		String sep = ServiceUtils.getSeparator();
@@ -46,11 +46,12 @@ public class RTCompile {
 		String globalJarsPath = "global/dependency/jars/";
 
 		String currentPath = System.getProperty("java.class.path");
+		String packagePath= PropertyManager.getPackagePath(dp.rp.getTenant());
 		
 		LOGGER.trace("Path Jars: "+currentPath);
 		LOGGER.trace("Package Jars: "+localJarsPath);
 		LOGGER.trace("Global Jars: "+globalJarsPath);
-		String paths[] = ServiceUtils.getJarPaths(localJarsPath);
+		String paths[] = ServiceUtils.getJarPaths(localJarsPath,packagePath+"/packages/");
 		//URL localURLs[] = ServiceUtils.getJarURLs(localJarsPath);
 		//URL currentURLs[]=ServiceUtils.getClassesURLs(currentPath);
 		
@@ -61,7 +62,7 @@ public class RTCompile {
 					localJarsPath += jp + sep;
 			}
 
-		String globalPaths[] = ServiceUtils.getJarPaths(globalJarsPath);
+		String globalPaths[] = ServiceUtils.getJarPaths(globalJarsPath,packagePath+"/packages/");
 		//URL globalURLs[] = ServiceUtils.getJarURLs(globalJarsPath);
 		globalJarsPath = "";
 		if (globalPaths != null && globalPaths.length > 0)
@@ -126,28 +127,28 @@ public class RTCompile {
 				//URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
 				//URLClassLoader child = new URLClassLoader (URLs.toArray(new URL[URLs.size()]), ClassLoader.getSystemClassLoader());
 				//cls=Class.forName (fqn, true, child);
-				CustomClassLoader classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader());// (CustomClassLoader)
+				CustomClassLoader classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);// (CustomClassLoader)
 				cls = classLoader.findClass(fqn);
 			} else
 				throw new Exception("Compilation failed '" + fqn + "'\n " + error);
 		return cls;
 	}
 	
-	private static URL loadClassFromFile(String fqn) throws Exception {
-		// System.out.println(fileName);
-
-		fqn = fqn.replace('.', '/') + ".class";
-		// System.out.println(fileName);
-		URI path = null;
-		try {
-			path = new File((ServiceManager.packagePath + fqn.replace("packages/packages", "packages")).replace("//", "/")).toURI();// ServiceManager.class.getResource(fileName).toURI();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			ServiceUtils.printException(
-					"Failed to create URI '" + ( ServiceManager.packagePath + fqn.replace("packages/packages", "packages")).replace("//", "/") + "'", e);
-		}
-		
-		return path.toURL();
-	}
+//	private static URL loadClassFromFile1(String fqn) throws Exception {
+//		// System.out.println(fileName);
+//		String packagePath=PropertyManager.getPackagePath();
+//		fqn = fqn.replace('.', '/') + ".class";
+//		// System.out.println(fileName);
+//		URI path = null;
+//		try {
+//			path = new File((packagePath + fqn.replace("packages/packages", "packages")).replace("//", "/")).toURI();// ServiceManager.class.getResource(fileName).toURI();
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			ServiceUtils.printException(
+//					"Failed to create URI '" + ( packagePath + fqn.replace("packages/packages", "packages")).replace("//", "/") + "'", e);
+//		}
+//		
+//		return path.toURL();
+//	}
 	
 }

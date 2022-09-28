@@ -24,7 +24,9 @@ import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 
 public class CustomClassLoader extends ClassLoader {
-	public CustomClassLoader(String fqn, String[] paths, ClassLoader parent) {
+	DataPipeline dp=null;
+	public CustomClassLoader(String fqn, String[] paths, ClassLoader parent, DataPipeline dp) {
+		this.dp=dp;
 		if (paths != null && paths.length > 0)
 			try {
 				loadCustomJars(fqn, paths);
@@ -138,7 +140,7 @@ public class CustomClassLoader extends ClassLoader {
 		// System.out.println(name);
 		byte[] b;
 		try {
-			b = loadClassFromFile(name);
+			b = loadClassFromFile(name,dp);
 			return defineClass(name, b, 0, b.length);
 		} catch (SnippetException e) {
 			// TODO Auto-generated catch block
@@ -148,20 +150,21 @@ public class CustomClassLoader extends ClassLoader {
 
 	}
 
-	private byte[] loadClassFromFile(String fileName) throws SnippetException {
+	private byte[] loadClassFromFile(String fileName, DataPipeline dp) throws SnippetException {
 		// System.out.println(fileName);
 
 		fileName = fileName.replace('.', '/') + ".class";
 		// System.out.println(fileName);
+		String packagePath=PropertyManager.getPackagePath(dp.rp.getTenant());
 		URI path = null;
 		try {
 			path = new File(
-					(ServiceManager.packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/"))
+					(packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/"))
 							.toURI();// ServiceManager.class.getResource(fileName).toURI();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			ServiceUtils.printException("Failed to create URI '"
-					+ (ServiceManager.packagePath + fileName.replace("packages/packages", "packages")).replace("//",
+					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//",
 							"/")
 					+ "'", e);
 		}
@@ -191,7 +194,7 @@ public class CustomClassLoader extends ClassLoader {
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			ServiceUtils.printException("Class file not found '"
-					+ (ServiceManager.packagePath + fileName.replace("packages/packages", "packages")).replace("//",
+					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//",
 							"/")
 					+ "'", e);
 		} finally {

@@ -17,6 +17,7 @@ import java.util.Properties;
 import java.util.regex.Pattern;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 
 public class SQL {
@@ -141,8 +142,8 @@ public static Boolean DDL(String sqlCode, List<Map<String,Object>> sqlParameters
 }
 
 
-public static Connection startTransaction(String jdbcConnection) throws Exception {
-	Connection myCon = getConnection(jdbcConnection);	
+public static Connection startTransaction(String jdbcConnection,DataPipeline dp) throws Exception {
+	Connection myCon = getConnection(jdbcConnection,dp);	
 	myCon.setAutoCommit(false);
 	return myCon;
 }
@@ -155,9 +156,9 @@ public static void rollbackTransaction(Connection myCon) throws Exception {
 	myCon.rollback();
 }
 
-public static Connection getConnection(String jdbcConnection) throws Exception {
+public static Connection getConnection(String jdbcConnection,DataPipeline dp) throws Exception {
 	Properties jdbcProperties=new Properties();
-	String pPath=ServiceUtils.getPackagesPath();
+	String pPath=PropertyManager.getPackagePath(dp.rp.getTenant());
 	String connectionPropFile=pPath+"packages"+jdbcConnection+".jdbc";
 	jdbcProperties.load(new FileInputStream(new File(connectionPropFile)));
 	

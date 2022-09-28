@@ -28,6 +28,7 @@ import com.eka.middleware.auth.ResourceAuthenticator;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
 
 import io.undertow.Undertow;
 import io.undertow.Undertow.Builder;
@@ -64,7 +65,7 @@ public class MiddlewareServer {
 			String keyStorePassword=ServiceUtils.getServerProperty("middleware.server.keyStore.jks.password");
 
 			PathHandler pathHandler = Security.init();
-
+			
 			//https="8443";
 			String securePorts[] = null;
 			if(https!=null)
@@ -72,7 +73,7 @@ public class MiddlewareServer {
 			final UserProfileManager identityManager = UserProfileManager.create();
 			try {
 				String uuid = UUID.randomUUID().toString();
-				RuntimePipeline rp = RuntimePipeline.create(uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+				RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(null),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
 						"/execute/packages.middleware.pub.server.core.service.main");
 				rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
 			} catch (Exception e) {
@@ -81,7 +82,7 @@ public class MiddlewareServer {
 
 			try {
 				String uuid = UUID.randomUUID().toString();
-				RuntimePipeline rp = RuntimePipeline.create(uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+				RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(null),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
 						"/execute/packages.middleware.pub.server.core.service.main");
 				rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
 			} catch (Exception e) {

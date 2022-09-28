@@ -7,7 +7,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +19,10 @@ import java.util.concurrent.Future;
 
 import javax.json.JsonArray;
 
+<<<<<<< Updated upstream
 import org.apache.commons.lang3.math.NumberUtils;
+=======
+>>>>>>> Stashed changes
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,14 +32,16 @@ import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
+import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
-import com.eka.middleware.template.SystemException;
+
+import io.undertow.server.HttpServerExchange;
 
 public class DataPipeline {
 	private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
-	private final RuntimePipeline rp;
+	public final RuntimePipeline rp;
 	private final String resource;
 	private MultiPart mp = null;
 	private final Map<String, Map<String, Object>> payloadStack = new HashMap<String, Map<String, Object>>();
@@ -358,7 +363,8 @@ public class DataPipeline {
 	}
 
 	public void save(String name) {
-		File file = new File(ServiceManager.packagePath + "/packages/" + (resource.replace(".", "/")) + "_" + name
+		String packagePath=PropertyManager.getPackagePath(rp.getTenant());
+		File file = new File(packagePath + "/packages/" + (resource.replace(".", "/")) + "_" + name
 				+ "_dataPipeline.json");
 
 		LOGGER.info("Saving dataPipeline: " + file.getAbsolutePath());
@@ -391,8 +397,9 @@ public class DataPipeline {
 	}
 
 	public void restore(String name) {
+		String packagePath=PropertyManager.getPackagePath(rp.getTenant());
 		try {
-			File file = new File(ServiceManager.packagePath + "/packages/" + (currentResource.replace(".", "/")) + "_"
+			File file = new File(packagePath + "/packages/" + (currentResource.replace(".", "/")) + "_"
 					+ name + "_dataPipeline.json");
 			byte[] data = ServiceUtils.readAllBytes(file);
 			String json = new String(data);
@@ -575,6 +582,7 @@ public class DataPipeline {
 		// currentResource = fqnOfFunction;
 		// resourceStack.add(currentResource);
 		// put("*currentResource", currentResource);
+		final RuntimePipeline rp=this.rp;
 		final String correlationID = this.getCorrelationId();
 		final Map<String, Object> asyncInputDoc = this.getAsMap("asyncInputDoc");
 		final Map<String, Object> asyncOutputDoc = new HashMap<String, Object>();
@@ -624,7 +632,7 @@ public class DataPipeline {
 		final String currResrc=currentResource;
 		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
 			try {
-				final RuntimePipeline rpAsync = RuntimePipeline.create(uuidAsync, correlationID, null, fqnOfFunction,
+				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,
 						"");
 				final DataPipeline dpAsync = rpAsync.dataPipeLine;
 				String json = null;

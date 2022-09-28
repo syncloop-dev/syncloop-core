@@ -26,8 +26,8 @@ public class UserProfileManager implements IdentityManager {
 			if (bytes!=null) {
 				String json = new String(bytes);
 				final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-				final Map<String, Object> tanent = ((Map<String, Object>)map.get("dev"));
-				tanent.forEach((k,v)->{
+				final Map<String, Object> usersMap = ((Map<String, Object>)map.get("users"));
+				usersMap.forEach((k,v)->{
 					Map<String, Object> user = (Map<String, Object>) v;
 					String pass=user.get("password").toString();
 					if(!pass.startsWith("[#]")) {
@@ -86,9 +86,9 @@ public class UserProfileManager implements IdentityManager {
 	private boolean verifyCredential(Account account, Credential credential) {
 		if (credential instanceof PasswordCredential) {
 			char[] password = ((PasswordCredential) credential).getPassword();
-			Map<String, Object> tanent = (Map<String, Object>) users.get("dev");
+			Map<String, Object> usersMap = (Map<String, Object>) users.get("users");
 			String userId=account.getPrincipal().getName();
-			Map<String, Object> user = (Map<String, Object>) tanent.get(userId);
+			Map<String, Object> user = (Map<String, Object>) usersMap.get(userId);
 			if (user == null) {
 				return false;
 			}
@@ -106,8 +106,8 @@ public class UserProfileManager implements IdentityManager {
 	}
 	
 	private AuthAccount getAccount(final String id) {
-		final Map<String, Object> tanent = (Map<String, Object>) users.get("dev");
-		Map<String, Object> user = (Map<String, Object>) tanent.get(id);
+		final Map<String, Object> usersMap = (Map<String, Object>) users.get("users");
+		Map<String, Object> user = (Map<String, Object>) usersMap.get(id);
 		
 		if (user!=null) {
 			final Map<String, Object> profile=(Map<String, Object>) user.get("profile");
