@@ -19,10 +19,6 @@ import java.util.concurrent.Future;
 
 import javax.json.JsonArray;
 
-<<<<<<< Updated upstream
-import org.apache.commons.lang3.math.NumberUtils;
-=======
->>>>>>> Stashed changes
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -794,5 +790,17 @@ public class DataPipeline {
 
 	public void clearUserSession() throws SnippetException {
 		rp.logOut();
+	}
+
+	public String getRemoteIpAddr() {
+		try {
+			HttpServerExchange httpServerExchange = rp.getExchange();
+			if (null != httpServerExchange) {
+				return httpServerExchange.getHostAndPort();
+			}
+		} catch (SnippetException e) {
+			e.printStackTrace();
+		}
+		return "localhost";
 	}
 }
