@@ -71,20 +71,14 @@ public class MiddlewareServer {
 			if(https!=null)
 				securePorts=https.split(",");
 			final UserProfileManager identityManager = UserProfileManager.create();
+			List<String> tenants = (List<String>)UserProfileManager.getUsers().get("tenants");
 			try {
-				String uuid = UUID.randomUUID().toString();
-				RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(null),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
-						"/execute/packages.middleware.pub.server.core.service.main");
-				rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
-			} catch (Exception e) {
-				throw new SystemException("EKA_MWS_1008", e);
-			}
-
-			try {
-				String uuid = UUID.randomUUID().toString();
-				RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(null),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
-						"/execute/packages.middleware.pub.server.core.service.main");
-				rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
+				for (String tenant: tenants) {
+					String uuid = UUID.randomUUID().toString();
+					RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+							"/execute/packages.middleware.pub.server.core.service.main");
+					rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
+				}
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);
 			}
