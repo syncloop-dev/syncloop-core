@@ -56,7 +56,7 @@ public class SqlResolver {
 			myCon=(Connection)txConn;
 			//isTxn=true;
 		}else {
-			myCon=SQL.getConnection(sqlProperties.getProperty("JDBC"));
+			myCon=SQL.getConnection(sqlProperties.getProperty("JDBC"),dp);
 			isTxn=false;
 		}
 		

@@ -2,7 +2,7 @@ package com.eka.middleware.flow;
 
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,7 +11,6 @@ import java.util.regex.Pattern;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-import javax.script.Bindings;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
@@ -21,6 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.graalvm.polyglot.Context;
 
+import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.pub.util.document.Function;
 import com.eka.middleware.service.DataPipeline;

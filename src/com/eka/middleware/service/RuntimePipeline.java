@@ -20,6 +20,7 @@ import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
@@ -35,6 +36,7 @@ public class RuntimePipeline {
 	private boolean isDestroyed = false;
 	private Thread currentThread;
 	private BufferedWriter bw = null;
+	private Tenant tenant=null;
 
 	public boolean isExchangeInitialized() {
 		if(exchange==null)
@@ -51,10 +53,11 @@ public class RuntimePipeline {
 	}
 
 	public void writeSnapshot(String resource, String json) {
+		String packagePath=PropertyManager.getPackagePath(getTenant());
 		try {
 			if (bw == null) {
 				String name = sessionId + ".snap";
-				File file = new File(ServiceManager.packagePath + "/snapshots/" + resource + "/" + name);
+				File file = new File(packagePath + "/snapshots/" + resource + "/" + name);
 				file.getParentFile().mkdirs();
 				file.createNewFile();
 				BufferedWriter bufferedWriter = Files.newBufferedWriter(Path.of(file.toURI()));
@@ -82,8 +85,9 @@ public class RuntimePipeline {
 		return sessionId;
 	}
 
-	public RuntimePipeline(String requestId, String correlationId, final HttpServerExchange exchange, String resource,
+	public RuntimePipeline(Tenant tenant, String requestId, String correlationId, final HttpServerExchange exchange, String resource,
 						   String urlPath) {
+		this.tenant=tenant;
 		currentThread = Thread.currentThread();
 		sessionId = requestId;
 		this.exchange = exchange;
@@ -129,15 +133,15 @@ public class RuntimePipeline {
 		}
 	}
 
-	public static RuntimePipeline create(String requestId, String correlationId, final HttpServerExchange exchange,
+	public static RuntimePipeline create(Tenant tenant,String requestId, String correlationId, final HttpServerExchange exchange,
 										 String resource, String urlPath) {
 		// String md5=ServiceUtils.generateMD5(requestId+""+System.nanoTime());
 		RuntimePipeline rp = pipelines.get(requestId);
 		if (rp == null) {
-			rp = new RuntimePipeline(requestId, correlationId, exchange, resource, urlPath);
+			rp = new RuntimePipeline(tenant,requestId, correlationId, exchange, resource, urlPath);
 			pipelines.put(requestId, rp);
 		} else
-			rp = create(requestId, correlationId, exchange, resource, urlPath);
+			rp = create(tenant,requestId, correlationId, exchange, resource, urlPath);
 		return rp;
 	}
 
@@ -176,6 +180,10 @@ public class RuntimePipeline {
 
 	public String getCorrelationId() {
 		return correlationId;
+	}
+
+	public Tenant getTenant() {
+		return tenant;
 	}
 
 	public final Map<String, Object> payload = new ConcurrentHashMap<String, Object>();

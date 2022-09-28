@@ -11,6 +11,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import java.util.Properties;
+import com.eka.middleware.service.PropertyManager;
 
 public final class #className {
 
@@ -20,7 +21,7 @@ public final class #className {
 		try{
 		  if(mainSqlJsonObject==null)
 			synchronized(syncBlock){
-			  String location = ServiceUtils.getPackagesPath();
+			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
 			  if(mainSqlJsonObject==null)
 				  mainSqlJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();

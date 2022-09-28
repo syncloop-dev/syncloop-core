@@ -2,11 +2,13 @@ package com.eka.middleware.service;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.math.NumberUtils;
+
+import com.eka.middleware.heap.HashMap;
 
 public class MapUtils {
 	public static Object getValueByPointer(String pointer,final Object parentMap) {

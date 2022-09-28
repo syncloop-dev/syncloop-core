@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.RTCompile;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
@@ -23,7 +24,7 @@ public class ServiceManager {
 
 //	private static final Map<String, Long> lastModified = new ConcurrentHashMap<String, Long>();
 
-	public static final String packagePath = ServiceUtils.getServerProperty("middleware.server.home.dir");
+	//public static final String packagePath = ServiceUtils.getServerProperty("middleware.server.home.dir");
 
 	public static Class compileJava(final String fqn, final DataPipeline dataPipeLine) throws Throwable {
 
@@ -32,7 +33,8 @@ public class ServiceManager {
 		String className = expandFQN[expandFQN.length - 2];
 		String classFile = fqn.replace(".", "/").replace(className + "/" + funcName, className + ".java");
 		String fqnClass = classFile.replace(".java", "").replace("/", ".");
-
+		final String packagePath=PropertyManager.getPackagePath(dataPipeLine.rp.getTenant());
+		
 		URI path = null;
 		try {
 			// dataPipeLine.log((packagePath + classFile).replace("//", "/"));
@@ -50,7 +52,7 @@ public class ServiceManager {
 		}
 		String classID = fqn;// + "." + lastChangedTime;
 		Class cls = classMap.get(classID);
-		cls = RTCompile.getClassRef(fqnClass, file.getAbsolutePath(), true);
+		cls = RTCompile.getClassRef(fqnClass, file.getAbsolutePath(), true,dataPipeLine);
 		classMap.put(classID, cls);
 		return cls;
 	}

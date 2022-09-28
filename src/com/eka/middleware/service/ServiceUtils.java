@@ -12,7 +12,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -28,13 +28,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.pac4j.core.profile.UserProfile;
+import org.pac4j.undertow.account.Pac4jAccount;
 
+import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
 import com.eka.middleware.template.UriTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -47,6 +51,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 
 import io.undertow.io.Receiver.FullBytesCallback;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
@@ -57,7 +62,10 @@ import io.undertow.util.HttpString;
 
 public class ServiceUtils {
 	//private static final Properties serverProperties = new Properties();
-	private static final Properties urlMappings = new Properties();
+	//private static final Properties urlMappings = new Properties();
+	
+	private static final Map<String, Properties> aliasMap = new ConcurrentHashMap<String, Properties>();
+	
 	private static final Map<String, UriTemplate> parameterResolverMap = new ConcurrentHashMap<String, UriTemplate>();
 	private static final ObjectMapper om = new ObjectMapper();
 	public static final XmlMapper xmlMapper = new XmlMapper();
@@ -68,7 +76,8 @@ public class ServiceUtils {
 		return (OS.indexOf("win") >= 0);
 	}
 
-	public static List<String> searchEndpoints(final String keyword){
+	public static List<String> searchEndpoints(final String keyword, Tenant tenant){
+		Properties urlMappings=getUrlAliasMapping(tenant);
 		Set endpoints=urlMappings.keySet();
 		final List<String> endpointList=new ArrayList<>();
 		endpoints.forEach((k)->{
@@ -106,10 +115,6 @@ public class ServiceUtils {
 		} else {
 			throw new Exception("Un supported OS");
 		}
-	}
-
-	public static final String getPackagesPath() {
-		return ServiceManager.packagePath;
 	}
 
 	public static final String generateUUID(String msg) {
@@ -288,9 +293,19 @@ public class ServiceUtils {
 		
 		return val;
 	}
+	
+	private static Properties getUrlAliasMapping(Tenant tenant) {
+		Properties urlMappings=aliasMap.get(tenant.getName());
+		if(urlMappings==null) {
+			urlMappings=new Properties();
+			aliasMap.put(tenant.getName(), urlMappings);
+		}
+		return urlMappings;
+	}
 
-	public static final String getPathService(String requestPath, Map<String, Object> payload) {
+	public static final String getPathService(String requestPath, Map<String, Object> payload, Tenant tenant) {
 		try {
+			String URLAliasFilePath=PropertyManager.getPackagePath(tenant) +"URLAliasMapping.properties";
 			if (requestPath.contains("//")) {
 				LOGGER.log(Level.INFO, requestPath);
 				return null;
@@ -299,17 +314,21 @@ public class ServiceUtils {
 				requestPath += "$$^%@#";
 				requestPath = requestPath.replace("/$$^%@#", "");
 			}
+			final Properties urlMappings=getUrlAliasMapping(tenant);
 			Map<String, String> pathParams = new HashMap<String, String>();
-			boolean reload = PropertyManager.hasfileChanged("URLAliasMapping.properties");
+			boolean reload = PropertyManager.hasTenantFileChanged(URLAliasFilePath);
 			if (reload) {
-				Properties props=PropertyManager.getServerProperties("URLAliasMapping.properties");
+				Properties props=PropertyManager.getProperties(URLAliasFilePath);
+				if(props==null)
+					props=new Properties();
+				props.load(new FileInputStream(new File(URLAliasFilePath)));
 				Set<Object> keys = props.keySet();
 				//Add keys
 				for (Object keyStr : keys) {
 					String key=keyStr.toString();
 					urlMappings.put(key, props.get(key));
 					UriTemplate parameterResolver = new UriTemplate(key);
-					parameterResolverMap.put(key, parameterResolver);
+					parameterResolverMap.put(tenant.getName()+"-"+key, parameterResolver);
 				}
 				//Remove Keys
 				keys = urlMappings.keySet();
@@ -317,7 +336,7 @@ public class ServiceUtils {
 					String key=keyStr.toString();
 					if(props.get(key)==null) {
 						urlMappings.remove(key);
-						parameterResolverMap.remove(key);
+						parameterResolverMap.remove(tenant.getName()+"-"+key);
 					}
 				}
 			}
@@ -327,7 +346,7 @@ public class ServiceUtils {
 			if (serviceName == null && payload!=null) {
 				Set<Object> keys = urlMappings.keySet();
 				for (Object keyStr : keys) {
-					UriTemplate parameterResolver = parameterResolverMap.get(keyStr.toString());
+					UriTemplate parameterResolver = parameterResolverMap.get(tenant.getName()+"-"+keyStr);
 					if (parameterResolver == null) {
 						continue;
 					}
@@ -367,6 +386,14 @@ public class ServiceUtils {
 		log.append("    ");
 		log.append(info);
 		return log.toString();
+	}
+	
+	public static final Map<String,Object> getFormattedLogMap(String id, String resource, String info) {
+		Map<String, Object> map=new HashMap<>();
+		map.put("id", id);
+		map.put("resource", resource);
+		map.put("log", info);
+		return map;
 	}
 
 	public static final MultiPart getMultiPart(DataPipeline dataPipeLine) throws SnippetException {
@@ -438,7 +465,8 @@ public class ServiceUtils {
 		return mp;
 	}
 
-	public static final String getURLAlias(String fqn) throws Exception {
+	public static final String getURLAlias(String fqn,Tenant tenant) throws Exception {
+		Properties urlMappings=getUrlAliasMapping(tenant);
 		Set<Object> sset = urlMappings.keySet();
 		for (Object setKey : sset) {
 			if (fqn.equalsIgnoreCase(urlMappings.get(setKey).toString()))
@@ -447,13 +475,16 @@ public class ServiceUtils {
 		return null;
 	}
 
-	public static final String registerURLAlias(String fqn, String alias) throws Exception {
+	public static final String registerURLAlias(String fqn, String alias, DataPipeline dp) throws Exception {
 
 		//Map<String, Object> pathParams = new HashMap<String, Object>();
 		//pathParams.put("pathParameters", "");
-		String existingFQN = getPathService(alias, null);
+		String aliasTenantName=dp.rp.getTenant().getName();
+		//alias=aliasTenantName+alias;
+		String existingFQN = getPathService(alias, null,dp.rp.getTenant());
 
 		// String existingFQN=urlMappings.getProperty(alias);
+		Properties urlMappings=getUrlAliasMapping(dp.rp.getTenant());
 		String msg = "Saved";
 		if (existingFQN == null || existingFQN.equalsIgnoreCase(fqn)) {
 			Set<Object> sset = urlMappings.keySet();
@@ -467,7 +498,7 @@ public class ServiceUtils {
 			return msg;
 		}
 		//URL url = new URL(MiddlewareServer.getConfigFolderPath() + "URLAliasMapping.properties");
-		FileOutputStream fos = new FileOutputStream(new File(MiddlewareServer.getConfigFolderPath() + "URLAliasMapping.properties"));
+		FileOutputStream fos = new FileOutputStream(new File(PropertyManager.getPackagePath(dp.rp.getTenant()) +"URLAliasMapping.properties"));
 		urlMappings.store(fos, "");// save(fos, "");
 		fos.flush();
 		fos.close();
@@ -670,11 +701,12 @@ public class ServiceUtils {
 		return null;
 	}
 
-	public static final URL[] getJarURLs(String path) throws Exception {
+	public static final URL[] getJarURLs(String path,String packagePath) throws Exception {
 		URL urls[] = null;
 		String paths[] = null;
-		LOGGER.info("JAR PATH: " + ServiceManager.packagePath + "packages/" + path);
-		File file = new File(ServiceManager.packagePath + "packages/" + path);
+		//String packagePath=PropertyManager.getPackagePath();
+		LOGGER.info("JAR PATH: " + packagePath + path);
+		File file = new File(packagePath + path);
 
 		if (file.isDirectory()) {
 			File files[] = file.listFiles();
@@ -697,7 +729,7 @@ public class ServiceUtils {
 					// customClassLoader);
 					// URLClassLoader urljl=new URLClassLoader(urls, customClassLoader);
 					// urljl.d
-					LOGGER.info("JAR PATH(" + indx + "): " + ServiceManager.packagePath + "packages/" + path);
+					LOGGER.info("JAR PATH(" + indx + "): " + packagePath + path);
 					return urls;
 					// dataPipeline.getPayload().put("package", pname.toString() + " reloaded
 					// successfully");
@@ -733,11 +765,20 @@ public class ServiceUtils {
 		return null;
 	}
 
-	public static final String[] getJarPaths(String path) throws Exception {
+	public static UserProfile getCurrentLoggedInUserProfile(HttpServerExchange exchange) throws SnippetException {
+		final SecurityContext context = exchange.getSecurityContext();
+		if (context != null)
+			return ((Pac4jAccount)context.getAuthenticatedAccount()).getProfile();
+		return null;
+	}
+	
+	
+	public static final String[] getJarPaths(String path,String packagePath) throws Exception {
 		URL urls[] = null;
 		String paths[] = null;
-		LOGGER.info("JAR PATH: " + ServiceManager.packagePath + "packages/" + path);
-		File file = new File(ServiceManager.packagePath + "packages/" + path);
+		//String packagePath=PropertyManager.getPackagePath();
+		LOGGER.info("JAR PATH: " + packagePath + path);
+		File file = new File(packagePath + path);
 
 		if (file.isDirectory()) {
 			File files[] = file.listFiles();
@@ -760,7 +801,7 @@ public class ServiceUtils {
 					// customClassLoader);
 					// URLClassLoader urljl=new URLClassLoader(urls, customClassLoader);
 					// urljl.d
-					LOGGER.info("JAR PATH(" + indx + "): " + ServiceManager.packagePath + "packages/" + path);
+					LOGGER.info("JAR PATH(" + indx + "): " + packagePath + path);
 					return paths;
 					// dataPipeline.getPayload().put("package", pname.toString() + " reloaded
 					// successfully");

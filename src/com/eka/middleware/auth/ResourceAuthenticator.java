@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.eka.middleware.server.ServiceManager;
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
+import com.eka.middleware.template.Tenant;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
@@ -35,13 +37,18 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
 	String userID=authAccount.getUserId();
 	boolean canConsume=false;
 	try {
-		String path = (ServiceManager.packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".service"); 
+		String packagePath=null;
+//		if(authAccount.getAuthProfile()!=null && authAccount.getAuthProfile().get("tenant")!=null)
+//			packagePath=PropertyManager.getPackagePath((String) authAccount.getAuthProfile().get("tenant"));
+//		else
+		packagePath=PropertyManager.getPackagePath(Tenant.getTenant((String)authAccount.getAuthProfile().get("tenant")));
+		String path = (packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".service"); 
 		File file=new File(path);
 		if(!file.exists()) {
-			path=(ServiceManager.packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".sql");
+			path=(packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".sql");
 			file=new File(path);
 			if(!file.exists()) {
-				path=(ServiceManager.packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".flow");
+				path=(packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".flow");
 				file=new File(path);
 				if(!file.exists())
 					file=null;

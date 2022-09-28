@@ -10,6 +10,7 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+import com.eka.middleware.service.PropertyManager;
 import java.util.*;
 import java.net.*;
 
@@ -43,7 +44,7 @@ public final class #className {
 		try{
 		  if(mainflowJsonObject==null)
 			synchronized(syncBlock){
-			  String location = ServiceUtils.getPackagesPath();
+			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
 			  if(mainflowJsonObject==null)
 				  mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
