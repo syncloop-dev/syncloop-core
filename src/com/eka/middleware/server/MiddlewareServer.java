@@ -107,6 +107,7 @@ public class MiddlewareServer {
 			configureUndertow(builder);
 			Undertow server = builder.build();
 			server.start();
+			Security.addExternalOIDCAuthorizationServer();
 		}catch(Exception e) {
 			e.printStackTrace();
 			throw new SystemException("EKA_MWS_1004", e);

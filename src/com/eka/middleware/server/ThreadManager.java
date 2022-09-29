@@ -1,6 +1,7 @@
 package com.eka.middleware.server;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +26,8 @@ import com.eka.middleware.template.SystemException;
 import com.eka.middleware.template.Tenant;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.PathTemplate;
@@ -55,10 +58,34 @@ public class ThreadManager {
 		}
 		if (account != null) {
 			String tenantName = null;
-			if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
-				tenantName = (String) account.getAuthProfile().get("tenant");
-			} else
-				tenantName = "GUEST";
+			if (account.getUserId().equalsIgnoreCase("anonymous")) {
+				Cookie cookie = exchange.getRequestCookie("tenant");
+				if(cookie!=null)
+					tenantName=cookie.getValue();					
+				if (exchange.getQueryParameters().get("tenant") != null && tenantName==null) {
+					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
+					cookie = new CookieImpl("tenant",tenantName);
+				} 
+				
+				if(tenantName==null) {
+					exchange.getResponseSender().send(
+							"You need to pass query parameter tenant=<your tenant name>\n Example:https://console.ekamw.org/my/url?tenant=n9 \n*Note: Tenant name is case sensitive.");
+					exchange.endExchange();
+					return;
+				}
+				
+				account.getAuthProfile().put("tenant", tenantName);
+				List<String> groups=new ArrayList<String>();
+				groups.add("administrators");
+				groups.add("guest");
+				account.getAuthProfile().put("groups",groups);	
+				exchange.setResponseCookie(cookie);
+
+			} 
+				if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
+					tenantName = (String) account.getAuthProfile().get("tenant");
+				} else
+					tenantName = "GUEST";
 			Tenant tenant = Tenant.getTenant(tenantName);
 
 			RuntimePipeline rp = null;
