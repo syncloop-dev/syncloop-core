@@ -1,6 +1,7 @@
 package com.eka.middleware.server;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.ResourceAuthenticator;
+import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.auth.manager.AuthorizationRequest;
 import com.eka.middleware.service.RuntimePipeline;
@@ -25,9 +27,12 @@ import com.eka.middleware.template.SystemException;
 import com.eka.middleware.template.Tenant;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.PathTemplate;
+import io.undertow.util.StatusCodes;
 
 public class ThreadManager {
 	// int
@@ -55,10 +60,44 @@ public class ThreadManager {
 		}
 		if (account != null) {
 			String tenantName = null;
+			if (account.getUserId().equalsIgnoreCase("anonymous")) {
+				Cookie cookie = exchange.getRequestCookie("tenant");
+				if (cookie != null)
+					tenantName = cookie.getValue();
+				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null) {
+					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
+					cookie = new CookieImpl("tenant", tenantName);
+				}
+
+				if (tenantName == null) {
+					exchange.getResponseSender().send(
+							"You need to pass query parameter tenant=<your tenant name>\n Example:https://console.ekamw.org/my/url?tenant=n9 \n*Note: Tenant name is case sensitive.");
+					exchange.endExchange();
+					return;
+				}
+
+				account.getAuthProfile().put("tenant", tenantName);
+				List<String> groups = new ArrayList<String>();
+				groups.add("administrators");
+				groups.add("guest");
+				account.getAuthProfile().put("groups", groups);
+				exchange.setResponseCookie(cookie);
+
+			}
 			if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
 				tenantName = (String) account.getAuthProfile().get("tenant");
-			} else
-				tenantName = "GUEST";
+			} else {
+				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null)
+					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
+				else {
+					tenantName = "default";
+					account.getAuthProfile().put("tenant", tenantName);
+					List<String> groups = new ArrayList<String>();
+					groups.add("default");
+					groups.add("guest");
+					account.getAuthProfile().put("groups", groups);
+				}
+			}
 			Tenant tenant = Tenant.getTenant(tenantName);
 
 			RuntimePipeline rp = null;
@@ -103,7 +142,16 @@ public class ThreadManager {
 
 					boolean isAllowed = false;
 					// if(account.getAuthProfile().get("groups"))
-					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account);
+					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account,requestPath);
+					
+					if(!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
+						exchange.getResponseHeaders().clear();
+						exchange.setStatusCode(StatusCodes.FOUND);
+					    exchange.getResponseHeaders().put(Headers.LOCATION, Security.defaultTenantPage);
+					    exchange.endExchange();
+					    return;
+					}
+					
 					if (!isAllowed) {
 						if (logTransaction == true)
 							LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), resource, "resource"));

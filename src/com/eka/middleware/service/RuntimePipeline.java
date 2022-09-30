@@ -26,7 +26,9 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.session.Session;
+import io.undertow.util.Headers;
 import io.undertow.util.Sessions;
+import io.undertow.util.StatusCodes;
 
 public class RuntimePipeline {
 	private static final Map<String, RuntimePipeline> pipelines = new ConcurrentHashMap<String, RuntimePipeline>();
@@ -69,6 +71,15 @@ public class RuntimePipeline {
 		} catch (Exception e) {
 			ServiceUtils.printException("Exception while saving snapshot.", e);
 		}
+	}
+	
+	public void redirectRequest(String path) throws SnippetException {
+		HttpServerExchange exchange=getExchange();
+		if(exchange==null)
+			return;
+		exchange.getResponseHeaders().clear();
+		exchange.setStatusCode(StatusCodes.FOUND);
+	    exchange.getResponseHeaders().put(Headers.LOCATION, path);
 	}
 
 	public boolean isDestroyed() {
