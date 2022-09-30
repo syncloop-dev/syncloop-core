@@ -19,10 +19,6 @@ import java.util.concurrent.Future;
 
 import javax.json.JsonArray;
 
-<<<<<<< Updated upstream
-import org.apache.commons.lang3.math.NumberUtils;
-=======
->>>>>>> Stashed changes
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
