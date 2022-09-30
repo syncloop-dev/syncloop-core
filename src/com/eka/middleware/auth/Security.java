@@ -17,6 +17,7 @@ import io.undertow.server.handlers.PathHandler;
 
 public class Security {
 	private static final PathHandler path = new PathHandler();
+	public static final String defaultTenantPage="/files/gui/middleware/pub/server/ui/tenant/newTenant.html";
 	private static final Set<String> paths=new HashSet<String>();
 	public static Set<String> getPath() {
 		return paths;

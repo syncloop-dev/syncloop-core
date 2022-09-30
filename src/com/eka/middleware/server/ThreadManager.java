@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.ResourceAuthenticator;
+import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.auth.manager.AuthorizationRequest;
 import com.eka.middleware.service.RuntimePipeline;
@@ -143,13 +144,13 @@ public class ThreadManager {
 					// if(account.getAuthProfile().get("groups"))
 					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account,requestPath);
 					
-//					if(!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
-//						exchange.getResponseHeaders().clear();
-//						exchange.setStatusCode(StatusCodes.FOUND);
-//					    //exchange.getResponseHeaders().put(Headers.LOCATION, "/files/gui/TenantManager/manage/newTenant.html");
-//					    exchange.endExchange();
-//					    return;
-//					}
+					if(!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
+						exchange.getResponseHeaders().clear();
+						exchange.setStatusCode(StatusCodes.FOUND);
+					    exchange.getResponseHeaders().put(Headers.LOCATION, Security.defaultTenantPage);
+					    exchange.endExchange();
+					    return;
+					}
 					
 					if (!isAllowed) {
 						if (logTransaction == true)
