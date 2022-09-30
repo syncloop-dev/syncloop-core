@@ -2,52 +2,34 @@ package com.eka.middleware.server;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.net.InetAddress;
-import java.net.URL;
 import java.security.KeyStore;
 import java.security.SecureRandom;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.eka.middleware.auth.Security;
-import com.eka.middleware.service.PropertyManager;
-import com.eka.middleware.service.RuntimePipeline;
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.LoggerContext;
 
-import com.eka.middleware.auth.ResourceAuthenticator;
+import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.service.PropertyManager;
+import com.eka.middleware.service.RuntimePipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
 import com.eka.middleware.template.Tenant;
 
 import io.undertow.Undertow;
 import io.undertow.Undertow.Builder;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.AuthenticationMode;
-import io.undertow.security.handlers.AuthenticationCallHandler;
-import io.undertow.security.handlers.AuthenticationConstraintHandler;
-import io.undertow.security.handlers.AuthenticationMechanismsHandler;
-import io.undertow.security.handlers.SecurityInitialHandler;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.security.impl.BasicAuthenticationMechanism;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.BlockingHandler;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.session.InMemorySessionManager;
+import io.undertow.server.session.SessionAttachmentHandler;
+import io.undertow.server.session.SessionCookieConfig;
 
 public class MiddlewareServer {
 	public static Logger LOGGER = LogManager.getLogger(MiddlewareServer.class);
@@ -80,15 +62,6 @@ public class MiddlewareServer {
 				throw new SystemException("EKA_MWS_1008", e);
 			}
 
-			try {
-				String uuid = UUID.randomUUID().toString();
-				RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(null),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
-						"/execute/packages.middleware.pub.server.core.service.main");
-				rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
-			} catch (Exception e) {
-				throw new SystemException("EKA_MWS_1008", e);
-			}
-
 			Builder builder = Undertow.builder();
 			for (String port : ports) {
 				builder.addHttpListener(Integer.parseInt(port), local_IP).setHandler(
@@ -107,7 +80,7 @@ public class MiddlewareServer {
 			configureUndertow(builder);
 			Undertow server = builder.build();
 			server.start();
-			Security.addExternalOIDCAuthorizationServer();
+			//Security.addExternalOIDCAuthorizationServer();
 		}catch(Exception e) {
 			e.printStackTrace();
 			throw new SystemException("EKA_MWS_1004", e);

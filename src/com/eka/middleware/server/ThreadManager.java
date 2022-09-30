@@ -31,6 +31,7 @@ import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.PathTemplate;
+import io.undertow.util.StatusCodes;
 
 public class ThreadManager {
 	// int
@@ -60,32 +61,42 @@ public class ThreadManager {
 			String tenantName = null;
 			if (account.getUserId().equalsIgnoreCase("anonymous")) {
 				Cookie cookie = exchange.getRequestCookie("tenant");
-				if(cookie!=null)
-					tenantName=cookie.getValue();					
-				if (exchange.getQueryParameters().get("tenant") != null && tenantName==null) {
+				if (cookie != null)
+					tenantName = cookie.getValue();
+				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null) {
 					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
-					cookie = new CookieImpl("tenant",tenantName);
-				} 
-				
-				if(tenantName==null) {
+					cookie = new CookieImpl("tenant", tenantName);
+				}
+
+				if (tenantName == null) {
 					exchange.getResponseSender().send(
 							"You need to pass query parameter tenant=<your tenant name>\n Example:https://console.ekamw.org/my/url?tenant=n9 \n*Note: Tenant name is case sensitive.");
 					exchange.endExchange();
 					return;
 				}
-				
+
 				account.getAuthProfile().put("tenant", tenantName);
-				List<String> groups=new ArrayList<String>();
+				List<String> groups = new ArrayList<String>();
 				groups.add("administrators");
 				groups.add("guest");
-				account.getAuthProfile().put("groups",groups);	
+				account.getAuthProfile().put("groups", groups);
 				exchange.setResponseCookie(cookie);
 
-			} 
-				if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
-					tenantName = (String) account.getAuthProfile().get("tenant");
-				} else
-					tenantName = "GUEST";
+			}
+			if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
+				tenantName = (String) account.getAuthProfile().get("tenant");
+			} else {
+				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null)
+					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
+				else {
+					tenantName = "default";
+					account.getAuthProfile().put("tenant", tenantName);
+					List<String> groups = new ArrayList<String>();
+					groups.add("default");
+					groups.add("guest");
+					account.getAuthProfile().put("groups", groups);
+				}
+			}
 			Tenant tenant = Tenant.getTenant(tenantName);
 
 			RuntimePipeline rp = null;
@@ -130,7 +141,16 @@ public class ThreadManager {
 
 					boolean isAllowed = false;
 					// if(account.getAuthProfile().get("groups"))
-					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account);
+					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account,requestPath);
+					
+					if(!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
+						exchange.getResponseHeaders().clear();
+						exchange.setStatusCode(StatusCodes.FOUND);
+					    exchange.getResponseHeaders().put(Headers.LOCATION, "/files/gui/TenantManager/manage/newTenant.html");
+					    exchange.endExchange();
+					    return;
+					}
+					
 					if (!isAllowed) {
 						if (logTransaction == true)
 							LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), resource, "resource"));

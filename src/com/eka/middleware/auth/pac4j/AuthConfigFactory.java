@@ -1,5 +1,6 @@
 package com.eka.middleware.auth.pac4j;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -111,6 +112,8 @@ public class AuthConfigFactory implements ConfigFactory {
 					final OidcClient oidcClient = new OidcClient(oidcConfiguration);
 					oidcClient.setAuthorizationGenerator((ctx, session, profile) -> {
 						profile.addRole("ROLE_ADMIN");
+						if(profile.getAttribute("email")==null)
+							profile.addAttribute("email", profile.getId());
 						return Optional.of(profile);
 
 					});
@@ -121,31 +124,31 @@ public class AuthConfigFactory implements ConfigFactory {
 		return OIDCAuthClientConfig;
 	}
 
-	public static Config getOIDCAuthClientConfig(Properties props) throws SystemException {
+	public static Config getOIDCAuthClientConfig(Map<String,Object> props) throws SystemException {
 		OidcConfiguration oidcConfiguration = null;
 		oidcConfiguration = new OidcConfiguration();
-		oidcConfiguration.setClientId(props.getProperty("clientId"));
-		oidcConfiguration.setSecret(props.getProperty("secret"));
-		oidcConfiguration.setDiscoveryURI(props.getProperty("discoveryURI"));
+		oidcConfiguration.setClientId((String)props.get("clientId"));
+		oidcConfiguration.setSecret((String)props.get("secret"));
+		oidcConfiguration.setDiscoveryURI((String)props.get("discoveryURI"));
 		oidcConfiguration.setUseNonce(true);
-		String preferedJwsAlgo = props.getProperty("preferredJwsAlgorithm");
+		String preferedJwsAlgo = (String)props.get("preferredJwsAlgorithm");
 		if (preferedJwsAlgo != null)
 			try {
 				JWSAlgorithm jwsAlgo = new JWSAlgorithm(preferedJwsAlgo);
 				oidcConfiguration.setPreferredJwsAlgorithm(jwsAlgo);
 				oidcConfiguration
-						.setProviderMetadata(ServiceUtils.fetchMetadata(props.getProperty("discoveryURI"), jwsAlgo));
+						.setProviderMetadata(ServiceUtils.fetchMetadata((String)props.get("discoveryURI"), jwsAlgo));
 			} catch (Exception e) {
 				System.err.println("Failed to validate Bearer token: " + e.getMessage());
 				e.printStackTrace();
 			}
 
-		Set<Object> keys = props.keySet();
-		for (Object keyStr : keys) {
+		Set<String> keys = props.keySet();
+		for (String keyStr : keys) {
 			String key = keyStr.toString();
 			if (key.startsWith("customParam")) {
 				String customKey = key.replace("customParam.", "");
-				String val = props.getProperty(key);
+				String val = (String)props.get(key);
 				oidcConfiguration.addCustomParam(customKey, val);
 			}
 		}

@@ -9,6 +9,11 @@ import io.undertow.security.idm.Account;
 
 public class AuthAccount implements Account{
 	
+	public static final String STATIC_ADMIN_GROUP="administrators";
+	public static final String STATIC_DEVELOPER_GROUP="developers";
+	public static final String STATIC_RND_GROUP="rnd";
+	public static final String STATIC_DEFAULT_GROUP="default";
+	
 	public String getUserId() {
 		return userId;
 	}

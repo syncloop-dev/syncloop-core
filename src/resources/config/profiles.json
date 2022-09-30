@@ -27,7 +27,7 @@
           "verified" : true
         },
         "phone" : {
-          "number" : "4387255626",
+          "number" : "9898765789",
           "verified" : true
         },
         "groups" : [ "developers", "administrators", "rnd" ],
@@ -44,7 +44,7 @@
           "verified" : true
         },
         "phone" : {
-          "number" : "4387255626",
+          "number" : "9898765789",
           "verified" : true
         },
         "groups" : [ "abc" ],
@@ -61,7 +61,7 @@
           "verified" : true
         },
         "phone" : {
-          "number" : "4387255626",
+          "number" : "9898765789",
           "verified" : true
         },
         "groups" : [ "xyz" ],
@@ -78,7 +78,7 @@
           "verified" : true
         },
         "phone" : {
-          "number" : "4387255626",
+          "number" : "9898765789",
           "verified" : true
         },
         "groups" : [ "group1", "administrators" ],
@@ -95,11 +95,28 @@
           "verified" : true
         },
         "phone" : {
-          "number" : "4387255626",
+          "number" : "9898765789",
           "verified" : true
         },
         "groups" : [ "group2" ],
         "tenant" : "dev"
+      }
+    },
+    "su" : {
+      "password" : "[#]9e31172c-82c6-39c0-a472-1131d319d06c",
+      "profile" : {
+        "name" : "RND",
+        "lastName" : "User",
+        "email" : {
+          "id" : "dev@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "0980988909",
+          "verified" : true
+        },
+        "groups" : [ "developers", "administrators", "rnd" ],
+        "tenant" : "default"
       }
     }
   },

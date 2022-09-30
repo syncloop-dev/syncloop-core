@@ -1,7 +1,9 @@
 package com.eka.middleware.auth;
 
+import java.util.Map;
 import java.util.Properties;
 
+import org.pac4j.core.config.Config;
 import org.pac4j.undertow.handler.CallbackHandler;
 import org.pac4j.undertow.handler.SecurityHandler;
 
@@ -18,7 +20,6 @@ public static PathHandler init() throws Exception{
 	path.addPrefixPath("/files/gui/middleware/pub/server/ui/welcome/", SecurityHandler.build(AuthHandlers.indexHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 	path.addExactPath("/jwt", SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
 	path.addExactPath("/JWT", SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
-	path.addExactPath("/callback", CallbackHandler.build(AuthConfigFactory.getOIDCAuthClientConfig(), null));
     path.addPrefixPath("/", AuthHandlers.mainHandler);
     return path;
 }
@@ -31,16 +32,17 @@ public static void addPublicPrefixPath(String resourcePrefixPath) {
 	path.addExactPath(resourcePrefixPath, SecurityHandler.build(AuthHandlers.indexHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 }
 
-public static void addExternalOIDCAuthorizationServer(String resourcePath,Properties props) throws Exception {
-	path.addExactPath(resourcePath.toUpperCase(), SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getOIDCAuthClientConfig(props)));
-	path.addExactPath(resourcePath.toLowerCase(), SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getOIDCAuthClientConfig(props)));
-	path.addExactPath(resourcePath, SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getOIDCAuthClientConfig(props)));
+public static String addExternalOIDCAuthorizationServer(Map<String, Object> props,String name) throws Exception {
+	
+	Config conf= AuthConfigFactory.getOIDCAuthClientConfig(props);
+	path.addExactPath("/execute/"+name, SecurityHandler.build(AuthHandlers.mainHandler, conf));
+	path.addExactPath("/callback", CallbackHandler.build(conf, null));
+	return "Login url 'https://<server>:<port>/execute/"+name+"'";
 }
 
-public static void addExternalOIDCAuthorizationServer() throws Exception {
-	path.addExactPath("oidc".toUpperCase(), SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getOIDCAuthClientConfig()));
-	path.addExactPath("oidc", SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getOIDCAuthClientConfig()));
-	
+public static void removePath(String resourcePath) throws Exception {
+	path.removeExactPath(resourcePath);
+	path.removePrefixPath(resourcePath);
 }
 
 }

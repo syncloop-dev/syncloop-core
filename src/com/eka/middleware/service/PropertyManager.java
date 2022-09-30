@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.net.InetAddress;
-import java.net.URI;
 import java.net.URL;
 import java.util.Map;
 import java.util.Properties;
@@ -17,7 +16,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 
 import com.eka.middleware.server.MiddlewareServer;
-import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
 import com.eka.middleware.template.Tenant;
@@ -45,7 +43,7 @@ public class PropertyManager {
     
      public static final Properties getProperties(DataPipeline dataPipeLine, String fileName) throws SnippetException {
         String packageName = dataPipeLine.getCurrentResource();
-        String packagePath=PropertyManager.getPackagePath(dataPipeLine.rp.getTenant());
+        String packagePath=PropertyManager.getPackagePath(dataPipeLine.rp.getTenant())+"packages/";
         if (fileName.startsWith("global"))
             packageName = "global";
         else {
@@ -134,6 +132,7 @@ public class PropertyManager {
     	File file = new File(absoluteFilePath);
     	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
     	if (lastModified == null || lastModified < file.lastModified()) {
+    		lastModified=file.lastModified();
     		lastModifiedMap.put(absoluteFilePath, lastModified);
     		return true;
     	}
@@ -145,6 +144,7 @@ public class PropertyManager {
     	File file = new File(filePath);
     	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
     	if (lastModified == null || lastModified < file.lastModified()) {
+    		lastModified=file.lastModified();
     		lastModifiedMap.put(filePath, lastModified);
     		return true;
     	}
