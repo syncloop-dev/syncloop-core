@@ -2,6 +2,7 @@ package com.eka.middleware.auth;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -52,6 +53,22 @@ public class UserProfileManager implements IdentityManager {
 			}
 		}
 		return usersMap;
+	}
+	
+	public static List<String> getTenants() {
+		byte bytes[]=null;
+		try {
+			bytes = PropertyManager.readConfigurationFile("profiles.json");
+		} catch (SystemException e) {
+			ServiceUtils.printException("Failed while loading tenant list", e);
+		}
+		List<String> tenants = null;
+		if (bytes != null) {
+			String json = new String(bytes);
+			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
+			tenants=(List<String>)map.get("tenants");
+		}
+		return tenants;
 	}
 
 	public static void addUser(AuthAccount account) throws SystemException {

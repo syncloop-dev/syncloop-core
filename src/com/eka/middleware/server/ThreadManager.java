@@ -143,13 +143,13 @@ public class ThreadManager {
 					// if(account.getAuthProfile().get("groups"))
 					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account,requestPath);
 					
-					if(!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
-						exchange.getResponseHeaders().clear();
-						exchange.setStatusCode(StatusCodes.FOUND);
-					    exchange.getResponseHeaders().put(Headers.LOCATION, "/files/gui/TenantManager/manage/newTenant.html");
-					    exchange.endExchange();
-					    return;
-					}
+//					if(!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
+//						exchange.getResponseHeaders().clear();
+//						exchange.setStatusCode(StatusCodes.FOUND);
+//					    //exchange.getResponseHeaders().put(Headers.LOCATION, "/files/gui/TenantManager/manage/newTenant.html");
+//					    exchange.endExchange();
+//					    return;
+//					}
 					
 					if (!isAllowed) {
 						if (logTransaction == true)

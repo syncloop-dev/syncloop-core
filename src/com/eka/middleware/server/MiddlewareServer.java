@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,11 +54,14 @@ public class MiddlewareServer {
 			if(https!=null)
 				securePorts=https.split(",");
 			final UserProfileManager identityManager = UserProfileManager.create();
+			List<String> tenants = UserProfileManager.getTenants();
 			try {
-				String uuid = UUID.randomUUID().toString();
-				RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(null),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
-						"/execute/packages.middleware.pub.server.core.service.main");
-				rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
+				for (String tenant: tenants) {
+					String uuid = UUID.randomUUID().toString();
+					RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+							"/execute/packages.middleware.pub.server.core.service.main");
+					rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
+				}
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);
 			}
