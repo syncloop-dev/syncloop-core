@@ -1,9 +1,12 @@
 package com.eka.middleware.auth;
 
+import java.security.Principal;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.pac4j.core.profile.UserProfile;
@@ -69,6 +72,16 @@ public class UserProfileManager implements IdentityManager {
 			tenants=(List<String>)map.get("tenants");
 		}
 		return tenants;
+	}
+	
+	public static void newTenant(String name) throws Exception {
+		final Map<String, Object> map = new HashMap();
+		List<String> tenants = getTenants();
+		tenants.add(name);
+		map.put("tenants", tenants);
+		map.put("users", getUsers());
+		String json = ServiceUtils.toPrettyJson(map);
+		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
 	}
 
 	public static void addUser(AuthAccount account) throws SystemException {
@@ -197,4 +210,158 @@ public class UserProfileManager implements IdentityManager {
 		profile.put("groups", groups);
 		return profile;
 	}
+	
+	public static final UserProfile SYSTEM_PROFILE =new UserProfile(){
+
+		@Override
+		public String getId() {
+			// TODO Auto-generated method stub
+			return "SYSTEM";
+		}
+
+		@Override
+		public void setId(String id) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public String getTypedId() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public String getUsername() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Object getAttribute(String name) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Map<String, Object> getAttributes() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public boolean containsAttribute(String name) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public void addAttribute(String key, Object value) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void removeAttribute(String key) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void addAuthenticationAttribute(String key, Object value) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void removeAuthenticationAttribute(String key) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void addRole(String role) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void addRoles(Collection<String> roles) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public Set<String> getRoles() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void addPermission(String permission) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void addPermissions(Collection<String> permissions) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public Set<String> getPermissions() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public boolean isRemembered() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public void setRemembered(boolean rme) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public String getClientName() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void setClientName(String clientName) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public String getLinkedId() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void setLinkedId(String linkedId) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public boolean isExpired() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public Principal asPrincipal() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+	};
+	
 }

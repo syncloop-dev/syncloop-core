@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
@@ -730,6 +731,18 @@ public class DataPipeline {
 		Properties props = PropertyManager.getProperties(this, "package.properties");
 		return props.getProperty(key);
 	}
+	
+	public String getMyPackageConfigPath() {
+		String packagePath=PropertyManager.getPackagePath(rp.getTenant())+"packages/";
+		String packageName = getCurrentResource();
+		String pkg[] = packageName.split(Pattern.quote("."));
+        if (pkg.length == 1)
+            packageName = pkg[0];
+        else
+            packageName = pkg[1];
+        String path = packageName + "/dependency/config";
+		return path;
+	}
 
 	public Properties getMyProperties() throws SnippetException {
 		Properties props = PropertyManager.getProperties(this, getCurrentResource() + ".properties");
@@ -793,13 +806,16 @@ public class DataPipeline {
 	}
 
 	public String getRemoteIpAddr() {
+		
+		if(!rp.isExchangeInitialized())
+			return "localhost";
 		try {
 			HttpServerExchange httpServerExchange = rp.getExchange();
 			if (null != httpServerExchange) {
 				return httpServerExchange.getHostAndPort();
 			}
 		} catch (SnippetException e) {
-			e.printStackTrace();
+			ServiceUtils.printException("Exchange not initialized..", e);
 		}
 		return "localhost";
 	}

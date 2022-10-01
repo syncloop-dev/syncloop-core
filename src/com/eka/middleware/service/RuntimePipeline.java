@@ -109,6 +109,10 @@ public class RuntimePipeline {
 	}
 
 	public UserProfile getCurrentLoggedInUserProfile() throws SnippetException {
+		
+		if(!isExchangeInitialized())
+			return UserProfileManager.SYSTEM_PROFILE;
+		
 		final SecurityContext context = getExchange().getSecurityContext();
 		if (context != null)
 			return ((Pac4jAccount)context.getAuthenticatedAccount()).getProfile();

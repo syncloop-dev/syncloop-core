@@ -163,6 +163,7 @@ public static Connection getConnection(String jdbcConnection,DataPipeline dp) th
 	jdbcProperties.load(new FileInputStream(new File(connectionPropFile)));
 	
 	String connectionUrl=jdbcProperties.getProperty("url");
+	connectionUrl=connectionUrl.replace("#{PackageConfig}", dp.getMyPackageConfigPath());
 	String driver=jdbcProperties.getProperty("driver");
 	String username=jdbcProperties.getProperty("username");
 	String password=jdbcProperties.getProperty("password");

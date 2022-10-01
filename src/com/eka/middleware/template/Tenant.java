@@ -19,6 +19,10 @@ public static Tenant getTenant(String name) {
 	return tenantMap.get(name);
 }
 
+public static boolean exists(String name) {
+	return tenantMap.get(name)!=null;
+}
+
 private Tenant(String name) {
 	this.name=name;
 }

@@ -58,6 +58,10 @@ public class MiddlewareServer {
 			try {
 				for (String tenant: tenants) {
 					String uuid = UUID.randomUUID().toString();
+					String dirPath=PropertyManager.getPackagePath(Tenant.getTenant(tenant))+"packages";
+					File dir=new File(dirPath);
+					if(!dir.exists())
+						continue;
 					RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
 							"/execute/packages.middleware.pub.server.core.service.main");
 					rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");

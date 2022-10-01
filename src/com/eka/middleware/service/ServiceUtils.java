@@ -10,6 +10,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 //import java.util.HashMap;
@@ -20,9 +23,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
@@ -31,9 +36,10 @@ import org.apache.logging.log4j.Logger;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
+import com.eka.middleware.auth.AuthAccount;
+import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
-import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
@@ -61,30 +67,32 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
 public class ServiceUtils {
-	//private static final Properties serverProperties = new Properties();
-	//private static final Properties urlMappings = new Properties();
-	
+	// private static final Properties serverProperties = new Properties();
+	// private static final Properties urlMappings = new Properties();
+
 	private static final Map<String, Properties> aliasMap = new ConcurrentHashMap<String, Properties>();
-	
+
 	private static final Map<String, UriTemplate> parameterResolverMap = new ConcurrentHashMap<String, UriTemplate>();
 	private static final ObjectMapper om = new ObjectMapper();
 	public static final XmlMapper xmlMapper = new XmlMapper();
 	public static final YAMLMapper yamlMapper = new YAMLMapper();
 	public static Logger LOGGER = LogManager.getLogger(ServiceUtils.class);
 	private static final String OS = System.getProperty("os.name").toLowerCase();
+
 	public static boolean isWindows() {
 		return (OS.indexOf("win") >= 0);
 	}
 
-	public static List<String> searchEndpoints(final String keyword, Tenant tenant){
-		Properties urlMappings=getUrlAliasMapping(tenant);
-		Set endpoints=urlMappings.keySet();
-		final List<String> endpointList=new ArrayList<>();
-		endpoints.forEach((k)->{
-			String key=k+"";
-			String value=urlMappings.getProperty(key,"");
-			if(keyword==null || keyword.trim().length()==0 || value.toLowerCase().contains(keyword.toLowerCase()) || key.toLowerCase().trim().contains(keyword.toLowerCase()))
-				endpointList.add(key+" : "+value);
+	public static List<String> searchEndpoints(final String keyword, Tenant tenant) {
+		Properties urlMappings = getUrlAliasMapping(tenant);
+		Set endpoints = urlMappings.keySet();
+		final List<String> endpointList = new ArrayList<>();
+		endpoints.forEach((k) -> {
+			String key = k + "";
+			String value = urlMappings.getProperty(key, "");
+			if (keyword == null || keyword.trim().length() == 0 || value.toLowerCase().contains(keyword.toLowerCase())
+					|| key.toLowerCase().trim().contains(keyword.toLowerCase()))
+				endpointList.add(key + " : " + value);
 		});
 		return endpointList;
 	}
@@ -94,9 +102,7 @@ public class ServiceUtils {
 	}
 
 	public static boolean isUnix() {
-		return (OS.indexOf("nix") >= 0
-				|| OS.indexOf("nux") >= 0
-				|| OS.indexOf("aix") > 0);
+		return (OS.indexOf("nix") >= 0 || OS.indexOf("nux") >= 0 || OS.indexOf("aix") > 0);
 	}
 
 	public static boolean isSolaris() {
@@ -128,16 +134,14 @@ public class ServiceUtils {
 		return json;
 	}
 
-
 	public static final String toPrettyJson(Map<String, Object> map) throws Exception {
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
 		return json;
 	}
 
-
 	public static final byte[] readAllBytes(File file) throws Exception {
-		if(!file.exists())
+		if (!file.exists())
 			return null;
 		FileInputStream fis = null;
 		ByteArrayOutputStream baos = null;
@@ -225,23 +229,24 @@ public class ServiceUtils {
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
-		//System.out.println(json);
+		// System.out.println(json);
 	}
 
-	public static Object getExceptionMap(Exception e){
-		Map<String, Object> lastErrorDump=new HashMap<>();
-		if(e==null)
-			e=new SystemException("EKA_MWS_1007", new Exception("Exception thrown is null but it's not clear if it's null pointer exception"));
+	public static Object getExceptionMap(Exception e) {
+		Map<String, Object> lastErrorDump = new HashMap<>();
+		if (e == null)
+			e = new SystemException("EKA_MWS_1007",
+					new Exception("Exception thrown is null but it's not clear if it's null pointer exception"));
 		if (e instanceof SnippetException) {
-			lastErrorDump.put("lastErrorDump", (SnippetException)e);
+			lastErrorDump.put("lastErrorDump", (SnippetException) e);
 		} else {
 			lastErrorDump.put("lastErrorDump", e);
 		}
 
-		String json=null;
+		String json = null;
 		try {
-			json=ServiceUtils.toJson(lastErrorDump);
-			lastErrorDump=ServiceUtils.jsonToMap(json);
+			json = ServiceUtils.toJson(lastErrorDump);
+			lastErrorDump = ServiceUtils.jsonToMap(json);
 		} catch (Exception e2) {
 			// TODO: handle exception
 			lastErrorDump.clear();
@@ -251,8 +256,8 @@ public class ServiceUtils {
 	}
 
 	public static final void execute(String fqn, DataPipeline dataPipeLine) throws SnippetException {
-		if(!fqn.endsWith(".main"))
-			fqn+=".main";
+		if (!fqn.endsWith(".main"))
+			fqn += ".main";
 		ServiceManager.invokeJavaMethod(fqn, dataPipeLine);
 	}
 
@@ -290,22 +295,25 @@ public class ServiceUtils {
 		} catch (SystemException e) {
 			e.printStackTrace();
 		}
-		
+
 		return val;
 	}
-	
+
 	private static Properties getUrlAliasMapping(Tenant tenant) {
-		Properties urlMappings=aliasMap.get(tenant.getName());
-		if(urlMappings==null) {
-			urlMappings=new Properties();
+		Properties urlMappings = aliasMap.get(tenant.getName());
+		if (urlMappings == null) {
+			urlMappings = new Properties();
 			aliasMap.put(tenant.getName(), urlMappings);
 		}
 		return urlMappings;
 	}
 
 	public static final String getPathService(String requestPath, Map<String, Object> payload, Tenant tenant) {
+		
+		if(requestPath.startsWith("GET/packages"))
+			return requestPath.split("/")[1];
 		try {
-			String URLAliasFilePath=PropertyManager.getPackagePath(tenant) +"URLAliasMapping.properties";
+			String URLAliasFilePath = PropertyManager.getPackagePath(tenant) + "URLAliasMapping.properties";
 			if (requestPath.contains("//")) {
 				LOGGER.log(Level.INFO, requestPath);
 				return null;
@@ -314,39 +322,39 @@ public class ServiceUtils {
 				requestPath += "$$^%@#";
 				requestPath = requestPath.replace("/$$^%@#", "");
 			}
-			final Properties urlMappings=getUrlAliasMapping(tenant);
+			final Properties urlMappings = getUrlAliasMapping(tenant);
 			Map<String, String> pathParams = new HashMap<String, String>();
 			boolean reload = PropertyManager.hasTenantFileChanged(URLAliasFilePath);
 			if (reload) {
-				Properties props=PropertyManager.getProperties(URLAliasFilePath);
-				if(props==null)
-					props=new Properties();
+				Properties props = PropertyManager.getProperties(URLAliasFilePath);
+				if (props == null)
+					props = new Properties();
 				props.load(new FileInputStream(new File(URLAliasFilePath)));
 				Set<Object> keys = props.keySet();
-				//Add keys
+				// Add keys
 				for (Object keyStr : keys) {
-					String key=keyStr.toString();
+					String key = keyStr.toString();
 					urlMappings.put(key, props.get(key));
 					UriTemplate parameterResolver = new UriTemplate(key);
-					parameterResolverMap.put(tenant.getName()+"-"+key, parameterResolver);
+					parameterResolverMap.put(tenant.getName() + "-" + key, parameterResolver);
 				}
-				//Remove Keys
+				// Remove Keys
 				keys = urlMappings.keySet();
 				for (Object keyStr : keys) {
-					String key=keyStr.toString();
-					if(props.get(key)==null) {
+					String key = keyStr.toString();
+					if (props.get(key) == null) {
 						urlMappings.remove(key);
-						parameterResolverMap.remove(tenant.getName()+"-"+key);
+						parameterResolverMap.remove(tenant.getName() + "-" + key);
 					}
 				}
 			}
 			String serviceName = urlMappings.getProperty(requestPath + "/*");
 			if (serviceName == null)
 				serviceName = urlMappings.getProperty(requestPath);
-			if (serviceName == null && payload!=null) {
+			if (serviceName == null && payload != null) {
 				Set<Object> keys = urlMappings.keySet();
 				for (Object keyStr : keys) {
-					UriTemplate parameterResolver = parameterResolverMap.get(tenant.getName()+"-"+keyStr);
+					UriTemplate parameterResolver = parameterResolverMap.get(tenant.getName() + "-" + keyStr);
 					if (parameterResolver == null) {
 						continue;
 					}
@@ -387,9 +395,9 @@ public class ServiceUtils {
 		log.append(info);
 		return log.toString();
 	}
-	
-	public static final Map<String,Object> getFormattedLogMap(String id, String resource, String info) {
-		Map<String, Object> map=new HashMap<>();
+
+	public static final Map<String, Object> getFormattedLogMap(String id, String resource, String info) {
+		Map<String, Object> map = new HashMap<>();
 		map.put("id", id);
 		map.put("resource", resource);
 		map.put("log", info);
@@ -465,8 +473,8 @@ public class ServiceUtils {
 		return mp;
 	}
 
-	public static final String getURLAlias(String fqn,Tenant tenant) throws Exception {
-		Properties urlMappings=getUrlAliasMapping(tenant);
+	public static final String getURLAlias(String fqn, Tenant tenant) throws Exception {
+		Properties urlMappings = getUrlAliasMapping(tenant);
 		Set<Object> sset = urlMappings.keySet();
 		for (Object setKey : sset) {
 			if (fqn.equalsIgnoreCase(urlMappings.get(setKey).toString()))
@@ -477,14 +485,14 @@ public class ServiceUtils {
 
 	public static final String registerURLAlias(String fqn, String alias, DataPipeline dp) throws Exception {
 
-		//Map<String, Object> pathParams = new HashMap<String, Object>();
-		//pathParams.put("pathParameters", "");
-		String aliasTenantName=dp.rp.getTenant().getName();
-		//alias=aliasTenantName+alias;
-		String existingFQN = getPathService(alias, null,dp.rp.getTenant());
+		// Map<String, Object> pathParams = new HashMap<String, Object>();
+		// pathParams.put("pathParameters", "");
+		String aliasTenantName = dp.rp.getTenant().getName();
+		// alias=aliasTenantName+alias;
+		String existingFQN = getPathService(alias, null, dp.rp.getTenant());
 
 		// String existingFQN=urlMappings.getProperty(alias);
-		Properties urlMappings=getUrlAliasMapping(dp.rp.getTenant());
+		Properties urlMappings = getUrlAliasMapping(dp.rp.getTenant());
 		String msg = "Saved";
 		if (existingFQN == null || existingFQN.equalsIgnoreCase(fqn)) {
 			Set<Object> sset = urlMappings.keySet();
@@ -497,8 +505,10 @@ public class ServiceUtils {
 			msg = "Failed to save. The alias conflicted with the existing FQN(" + existingFQN + ").";
 			return msg;
 		}
-		//URL url = new URL(MiddlewareServer.getConfigFolderPath() + "URLAliasMapping.properties");
-		FileOutputStream fos = new FileOutputStream(new File(PropertyManager.getPackagePath(dp.rp.getTenant()) +"URLAliasMapping.properties"));
+		// URL url = new URL(MiddlewareServer.getConfigFolderPath() +
+		// "URLAliasMapping.properties");
+		FileOutputStream fos = new FileOutputStream(
+				new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
 		urlMappings.store(fos, "");// save(fos, "");
 		fos.flush();
 		fos.close();
@@ -514,22 +524,22 @@ public class ServiceUtils {
 			throw new SnippetException(rp.dataPipeLine, "Exception while streaming file.\n" + e.getMessage(), e);
 
 		} /*
-		 * // Thread newThread = new Thread(() -> {
-		 *
-		 * ExecutorService threadpool = Executors.newCachedThreadPool();
-		 *
-		 * @SuppressWarnings("unchecked") Future<Long> futureTask = (Future<Long>)
-		 * threadpool.submit(() -> { try { handleFileResponse(rp.getExchange(), mp); }
-		 * catch (Exception e) { // TODO Auto-generated catch block
-		 * ServiceUtils.printException(rp.getSessionID() +
-		 * " Could not stream file thread.", e); } });
-		 *
-		 * while (!futureTask.isDone()) { //
-		 * System.out.println("FutureTask is not finished yet..."); Thread.sleep(100); }
-		 *
-		 * threadpool.shutdown();
-		 *
-		 */
+			 * // Thread newThread = new Thread(() -> {
+			 *
+			 * ExecutorService threadpool = Executors.newCachedThreadPool();
+			 *
+			 * @SuppressWarnings("unchecked") Future<Long> futureTask = (Future<Long>)
+			 * threadpool.submit(() -> { try { handleFileResponse(rp.getExchange(), mp); }
+			 * catch (Exception e) { // TODO Auto-generated catch block
+			 * ServiceUtils.printException(rp.getSessionID() +
+			 * " Could not stream file thread.", e); } });
+			 *
+			 * while (!futureTask.isDone()) { //
+			 * System.out.println("FutureTask is not finished yet..."); Thread.sleep(100); }
+			 *
+			 * threadpool.shutdown();
+			 *
+			 */
 	}
 
 	private static void handleFileResponse(HttpServerExchange exchange, MultiPart mp) throws Exception {
@@ -619,21 +629,20 @@ public class ServiceUtils {
 				exchange.getResponseHeaders().put(HttpString.tryFromString(key), mp.headers.get(key).toString());
 			}
 			os = exchange.getOutputStream();
-			//System.out.println("Available bytes:" + targetStream.available());
+			// System.out.println("Available bytes:" + targetStream.available());
 //		byte bytes[]=targetStream.readNBytes(200);
 //		System.out.println(new String(bytes));
 			IOUtils.copy(targetStream, os);
 			os.flush();
 			os.close();
-			//os=null;
+			// os=null;
 			targetStream.close();
-			//targetStream=null;
+			// targetStream=null;
 			exchange.endExchange();
 
-		}catch (Throwable e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
-		}
-		finally {
+		} finally {
 			if (os != null)
 				os.close();
 			if (targetStream != null)
@@ -701,49 +710,55 @@ public class ServiceUtils {
 		return null;
 	}
 
-	public static final URL[] getJarURLs(String path,String packagePath) throws Exception {
-		URL urls[] = null;
-		String paths[] = null;
-		//String packagePath=PropertyManager.getPackagePath();
-		LOGGER.info("JAR PATH: " + packagePath + path);
-		File file = new File(packagePath + path);
-
-		if (file.isDirectory()) {
-			File files[] = file.listFiles();
-
-			if (files.length > 0) {
-				urls = new URL[files.length];
-				paths = new String[files.length];
-				int indx = 0;
-				for (File fileItem : files) {
-
-					if (fileItem.getName().endsWith(".jar")) {
-
-						urls[indx] = fileItem.toURL();
-						paths[indx] = fileItem.getAbsolutePath();
-						indx++;
-					}
-				}
-				if (indx > 0) {
-					// DynamicJarClassLoader dynamicJarClassLoader=new DynamicJarClassLoader(urls,
-					// customClassLoader);
-					// URLClassLoader urljl=new URLClassLoader(urls, customClassLoader);
-					// urljl.d
-					LOGGER.info("JAR PATH(" + indx + "): " + packagePath + path);
-					return urls;
-					// dataPipeline.getPayload().put("package", pname.toString() + " reloaded
-					// successfully");
-				}
-				// else dataPipeline.getPayload().put("package", pname.toString() + " jars not
-				// found at location '"+file.getAbsolutePath()+"'");
-
+	public static void copyDirectory(String sourceDirectoryLocation, String destinationDirectoryLocation)
+			throws IOException {
+		FileUtils.copyDirectory(new File(sourceDirectoryLocation), new File(destinationDirectoryLocation));
+		
+		Path src=new File(sourceDirectoryLocation).toPath();
+		File dst=new File(destinationDirectoryLocation);
+		dst.mkdirs();
+		Path dest=dst.toPath();
+		
+		try (Stream<Path> stream = Files.walk(src)) {
+			  stream.forEach(source -> copy(source, dest.resolve(src.relativize(source))));
 			}
-			// dataPipeline.getPayload().put("package", pname.toString() + " no jars found
-			// at location '"+file.getAbsolutePath()+"'");
+	}
+	
+	private static void copy(Path source, Path dest) {
+		try {
+		  Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
+		} catch (Exception e) {
+		  throw new RuntimeException(e.getMessage(), e);
 		}
-		// dataPipeline.getPayload().put("package", pname.toString() + " could not find
-		// directory or it's empty '"+file.getAbsolutePath()+"'");
-		return null;
+	}
+	
+	public static String initNewTenant(String name, AuthAccount account) {
+		try {
+			if(Tenant.exists(name))
+				throw new Exception("Tenant already exists");
+			
+			List<String> groups=new ArrayList<String>();
+			groups.add(AuthAccount.STATIC_ADMIN_GROUP);
+			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
+			account.getAuthProfile().put("groups",groups);
+			account.getAuthProfile().put("tenant", name);
+			String src=PropertyManager.getPackagePath(Tenant.getTenant("default"));
+			String dest=PropertyManager.getPackagePath(Tenant.getTenant(name));
+			copyDirectory(src, dest);
+			String uuid = UUID.randomUUID().toString();
+			RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(name),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+					"/execute/packages.middleware.pub.server.core.service.main");
+			rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
+			UserProfileManager.addUser(account);
+			LOGGER.info("New user("+account.getUserId()+") added for the tenant "+name+" successfully.");
+			UserProfileManager.newTenant(name);
+			LOGGER.info("New tenant with name "+name+" created successfully.");
+			
+		} catch (Exception e) {
+			printException("Failed to create tenant with name "+name, e);
+			return e.getMessage();
+		}
+		return "Done";
 	}
 
 	public static final URL[] getClassesURLs(String path) throws Exception {
@@ -752,14 +767,14 @@ public class ServiceUtils {
 
 		for (String location : paths) {
 			File file = new File(location);
-			LOGGER.info("******************************************************************\n"+file.getAbsolutePath());
-			if(file.getName().contains("ekamw"))
+			LOGGER.info("Class file path: "+ file.getAbsolutePath());
+			if (file.getName().contains("ekamw"))
 				LOGGER.info(file.getAbsolutePath());
-			if(file.isFile())
+			if (file.isFile())
 				urls.add(file.toURL());
 		}
 
-		if(urls.size()>0)
+		if (urls.size() > 0)
 			return urls.toArray(new URL[urls.size()]);
 
 		return null;
@@ -768,16 +783,15 @@ public class ServiceUtils {
 	public static UserProfile getCurrentLoggedInUserProfile(HttpServerExchange exchange) throws SnippetException {
 		final SecurityContext context = exchange.getSecurityContext();
 		if (context != null)
-			return ((Pac4jAccount)context.getAuthenticatedAccount()).getProfile();
+			return ((Pac4jAccount) context.getAuthenticatedAccount()).getProfile();
 		return null;
 	}
-	
-	
-	public static final String[] getJarPaths(String path,String packagePath) throws Exception {
+
+	public static final String[] getJarPaths(String path, String packagePath) throws Exception {
 		URL urls[] = null;
 		String paths[] = null;
-		//String packagePath=PropertyManager.getPackagePath();
-		LOGGER.info("JAR PATH: " + packagePath + path);
+		// String packagePath=PropertyManager.getPackagePath();
+		LOGGER.info(" 780 JAR PATH: " + packagePath + path);
 		File file = new File(packagePath + path);
 
 		if (file.isDirectory()) {
@@ -818,7 +832,6 @@ public class ServiceUtils {
 		return null;
 	}
 
-
 	public static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
 		if (fileToZip.isHidden()) {
 			return;
@@ -848,24 +861,24 @@ public class ServiceUtils {
 		fis.close();
 	}
 
-	public static OIDCProviderMetadata fetchMetadata(String discoveryUrl,JWSAlgorithm jwsAlgo) throws Exception {
-        URI issuerURI = new URI(discoveryUrl);
-        URL providerConfigurationURL = issuerURI.toURL();
-        InputStream stream = providerConfigurationURL.openStream();
-        // Read all data from URL
-        String providerInfo = null;
-        try (java.util.Scanner s = new java.util.Scanner(stream)) {
-            providerInfo = s.useDelimiter("\\A").hasNext() ? s.next() : "";
-        }
-        OIDCProviderMetadata oidcPM=OIDCProviderMetadata.parse(providerInfo);
-        List<JWSAlgorithm> jwsArr=oidcPM.getIDTokenJWSAlgs();
-        if(jwsArr==null)
-        	jwsArr=new ArrayList<>();
-        jwsArr.add(jwsAlgo);
-        oidcPM.setIDTokenJWSAlgs(jwsArr);
-        return oidcPM;
-    }
-	
+	public static OIDCProviderMetadata fetchMetadata(String discoveryUrl, JWSAlgorithm jwsAlgo) throws Exception {
+		URI issuerURI = new URI(discoveryUrl);
+		URL providerConfigurationURL = issuerURI.toURL();
+		InputStream stream = providerConfigurationURL.openStream();
+		// Read all data from URL
+		String providerInfo = null;
+		try (java.util.Scanner s = new java.util.Scanner(stream)) {
+			providerInfo = s.useDelimiter("\\A").hasNext() ? s.next() : "";
+		}
+		OIDCProviderMetadata oidcPM = OIDCProviderMetadata.parse(providerInfo);
+		List<JWSAlgorithm> jwsArr = oidcPM.getIDTokenJWSAlgs();
+		if (jwsArr == null)
+			jwsArr = new ArrayList<>();
+		jwsArr.add(jwsAlgo);
+		oidcPM.setIDTokenJWSAlgs(jwsArr);
+		return oidcPM;
+	}
+
 	public static String replaceAllIgnoreRegx(String source, String search, String replace) {
 
 		return StringUtils.join(source.split(Pattern.quote(search)), replace);
