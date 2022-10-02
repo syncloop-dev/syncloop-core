@@ -712,23 +712,34 @@ public class ServiceUtils {
 
 	public static void copyDirectory(String sourceDirectoryLocation, String destinationDirectoryLocation)
 			throws IOException {
-		FileUtils.copyDirectory(new File(sourceDirectoryLocation), new File(destinationDirectoryLocation));
+		LOGGER.info("Copying files from : "+sourceDirectoryLocation.toString());
+		LOGGER.info("Copying files to : "+destinationDirectoryLocation.toString());
 		
-		Path src=new File(sourceDirectoryLocation).toPath();
+		FileUtils.copyDirectory(new File(sourceDirectoryLocation), new File(destinationDirectoryLocation));
+		/*Path src=new File(sourceDirectoryLocation).toPath();
 		File dst=new File(destinationDirectoryLocation);
 		dst.mkdirs();
 		Path dest=dst.toPath();
 		
 		try (Stream<Path> stream = Files.walk(src)) {
-			  stream.forEach(source -> copy(source, dest.resolve(src.relativize(source))));
-			}
+			  stream.parallel().forEach(source -> copy(source, dest.resolve(src.relativize(source))));
+		}*/
+		LOGGER.info("Tenant instance created: "+destinationDirectoryLocation.toString());
 	}
 	
 	private static void copy(Path source, Path dest) {
 		try {
-		  Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
+			//LOGGER.info("From: "+source.toAbsolutePath().toString());
+			//LOGGER.info("To: "+dest.toAbsolutePath().toString());
+			if(source.toFile().isDirectory()) {
+				if(!source.toFile().exists())
+					source.toFile().mkdir();
+			}else
+				Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
+		  
 		} catch (Exception e) {
-		  throw new RuntimeException(e.getMessage(), e);
+			printException("Failed while copying "+source.toString()+"\n to \n"+dest.toString(), e);
+		  //throw new RuntimeException(e.getMessage(), e);
 		}
 	}
 	
@@ -742,7 +753,7 @@ public class ServiceUtils {
 			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
 			account.getAuthProfile().put("groups",groups);
 			account.getAuthProfile().put("tenant", name);
-			String src=PropertyManager.getPackagePath(Tenant.getTenant("default"));
+			String src=PropertyManager.getPackagePath(null)+"released"+File.separator+"core";
 			String dest=PropertyManager.getPackagePath(Tenant.getTenant(name));
 			copyDirectory(src, dest);
 			String uuid = UUID.randomUUID().toString();

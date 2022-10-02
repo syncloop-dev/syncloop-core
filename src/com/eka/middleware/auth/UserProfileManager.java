@@ -1,9 +1,11 @@
 package com.eka.middleware.auth;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,6 +24,7 @@ import io.undertow.security.idm.PasswordCredential;
 
 public class UserProfileManager implements IdentityManager {
 	private static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
+	private static final Set<String> tenants = new HashSet();
 	private static UserProfileManager upm = null;
 
 	public static final Map<String, Object> getUsers() throws SystemException {
@@ -32,6 +35,8 @@ public class UserProfileManager implements IdentityManager {
 					String json = new String(bytes);
 					final Map<String, Object> map = ServiceUtils.jsonToMap(json);
 					final Map<String, Object> umap = ((Map<String, Object>) map.get("users"));
+					List<String> tenantList=(List<String>)map.get("tenants");
+					tenantList.forEach(v->tenants.add(v));
 					umap.forEach((k, v) -> {
 						Map<String, Object> user = (Map<String, Object>) v;
 						if (user.get("password") != null) {
@@ -65,20 +70,21 @@ public class UserProfileManager implements IdentityManager {
 		} catch (SystemException e) {
 			ServiceUtils.printException("Failed while loading tenant list", e);
 		}
-		List<String> tenants = null;
+		List<String> tenantList = null;
 		if (bytes != null) {
 			String json = new String(bytes);
 			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-			tenants=(List<String>)map.get("tenants");
+			tenantList=(List<String>)map.get("tenants");
 		}
-		return tenants;
+		return new ArrayList(tenants);
 	}
 	
 	public static void newTenant(String name) throws Exception {
 		final Map<String, Object> map = new HashMap();
-		List<String> tenants = getTenants();
+		List<String> tenantList = getTenants();
+		tenantList.add(name);
 		tenants.add(name);
-		map.put("tenants", tenants);
+		map.put("tenants", tenantList);
 		map.put("users", getUsers());
 		String json = ServiceUtils.toPrettyJson(map);
 		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
@@ -86,14 +92,14 @@ public class UserProfileManager implements IdentityManager {
 
 	public static void addUser(AuthAccount account) throws SystemException {
 		try {
-			byte bytes[] = PropertyManager.readConfigurationFile("profiles.json");
-			String json = new String(bytes);
-			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-			final Map<String, Object> umap = ((Map<String, Object>) map.get("users"));
+			final Map<String, Object> map = new HashMap();
+			final Map<String, Object> umap = getUsers();
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
 			umap.put(account.getUserId(), user);
-			json = ServiceUtils.toPrettyJson(map);
+			map.put("users", umap);
+			map.put("tenants", getTenants());
+			String json = ServiceUtils.toPrettyJson(map);
 			PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1001", e);
@@ -102,12 +108,12 @@ public class UserProfileManager implements IdentityManager {
 
 	public static void removeUser(String id) throws SystemException {
 		try {
-			byte bytes[] = PropertyManager.readConfigurationFile("profiles.json");
-			String json = new String(bytes);
-			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-			final Map<String, Object> umap = ((Map<String, Object>) map.get("users"));
+			final Map<String, Object> map = new HashMap();
+			final Map<String, Object> umap = getUsers();
 			umap.remove(id);
-			json = ServiceUtils.toPrettyJson(map);
+			map.put("users", umap);
+			map.put("tenants", getTenants());
+			String json = ServiceUtils.toPrettyJson(map);
 			PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1001", e);

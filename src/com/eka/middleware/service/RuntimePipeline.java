@@ -98,6 +98,9 @@ public class RuntimePipeline {
 
 	public RuntimePipeline(Tenant tenant, String requestId, String correlationId, final HttpServerExchange exchange, String resource,
 						   String urlPath) {
+		//Securitycont
+		
+		
 		this.tenant=tenant;
 		currentThread = Thread.currentThread();
 		sessionId = requestId;

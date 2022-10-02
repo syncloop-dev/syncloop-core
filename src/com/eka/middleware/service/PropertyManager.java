@@ -32,9 +32,9 @@ public class PropertyManager {
     }
     
     public static String getPackagePath(Tenant tenant) {
-    	String tenantName=tenant.getName();
-    	if(tenantName==null || tenantName.trim().length()==0)
+    	if(tenant==null)
     		return ServiceUtils.getServerProperty("middleware.server.home.dir");
+    	String tenantName=tenant.getName();
     	String tenantDir=tenantName;
     	//if(tenantName.equals("dev"))
     		//tenantDir="";

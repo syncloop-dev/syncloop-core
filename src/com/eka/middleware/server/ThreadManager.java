@@ -50,6 +50,9 @@ public class ThreadManager {
 
 	public static final void processRequest(final HttpServerExchange exchange) {
 		String requestAddress = exchange.toString() + "@" + Integer.toHexString(System.identityHashCode(exchange));
+		String method = exchange.getRequestMethod().toString();
+		String pureRequestPath=exchange.getRequestPath();;
+		String requestPath = method + pureRequestPath;
 		AuthAccount account = null;
 		try {
 			account = UserProfileManager.getUserProfileManager()
@@ -59,7 +62,14 @@ public class ThreadManager {
 			LOGGER.info(ServiceUtils.getFormattedLogLine(exchange.getRequestPath(), requestAddress, "Error"));
 		}
 		if (account != null) {
-			String tenantName = null;
+			String rsrcTokens[]=requestPath.split("/");
+			String tenantName=null;
+			if("tenant".equalsIgnoreCase(rsrcTokens[1])) {
+				tenantName = rsrcTokens[2];
+				requestPath=requestPath.replace("/"+rsrcTokens[1]+"/"+rsrcTokens[2], "");
+				pureRequestPath=pureRequestPath.replace("/"+rsrcTokens[1]+"/"+rsrcTokens[2], "");
+			}
+			
 			if (account.getUserId().equalsIgnoreCase("anonymous")) {
 				Cookie cookie = exchange.getRequestCookie("tenant");
 				if (cookie != null)
@@ -75,6 +85,15 @@ public class ThreadManager {
 					exchange.endExchange();
 					return;
 				}
+				else if(!Security.isPublic(pureRequestPath, tenantName)){
+					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch");
+					exchange.getResponseHeaders().clear();
+					exchange.getResponseHeaders().put(Headers.STATUS, 400);
+					exchange.getResponseSender().send("Tenant Access Denied. Path access not allowed.\n"+pureRequestPath+
+							"\nPublic prefix paths:\n"+Security.getPublicPrefixPaths(tenantName)+"\nPublic exact paths:\n"+Security.getPublicExactPaths(tenantName));
+					exchange.endExchange();
+					return;
+				}
 
 				account.getAuthProfile().put("tenant", tenantName);
 				List<String> groups = new ArrayList<String>();
@@ -83,6 +102,19 @@ public class ThreadManager {
 				account.getAuthProfile().put("groups", groups);
 				exchange.setResponseCookie(cookie);
 
+			}else {
+				if (tenantName!=null && account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null && 
+						!((String)account.getAuthProfile().get("tenant")).equalsIgnoreCase(tenantName)) {
+					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch");
+					exchange.getResponseHeaders().clear();
+					exchange.getResponseHeaders().put(Headers.STATUS, 400);
+					exchange.getResponseSender().send("Tenant Access Denied.");
+					exchange.endExchange();
+					return;
+				}
+				if(tenantName!=null) {
+					exchange.setResponseCookie(new CookieImpl("tenant", tenantName));
+				}
 			}
 			if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
 				tenantName = (String) account.getAuthProfile().get("tenant");
@@ -99,14 +131,12 @@ public class ThreadManager {
 				}
 			}
 			Tenant tenant = Tenant.getTenant(tenantName);
-
 			RuntimePipeline rp = null;
-			String method = exchange.getRequestMethod().toString();
-			String requestPath = method + exchange.getRequestPath();
 			Boolean logTransaction = true;
 			// Map<String, Object> pathParams=new HashMap<String, Object>();
 			if (requestPath != null && requestPath.length() > 1) {
 				String resource = null;
+				Tenant.getTenant(tenantName);
 				Map<String, Object> pathParams = new HashMap<String, Object>();
 				pathParams.put("pathParameters", "");
 				// if (requestPath.startsWith(method + "/execute"))
@@ -147,7 +177,10 @@ public class ThreadManager {
 					if(!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
 						exchange.getResponseHeaders().clear();
 						exchange.setStatusCode(StatusCodes.FOUND);
-					    exchange.getResponseHeaders().put(Headers.LOCATION, Security.defaultTenantPage);
+						String newUserPath=Security.gerDefaultNewUserPath(tenantName);
+						if(newUserPath==null)
+							newUserPath=Security.defaultTenantPage;
+					    exchange.getResponseHeaders().put(Headers.LOCATION, newUserPath);
 					    exchange.endExchange();
 					    return;
 					}

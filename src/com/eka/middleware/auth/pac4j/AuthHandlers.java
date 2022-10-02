@@ -19,6 +19,7 @@ import org.pac4j.undertow.handler.SecurityHandler;
 import org.pac4j.undertow.http.UndertowHttpActionAdapter;
 
 import com.eka.middleware.auth.ResourceAuthenticator;
+import com.eka.middleware.auth.Security;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ThreadManager;
 
@@ -26,10 +27,13 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 
 /**
  * A collection of basic handlers printing dynamic html for the demo application.
@@ -42,6 +46,17 @@ public class AuthHandlers {
     public static HttpHandler indexHandler() {
         return exchange -> {
         	ThreadManager.processRequest(exchange);
+        };
+    }
+    
+    public static HttpHandler defaultHandler() {
+        return exchange -> {
+        	exchange.getResponseHeaders().clear();
+			exchange.setStatusCode(StatusCodes.FOUND);
+		    exchange.getResponseHeaders().put(Headers.LOCATION, Security.defaultWelcomePage);
+		    Cookie cookie = new CookieImpl("tenant", "default");
+		    exchange.setResponseCookie(cookie);
+		    exchange.endExchange();
         };
     }
 
