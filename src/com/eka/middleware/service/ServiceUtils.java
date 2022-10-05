@@ -37,6 +37,7 @@ import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
 import com.eka.middleware.auth.AuthAccount;
+import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
@@ -746,30 +747,49 @@ public class ServiceUtils {
 	public static String initNewTenant(String name, AuthAccount account) {
 		try {
 			if(Tenant.exists(name))
-				throw new Exception("Tenant already exists");
+				throw new Exception("Tenant already exists or null. Tenant Name : "+name);
 			
-			List<String> groups=new ArrayList<String>();
-			groups.add(AuthAccount.STATIC_ADMIN_GROUP);
-			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
-			account.getAuthProfile().put("groups",groups);
+			List<String> groups=null;
+			if(account.getAuthProfile()!=null)
+				groups=(List<String>) account.getAuthProfile().get("groups");
+			if("default".equals(name)) {
+				groups=new ArrayList<String>();
+				groups.add(AuthAccount.STATIC_ADMIN_GROUP);
+				groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
+				account.getAuthProfile().put("groups",groups);
+			}
+			if(groups==null)
+				throw new Exception("Claim 'groups' is required in jwt access_token : "+name);
 			account.getAuthProfile().put("tenant", name);
 			String src=PropertyManager.getPackagePath(null)+"released"+File.separator+"core";
 			String dest=PropertyManager.getPackagePath(Tenant.getTenant(name));
 			copyDirectory(src, dest);
-			String uuid = UUID.randomUUID().toString();
-			RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(name),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
-					"/execute/packages.middleware.pub.server.core.service.main");
-			rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
+			Security.setupTenantSecurity(Tenant.getTenant(name));
+			LOGGER.info("Starting newly created tenant("+name+")......................");
+			startTenantServices(name);
+//			String uuid = UUID.randomUUID().toString();
+//			RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(name),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+//					"/execute/packages.middleware.pub.server.core.service.main");
+//			rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
 			UserProfileManager.addUser(account);
 			LOGGER.info("New user("+account.getUserId()+") added for the tenant "+name+" successfully.");
 			UserProfileManager.newTenant(name);
 			LOGGER.info("New tenant with name "+name+" created successfully.");
-			
+			//Serc addPublicPrefixPath("/tenant/default/files/gui/middleware/pub/server/ui/welcome/", Tenant.getTenant("default"));
 		} catch (Exception e) {
 			printException("Failed to create tenant with name "+name, e);
 			return e.getMessage();
 		}
 		return "Done";
+	}
+	
+	public static void startTenantServices(String tenant) throws SnippetException {
+		String uuid = UUID.randomUUID().toString();
+		RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+				"/execute/packages.middleware.pub.server.core.service.main");
+		LOGGER.trace("RP created for "+tenant);
+		LOGGER.trace("Executing startup servies for "+tenant);
+		rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
 	}
 
 	public static final URL[] getClassesURLs(String path) throws Exception {
@@ -796,6 +816,12 @@ public class ServiceUtils {
 		if (context != null)
 			return ((Pac4jAccount) context.getAuthenticatedAccount()).getProfile();
 		return null;
+	}
+	
+	public static AuthAccount getCurrentLoggedInAuthAccount(HttpServerExchange exchange) throws SnippetException {
+		if(getCurrentLoggedInUserProfile(exchange)==null)
+			return null;
+		return UserProfileManager.getUserProfileManager().getAccount(getCurrentLoggedInUserProfile(exchange));
 	}
 
 	public static final String[] getJarPaths(String path, String packagePath) throws Exception {

@@ -16,6 +16,8 @@ import org.pac4j.core.profile.UserProfile;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
+import com.nimbusds.jwt.JWTParser;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
@@ -94,8 +96,14 @@ public class UserProfileManager implements IdentityManager {
 		try {
 			final Map<String, Object> map = new HashMap();
 			final Map<String, Object> umap = getUsers();
+			Object existingUser= umap.get(account.getUserId());
+			if(existingUser!=null) {
+				throw new Exception("User already exists: "+account.getUserId());
+			}
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
+			if(account.getUserId().equals("admin"))
+				user.put("password", "admin");
 			umap.put(account.getUserId(), user);
 			map.put("users", umap);
 			map.put("tenants", getTenants());
@@ -142,7 +150,7 @@ public class UserProfileManager implements IdentityManager {
 
 	@Override
 	public AuthAccount verify(String id, Credential credential) {
-		AuthAccount account = getAccount(id);
+		AuthAccount account = getAccount(id,null);
 		try {
 			if (account != null && verifyCredential(account, credential)) {
 				return account;
@@ -180,13 +188,15 @@ public class UserProfileManager implements IdentityManager {
 	}
 
 	public AuthAccount getAccount(UserProfile up) {
+		if(up ==null)
+			return null;
 		String id = (String) up.getId();
 		if(up.getAttribute("email")!=null)
 			id=(String)up.getAttribute("email");
-		return getAccount(id);
+		return getAccount(id,up);
 	}
 
-	private AuthAccount getAccount(final String id) {
+	private AuthAccount getAccount(final String id, final UserProfile up) {
 		Map<String, Object> usersMap = null;
 		try {
 			usersMap = (Map<String, Object>) getUsers();
@@ -197,12 +207,19 @@ public class UserProfileManager implements IdentityManager {
 		Map<String, Object> user = (Map<String, Object>) usersMap.get(id);
 
 		if (user != null) {
-			final Map<String, Object> profile = (Map<String, Object>) user.get("profile");
+			Map<String, Object> profile = (Map<String, Object>) user.get("profile");
+			String tenant=(String) profile.get("tenant");
+			if(up!=null) { 
+				profile = createDefaultProfile(up);
+				profile.put("tenant", tenant);
+			}
+			
 			AuthAccount authAccount = new AuthAccount(id);
-			authAccount.setProfile(profile);
+			final Map<String, Object> profle=profile;
+			authAccount.setProfile(profle);
 			return authAccount;
 		} else {
-			final Map<String, Object> profile = createDefaultProfile();
+			final Map<String, Object> profile = createDefaultProfile(up);
 			AuthAccount authAccount = new AuthAccount(id);
 			authAccount.setProfile(profile);
 			// authAccount.getAuthProfile().put("groups", authAccount);
@@ -210,13 +227,30 @@ public class UserProfileManager implements IdentityManager {
 		}
 	}
 
-	private Map<String, Object> createDefaultProfile() {
+	public static Map<String, Object> createDefaultProfile(UserProfile up) {
 		Map<String, Object> profile = new HashMap<String, Object>();
-		String groups[] = { "Guest" };
-		profile.put("groups", groups);
+		Map<String, Object> jwtMap=null;
+		List<String> groupsList=new ArrayList<String>();
+		try {
+			BearerAccessToken bat=(BearerAccessToken) up.getAttribute("access_token");
+			if(bat!=null) {
+			String jwt=bat.getValue();
+			if(jwt!=null) {
+				jwtMap=JWTParser.parse(jwt).getJWTClaimsSet().toJSONObject();
+				groupsList=(List<String>) jwtMap.get("groups");
+				if(groupsList==null)
+					groupsList=(List<String>) jwtMap.get("Groups");
+			}
+			}
+		} catch (Exception e) {
+			ServiceUtils.printException("Failed while get token from UserProfile", e);
+		}
+		//String groups[] = { "Guest" };
+		groupsList.add("guest");
+		profile.put("groups", groupsList);
 		return profile;
 	}
-	
+
 	public static final UserProfile SYSTEM_PROFILE =new UserProfile(){
 
 		@Override

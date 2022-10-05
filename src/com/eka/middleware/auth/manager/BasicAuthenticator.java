@@ -1,5 +1,7 @@
 package com.eka.middleware.auth.manager;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.credentials.Credentials;
@@ -13,6 +15,8 @@ import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordA
 
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.server.MiddlewareServer;
+import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
 
 import io.undertow.security.idm.PasswordCredential;
@@ -20,6 +24,7 @@ import io.undertow.security.idm.PasswordCredential;
 public class BasicAuthenticator extends SimpleTestUsernamePasswordAuthenticator {
 
 	private static UserProfileManager identityManager=null;
+	public static Logger LOGGER = LogManager.getLogger(BasicAuthenticator.class);
 	/*   @Override
     public void validate(final Credentials cred, final WebContext context, final SessionStore sessionStore) {
         if (cred == null) {
@@ -58,32 +63,46 @@ public class BasicAuthenticator extends SimpleTestUsernamePasswordAuthenticator 
     	
 	@Override
     public void validate(final Credentials cred, final WebContext context, final SessionStore sessionStore) {
+		LOGGER.trace("Validating user...........");
         if (cred == null) {
             throw new CredentialsException("No credential");
         }
+        LOGGER.trace("IdentifyManager...........");
         if(identityManager==null)
     		try {
     			identityManager = UserProfileManager.create();
     			UserProfileManager.getUsers();
+    			LOGGER.info("Users loaded...........");
     		} catch (SystemException e) {
-    			// TODO Auto-generated catch block
-    			e.printStackTrace();
+    			ServiceUtils.printException("UserProfileManager issue", e);
     		}
+        LOGGER.trace("Casting cred...........");
         final var credentials = (UsernamePasswordCredentials) cred;
         var username = credentials.getUsername();
+        LOGGER.trace("User forund: "+username+"...........");
         var password = credentials.getPassword();
+        LOGGER.trace("Password forund: *******...........");
         if (CommonHelper.isBlank(username)) {
-            throw new CredentialsException("Username cannot be blank");
+        	CredentialsException ex=new CredentialsException("Username cannot be blank");
+        	ServiceUtils.printException("User is blank", ex);
+            throw ex;
         }
         if (CommonHelper.isBlank(password)) {
-            throw new CredentialsException("Password cannot be blank");
+        	CredentialsException ex=new CredentialsException("Password cannot be blank");
+        	ServiceUtils.printException("Password is blank", ex);
+            throw ex;
         }
-        
+        LOGGER.trace("Veify user: "+username+"...........");
         AuthAccount account=identityManager.verify(username, new PasswordCredential(password.toCharArray()));
-        
+
         if (account==null) {
-            throw new CredentialsException("Username : '" + username + "' does not match password");
+        	CredentialsException ex= new CredentialsException("Username : '" + username + "' does not match password");
+            ServiceUtils.printException("Credentials match failed", ex);
+            throw ex;
         }
+        
+        LOGGER.trace("Account user: "+account.getUserId()+"...........");
+        
         //System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&Account Found&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
         //if (CommonHelper.areNotEquals(username, password)) {
           //  throw new CredentialsException("Username : '" + username + "' does not match password");
@@ -92,5 +111,6 @@ public class BasicAuthenticator extends SimpleTestUsernamePasswordAuthenticator 
         profile.setId(username);
         profile.addAttribute(Pac4jConstants.USERNAME, username);
         credentials.setUserProfile(profile);
+        LOGGER.trace("Adding profile: "+profile+"...........");
     }//*/
 }

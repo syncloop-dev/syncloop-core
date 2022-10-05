@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.pac4j.core.authorization.authorizer.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.client.Clients;
@@ -28,7 +30,7 @@ import com.eka.middleware.template.SystemException;
 import com.nimbusds.jose.JWSAlgorithm;
 
 public class AuthConfigFactory implements ConfigFactory {
-
+	public static Logger LOGGER = LogManager.getLogger(AuthConfigFactory.class);
 	private static Config newConfig(Client clnt) {
 		final Config config = new Config(clnt);
 		config.addAuthorizer("admin", new RequireAnyRoleAuthorizer("ROLE_ADMIN"));
@@ -123,14 +125,15 @@ public class AuthConfigFactory implements ConfigFactory {
 			}
 		return OIDCAuthClientConfig;
 	}
-
-	public static Config getOIDCAuthClientConfig(Map<String,Object> props) throws SystemException {
+	public static Config getOIDCAuthClientConfig(Map<String,Object> props,String tenantName) throws SystemException {
 		OidcConfiguration oidcConfiguration = null;
 		oidcConfiguration = new OidcConfiguration();
 		oidcConfiguration.setClientId((String)props.get("clientId"));
 		oidcConfiguration.setSecret((String)props.get("secret"));
 		oidcConfiguration.setDiscoveryURI((String)props.get("discoveryURI"));
 		oidcConfiguration.setUseNonce(true);
+		if(props.get("scope")!=null)
+			oidcConfiguration.setScope((String)props.get("scope"));
 		String preferedJwsAlgo = (String)props.get("preferredJwsAlgorithm");
 		if (preferedJwsAlgo != null)
 			try {
@@ -152,15 +155,23 @@ public class AuthConfigFactory implements ConfigFactory {
 				oidcConfiguration.addCustomParam(customKey, val);
 			}
 		}
+		
 		final OidcClient oidcClient = new OidcClient(oidcConfiguration);
 		oidcClient.setAuthorizationGenerator((ctx, session, profile) -> {
 			profile.addRole("ROLE_ADMIN");
 			return Optional.of(profile);
 
 		});
+		String basePath=(String)props.get("basePath");
+		String loginHandlerAPI=(String)props.get("loginHandlerAPI");
+		//final Clients clients = new Clients();//oidcClient);// ,headerClient);
+		String reDirectURI=basePath+"/callback/tenant/"+tenantName+loginHandlerAPI;
+		oidcClient.setCallbackUrl(reDirectURI);
+		LOGGER.info("Re-direct URI:----------------------");
+		LOGGER.info(reDirectURI+"?client_name=OidcClient");
+		//clients.setClients(oidcClient);
+		Config OIDCAuthClientConfig = newConfig(oidcClient);
 		
-		final Clients clients = new Clients("http://localhost:8080/callback", oidcClient);// ,headerClient);
-		Config OIDCAuthClientConfig = newConfig(clients);
 		return OIDCAuthClientConfig;
 	}
 

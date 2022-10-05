@@ -19,7 +19,13 @@ public static Tenant getTenant(String name) {
 	return tenantMap.get(name);
 }
 
+public static Tenant getTempTenant(String name) {
+	return new Tenant(name);
+}
+
 public static boolean exists(String name) {
+	if(name==null || name.trim().length()==0)
+		return false;
 	return tenantMap.get(name)!=null;
 }
 

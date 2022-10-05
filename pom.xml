@@ -10,9 +10,9 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<java.version>17</java.version>
-		<pac4j.version>5.4.5</pac4j.version>
-		<undertow-pac4j.version>5.0.0</undertow-pac4j.version>
-		<undertow.version>2.3.0.Alpha2</undertow.version>
+		<pac4j.version>5.6.0</pac4j.version>
+		<undertow-pac4j.version>5.0.1</undertow-pac4j.version>
+		<undertow.version>2.3.0.Beta1</undertow.version>
 	</properties>
 	<build>
 		<finalName>ekamw</finalName>

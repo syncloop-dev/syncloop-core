@@ -90,7 +90,7 @@ public class PropertyManager {
     public static final Properties getServerProperties(String filePath) throws SystemException {
         String absoluteFilePath = getConfigFolderPath() + filePath;
         File file=new File(absoluteFilePath);
-        absoluteFilePath=file.getAbsolutePath();
+        //absoluteFilePath=file.getAbsolutePath();
         Properties props = propertiesMap.get(absoluteFilePath);
         try {
             byte[] bytes = readConfigurationAbsFile(file);
@@ -128,27 +128,31 @@ public class PropertyManager {
 	}
     
     public static boolean hasfileChanged(String filePath) {
+    	return true;
+    	/*
     	String absoluteFilePath = getConfigFolderPath() + filePath;
     	File file = new File(absoluteFilePath);
-    	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
+    	Long lastModified = lastModifiedMap.get(absoluteFilePath);
     	if (lastModified == null || lastModified < file.lastModified()) {
     		lastModified=file.lastModified();
     		lastModifiedMap.put(absoluteFilePath, lastModified);
     		return true;
     	}
-    	return false;
+    	return true;*/
     }
     
     public static boolean hasTenantFileChanged(String filePath) {
+    	return true;
+    	/*
     	//String absoluteFilePath = getConfigFolderPath() + filePath;
     	File file = new File(filePath);
-    	Long lastModified = lastModifiedMap.get(file.getAbsoluteFile());
+    	Long lastModified = lastModifiedMap.get(filePath);
     	if (lastModified == null || lastModified < file.lastModified()) {
     		lastModified=file.lastModified();
     		lastModifiedMap.put(filePath, lastModified);
     		return true;
     	}
-    	return false;
+    	return true;*/
     }
 
     public static final byte[] readConfigurationFile(String filePath) throws SystemException {

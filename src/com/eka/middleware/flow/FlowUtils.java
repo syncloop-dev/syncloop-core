@@ -128,30 +128,35 @@ public class FlowUtils {
 				case "ELV": // Evaluate Local Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getMyConfig(expressionKey);
-						map.put(expressionKey, expressionValue);
+						if(expressionValue!=null)
+							map.put(expressionKey, expressionValue);
 					}
 					break;
 				case "EGV": // Evaluate Global Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getGlobalConfig(expressionKey);
-						map.put(expressionKey, expressionValue);
+						if(expressionValue!=null)
+							map.put(expressionKey, expressionValue);
 					}
 					break;
 				case "EEV": // Evaluate Expression Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getValueByPointer(expressionKey) + "";
-						map.put(expressionKey, expressionValue);
+						if(expressionValue!=null)
+							map.put(expressionKey, expressionValue);
 					}
 					break;
 				case "EPV": // Evaluate Package Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getMyPackageConfig(expressionKey);
-						map.put(expressionKey, expressionValue);
+						if(expressionValue!=null)
+							map.put(expressionKey, expressionValue);
 					}
 					break;
 				}
 				for (String expressionKey : expressions) {
-					value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
+					if(map.get(expressionKey)!=null)
+						value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
 				}
 			}
 

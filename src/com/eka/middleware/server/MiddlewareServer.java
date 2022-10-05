@@ -17,6 +17,7 @@ import javax.net.ssl.TrustManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.service.PropertyManager;
@@ -47,29 +48,51 @@ public class MiddlewareServer {
 			String keyStoreFilePath=ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
 			String keyStorePassword=ServiceUtils.getServerProperty("middleware.server.keyStore.jks.password");
 
-			PathHandler pathHandler = Security.init();
+			
 			
 			//https="8443";
 			String securePorts[] = null;
 			if(https!=null)
 				securePorts=https.split(",");
 			final UserProfileManager identityManager = UserProfileManager.create();
+			LOGGER.trace("Users loaded..................");
 			List<String> tenants = UserProfileManager.getTenants();
+			LOGGER.trace("Tenants loaded: "+tenants);
 			try {
+				Tenant defaultTenant=Tenant.getTempTenant("default");
+				String dirPath=PropertyManager.getPackagePath(defaultTenant)+"packages";
+				File dir=new File(dirPath);
+				
+				if(!dir.exists()) {
+					AuthAccount authAcc=new AuthAccount("admin");
+					Map<String, Object> profile=UserProfileManager.createDefaultProfile(null);
+					authAcc.setProfile(profile);
+					//UserProfileManager.addUser(authAcc);
+					ServiceUtils.initNewTenant("default", authAcc);
+				}else {
+					LOGGER.info("Starting default tenant......................");
+					ServiceUtils.startTenantServices("default");
+				}
+				Thread.sleep(500);
 				for (String tenant: tenants) {
-					String uuid = UUID.randomUUID().toString();
-					String dirPath=PropertyManager.getPackagePath(Tenant.getTenant(tenant))+"packages";
-					File dir=new File(dirPath);
-					if(!dir.exists())
+					dirPath=PropertyManager.getPackagePath(Tenant.getTenant(tenant))+"packages";
+					dir=new File(dirPath);
+					LOGGER.trace("Tenant directory: "+dirPath);
+					if(!dir.exists()) {
+						LOGGER.trace("Tenant directory not found: "+dirPath);
 						continue;
-					RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
-							"/execute/packages.middleware.pub.server.core.service.main");
-					rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
+					}
+					if(!"default".equalsIgnoreCase(tenant)) {
+						LOGGER.info("Starting "+tenant+" tenant......................");
+						ServiceUtils.startTenantServices(tenant);
+						Thread.sleep(500);
+					}
 				}
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);
 			}
-
+			LOGGER.trace("Creating server builder ........");
+			PathHandler pathHandler = Security.init();
 			Builder builder = Undertow.builder();
 			for (String port : ports) {
 				builder.addHttpListener(Integer.parseInt(port), local_IP).setHandler(
