@@ -209,7 +209,7 @@ public class UserProfileManager implements IdentityManager {
 		if (user != null) {
 			Map<String, Object> profile = (Map<String, Object>) user.get("profile");
 			String tenant=(String) profile.get("tenant");
-			if(up!=null) { 
+			if(up!=null && up.getAttribute("access_token")!=null) { 
 				profile = createDefaultProfile(up);
 				profile.put("tenant", tenant);
 			}
