@@ -37,13 +37,13 @@ public class UserProfileManager implements IdentityManager {
 					String json = new String(bytes);
 					final Map<String, Object> map = ServiceUtils.jsonToMap(json);
 					final Map<String, Object> umap = ((Map<String, Object>) map.get("users"));
-					List<String> tenantList=(List<String>)map.get("tenants");
-					tenantList.forEach(v->tenants.add(v));
+					List<String> tenantList = (List<String>) map.get("tenants");
+					tenantList.forEach(v -> tenants.add(v));
 					umap.forEach((k, v) -> {
 						Map<String, Object> user = (Map<String, Object>) v;
 						if (user.get("password") != null) {
 							String pass = user.get("password").toString();
-							if(pass.trim().length()==0)
+							if (pass.trim().length() == 0)
 								user.remove("password");
 							if (!pass.startsWith("[#]")) {
 								String passHash = "[#]" + ServiceUtils.generateUUID(pass + k);
@@ -64,9 +64,9 @@ public class UserProfileManager implements IdentityManager {
 		}
 		return usersMap;
 	}
-	
+
 	public static List<String> getTenants() {
-		byte bytes[]=null;
+		byte bytes[] = null;
 		try {
 			bytes = PropertyManager.readConfigurationFile("profiles.json");
 		} catch (SystemException e) {
@@ -76,11 +76,11 @@ public class UserProfileManager implements IdentityManager {
 		if (bytes != null) {
 			String json = new String(bytes);
 			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-			tenantList=(List<String>)map.get("tenants");
+			tenantList = (List<String>) map.get("tenants");
 		}
 		return new ArrayList(tenants);
 	}
-	
+
 	public static void newTenant(String name) throws Exception {
 		final Map<String, Object> map = new HashMap();
 		List<String> tenantList = getTenants();
@@ -96,13 +96,13 @@ public class UserProfileManager implements IdentityManager {
 		try {
 			final Map<String, Object> map = new HashMap();
 			final Map<String, Object> umap = getUsers();
-			Object existingUser= umap.get(account.getUserId());
-			if(existingUser!=null) {
-				throw new Exception("User already exists: "+account.getUserId());
+			Object existingUser = umap.get(account.getUserId());
+			if (existingUser != null) {
+				throw new Exception("User already exists: " + account.getUserId());
 			}
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
-			if(account.getUserId().equals("admin"))
+			if (account.getUserId().equals("admin"))
 				user.put("password", "admin");
 			umap.put(account.getUserId(), user);
 			map.put("users", umap);
@@ -150,7 +150,7 @@ public class UserProfileManager implements IdentityManager {
 
 	@Override
 	public AuthAccount verify(String id, Credential credential) {
-		AuthAccount account = getAccount(id,null);
+		AuthAccount account = getAccount(id, null);
 		try {
 			if (account != null && verifyCredential(account, credential)) {
 				return account;
@@ -177,7 +177,7 @@ public class UserProfileManager implements IdentityManager {
 			if (user == null) {
 				return false;
 			}
-			if(user.get("password")==null)
+			if (user.get("password") == null)
 				return false;
 			char[] expectedPassword = user.get("password").toString().toCharArray();
 			String pass = new String(password);
@@ -188,15 +188,15 @@ public class UserProfileManager implements IdentityManager {
 	}
 
 	public AuthAccount getAccount(UserProfile up) {
-		if(up ==null)
+		if (up == null)
 			return null;
 		String id = (String) up.getId();
-		if(up.getAttribute("email")!=null)
-			id=(String)up.getAttribute("email");
-		return getAccount(id,up);
+		if (up.getAttribute("email") != null)
+			id = (String) up.getAttribute("email");
+		return getAccount(id, up);
 	}
 
-	private AuthAccount getAccount(final String id, final UserProfile up) {
+	public static AuthAccount getAccount(final String id, final UserProfile up) {
 		Map<String, Object> usersMap = null;
 		try {
 			usersMap = (Map<String, Object>) getUsers();
@@ -208,18 +208,18 @@ public class UserProfileManager implements IdentityManager {
 
 		if (user != null) {
 			Map<String, Object> profile = (Map<String, Object>) user.get("profile");
-			String tenant=(String) profile.get("tenant");
-			if(up!=null && up.getAttribute("access_token")!=null) { 
-				profile = createDefaultProfile(up);
-				profile.put("tenant", tenant);
+			String tenant = (String) profile.get("tenant");
+			if (up != null && up.getAttribute("access_token") != null) {
+				profile = createDefaultProfile(up,tenant);
+				// profile.put("tenant", tenant);
 			}
-			
+
 			AuthAccount authAccount = new AuthAccount(id);
-			final Map<String, Object> profle=profile;
+			final Map<String, Object> profle = profile;
 			authAccount.setProfile(profle);
 			return authAccount;
 		} else {
-			final Map<String, Object> profile = createDefaultProfile(up);
+			final Map<String, Object> profile = createDefaultProfile(up,null);
 			AuthAccount authAccount = new AuthAccount(id);
 			authAccount.setProfile(profile);
 			// authAccount.getAuthProfile().put("groups", authAccount);
@@ -227,31 +227,38 @@ public class UserProfileManager implements IdentityManager {
 		}
 	}
 
-	public static Map<String, Object> createDefaultProfile(UserProfile up) {
+	public static Map<String, Object> createDefaultProfile(UserProfile up,String tenant) {
 		Map<String, Object> profile = new HashMap<String, Object>();
-		Map<String, Object> jwtMap=null;
-		List<String> groupsList=new ArrayList<String>();
+		Map<String, Object> jwtMap = null;
+		//String tenant = null;
+		List<String> groups = new ArrayList<String>();
 		try {
-			BearerAccessToken bat=(BearerAccessToken) up.getAttribute("access_token");
-			if(bat!=null) {
-			String jwt=bat.getValue();
-			if(jwt!=null) {
-				jwtMap=JWTParser.parse(jwt).getJWTClaimsSet().toJSONObject();
-				groupsList=(List<String>) jwtMap.get("groups");
-				if(groupsList==null)
-					groupsList=(List<String>) jwtMap.get("Groups");
-			}
+			BearerAccessToken bat = (BearerAccessToken) up.getAttribute("access_token");
+			if (bat != null) {
+				String jwt = bat.getValue();
+				if (jwt != null) {
+					jwtMap = JWTParser.parse(jwt).getJWTClaimsSet().toJSONObject();
+					groups = (List<String>) jwtMap.get("groups");
+					tenant = (String) jwtMap.get("tenant");
+					if (groups == null)
+						groups = (List<String>) jwtMap.get("Groups");
+				}
+			}else {
+				tenant=(String) up.getAttribute("tenant");
+				groups = (List<String>)up.getAttribute("groups");
 			}
 		} catch (Exception e) {
 			ServiceUtils.printException("Failed while get token from UserProfile", e);
 		}
-		//String groups[] = { "Guest" };
-		groupsList.add("guest");
-		profile.put("groups", groupsList);
+		// String groups[] = { "Guest" };
+		groups.add("guest");
+		profile.put("groups", groups);
+		if(tenant!=null)
+			profile.put("tenant",tenant);
 		return profile;
 	}
 
-	public static final UserProfile SYSTEM_PROFILE =new UserProfile(){
+	public static final UserProfile SYSTEM_PROFILE = new UserProfile() {
 
 		@Override
 		public String getId() {
@@ -262,7 +269,7 @@ public class UserProfileManager implements IdentityManager {
 		@Override
 		public void setId(String id) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -298,37 +305,37 @@ public class UserProfileManager implements IdentityManager {
 		@Override
 		public void addAttribute(String key, Object value) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void removeAttribute(String key) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void addAuthenticationAttribute(String key, Object value) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void removeAuthenticationAttribute(String key) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void addRole(String role) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void addRoles(Collection<String> roles) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -340,13 +347,13 @@ public class UserProfileManager implements IdentityManager {
 		@Override
 		public void addPermission(String permission) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void addPermissions(Collection<String> permissions) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -364,7 +371,7 @@ public class UserProfileManager implements IdentityManager {
 		@Override
 		public void setRemembered(boolean rme) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -376,7 +383,7 @@ public class UserProfileManager implements IdentityManager {
 		@Override
 		public void setClientName(String clientName) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -388,7 +395,7 @@ public class UserProfileManager implements IdentityManager {
 		@Override
 		public void setLinkedId(String linkedId) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -403,5 +410,5 @@ public class UserProfileManager implements IdentityManager {
 			return null;
 		}
 	};
-	
+
 }

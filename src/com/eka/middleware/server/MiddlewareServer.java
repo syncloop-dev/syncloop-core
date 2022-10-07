@@ -65,7 +65,7 @@ public class MiddlewareServer {
 				
 				if(!dir.exists()) {
 					AuthAccount authAcc=new AuthAccount("admin");
-					Map<String, Object> profile=UserProfileManager.createDefaultProfile(null);
+					Map<String, Object> profile=UserProfileManager.createDefaultProfile(null,"default");
 					authAcc.setProfile(profile);
 					//UserProfileManager.addUser(authAcc);
 					ServiceUtils.initNewTenant("default", authAcc);

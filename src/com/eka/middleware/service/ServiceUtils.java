@@ -767,12 +767,11 @@ public class ServiceUtils {
 			Security.setupTenantSecurity(Tenant.getTenant(name));
 			LOGGER.info("Starting newly created tenant("+name+")......................");
 			startTenantServices(name);
-//			String uuid = UUID.randomUUID().toString();
-//			RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(name),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
-//					"/execute/packages.middleware.pub.server.core.service.main");
-//			rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
-			UserProfileManager.addUser(account);
-			LOGGER.info("New user("+account.getUserId()+") added for the tenant "+name+" successfully.");
+			if("default".equals(name)) {
+				UserProfileManager.addUser(account);
+				LOGGER.info("New user("+account.getUserId()+") added for the tenant "+name+" successfully.");
+			}
+			
 			UserProfileManager.newTenant(name);
 			LOGGER.info("New tenant with name "+name+" created successfully.");
 			//Serc addPublicPrefixPath("/tenant/default/files/gui/middleware/pub/server/ui/welcome/", Tenant.getTenant("default"));

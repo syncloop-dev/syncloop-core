@@ -86,7 +86,11 @@ public class AuthHandlers {
 			if (profiles != null) {
 				AuthAccount acc = ServiceUtils.getCurrentLoggedInAuthAccount(exchange);
 				Cookie cookie = exchange.getRequestCookie("tenant");
-				String tenantName = cookie.getValue();
+				String tenantName = null;
+				if(cookie!=null)
+					tenantName=cookie.getValue();
+				else
+					cookie=new CookieImpl("tenant");
 				if (acc != null && acc.getAuthProfile() != null && acc.getAuthProfile().get("tenant") != null)
 					tenantName = (String) acc.getAuthProfile().get("tenant");
 				if (tenantName == null || tenantName.trim().length() == 0)
