@@ -796,7 +796,7 @@ public class DataPipeline {
         else
             packageName = pkg[1];
         String path = packageName + "/dependency/config";
-		return path;
+		return packagePath + path;
 	}
 
 	public Properties getMyProperties() throws SnippetException {

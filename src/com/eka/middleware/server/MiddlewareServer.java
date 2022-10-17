@@ -47,8 +47,6 @@ public class MiddlewareServer {
 			String keyStoreFilePath=ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
 			String keyStorePassword=ServiceUtils.getServerProperty("middleware.server.keyStore.jks.password");
 
-			
-			
 			//https="8443";
 			String securePorts[] = null;
 			if(https!=null)
