@@ -1,7 +1,11 @@
 package com.eka.middleware.service;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -26,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.pac4j.core.profile.UserProfile;
 
 import com.eka.middleware.auth.AuthAccount;
+import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
@@ -709,27 +714,77 @@ public class DataPipeline {
 	public String getMyConfig(String key) throws SnippetException {
 		Properties props = PropertyManager.getProperties(this, getCurrentResource() + ".properties");
 		String value = props.getProperty(key);
+		String expressionValue=null;
 		if (value != null && value.trim().toUpperCase().startsWith("#GLOBAL/")) {
 			String vls[] = value.split("/");
 			if (vls.length == 2 && vls[1] != null && vls[1].trim().length() > 0)
 				key = vls[1];
 			else
 				return null;
-			return getGlobalConfig(key);
+			expressionValue=getGlobalConfig(key);
 		} else if (value != null && value.trim().toUpperCase().startsWith("#PACKAGE/")) {
 			String vls[] = value.split("/");
 			if (vls.length == 2 && vls[1] != null && vls[1].trim().length() > 0)
 				key = vls[1];
 			else
 				return null;
-			return getGlobalConfig(key);
+			expressionValue = getGlobalConfig(key);
 		}
-		return props.getProperty(key);
+		
+		expressionValue=props.getProperty(key);
+		
+		if(key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
+			expressionValue=expressionValue.replace("[#]","");
+			String privKey=getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if(key!=null)
+				try {
+					expressionValue=Security.getNormalString(expressionValue,privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this, "Could not decrypt property '"+key+"' for '"+rp.getTenant()+"'", e);
+				}
+		}
+		return expressionValue;
 	}
 
 	public String getMyPackageConfig(String key) throws SnippetException {
 		Properties props = PropertyManager.getProperties(this, "package.properties");
-		return props.getProperty(key);
+		String expressionValue=props.getProperty(key);
+		if(key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
+			expressionValue=expressionValue.replace("[#]","");
+			String privKey=getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if(key!=null)
+				try {
+					expressionValue=Security.getNormalString(expressionValue,privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this, "Could not decrypt property '"+key+"' for '"+rp.getTenant()+"'", e);
+				}
+		}
+		
+		return expressionValue;
+	}
+	
+	public void saveProperties(String path,byte[] data) {
+		Properties props=new Properties();
+		File file=new File(path);
+		ByteArrayInputStream bais=new ByteArrayInputStream(data);
+		try {
+			props.load(bais);
+			bais.close();
+			Set keys=props.keySet();
+			for (Object key : keys) {
+				if(key.toString().toLowerCase().startsWith("secure.")) {
+					String value=props.getProperty((String)key);
+					if(!value.startsWith("[#]")) {
+						String publicKey=getGlobalConfig(Security.PUBLIC_PROPERTY_KEY_NAME);
+						value="[#]"+Security.getSecureString(value, publicKey);
+						props.setProperty((String) key, value);
+					}
+				}
+			}
+			PropertyManager.saveProperties(path, props,"Properties saved at "+new Date().toString());
+		} catch (Exception e) {
+			ServiceUtils.printException("Failed to save properties '"+path+"'", e);
+		} 
 	}
 	
 	public String getMyPackageConfigPath() {
@@ -780,7 +835,18 @@ public class DataPipeline {
 
 	public String getGlobalConfig(String key) throws SnippetException {
 		Properties props = PropertyManager.getProperties(this, "global.properties");
-		return props.getProperty(key);
+		String expressionValue=props.getProperty(key);
+		if(key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
+			expressionValue=expressionValue.replace("[#]","");
+			String privKey=getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if(key!=null)
+				try {
+					expressionValue=Security.getNormalString(expressionValue,privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this, "Could not decrypt property '"+key+"' for '"+rp.getTenant()+"'", e);
+				}
+		}
+		return expressionValue;
 	}
 
 	public int getStackIndex() {

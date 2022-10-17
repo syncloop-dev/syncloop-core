@@ -157,6 +157,8 @@ public class FlowUtils {
 				for (String expressionKey : expressions) {
 					if(map.get(expressionKey)!=null)
 						value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
+					else
+						throw new SnippetException(dp, "Could not resolve expression '#{"+expressionKey+"}'.", new Exception("Property not set properly"));
 				}
 			}
 

@@ -4,9 +4,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.ssl.KeyManager;
@@ -21,7 +21,6 @@ import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.service.PropertyManager;
-import com.eka.middleware.service.RuntimePipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
 import com.eka.middleware.template.Tenant;
@@ -66,6 +65,11 @@ public class MiddlewareServer {
 				if(!dir.exists()) {
 					AuthAccount authAcc=new AuthAccount("admin");
 					Map<String, Object> profile=UserProfileManager.createDefaultProfile(null,"default");
+					List<String> groups=new ArrayList<String>();
+					groups.add(AuthAccount.STATIC_ADMIN_GROUP);
+					groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
+					profile.put("groups",groups);
+					profile.put("forceCreateUser",true);
 					authAcc.setProfile(profile);
 					//UserProfileManager.addUser(authAcc);
 					ServiceUtils.initNewTenant("default", authAcc);
@@ -73,6 +77,7 @@ public class MiddlewareServer {
 					LOGGER.info("Starting default tenant......................");
 					ServiceUtils.startTenantServices("default");
 				}
+				
 				Thread.sleep(500);
 				for (String tenant: tenants) {
 					dirPath=PropertyManager.getPackagePath(Tenant.getTenant(tenant))+"packages";

@@ -8,12 +8,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 //import java.util.HashMap;
 import java.util.List;
@@ -23,7 +23,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -210,29 +212,6 @@ public class ServiceUtils {
 		return null;
 	}
 
-	public static void main(String[] args) {
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("Data", "mydata");
-		Map<String, Object> map2 = new HashMap<String, Object>();
-		map2.put("MoreInfo", "Additional data");
-		try {
-			map2.put("complexObject", System.err);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		map.put("map2", map2);
-		map.put("Name", "unknown");
-		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-		String json = null;
-		try {
-			json = om.writeValueAsString(map);
-		} catch (JsonProcessingException e) {
-			e.printStackTrace();
-		}
-		// System.out.println(json);
-	}
-
 	public static Object getExceptionMap(Exception e) {
 		Map<String, Object> lastErrorDump = new HashMap<>();
 		if (e == null)
@@ -309,9 +288,30 @@ public class ServiceUtils {
 		return urlMappings;
 	}
 
+	public static byte[] compress(byte data[]) {
+		Deflater def = new Deflater();
+		def.setInput(data);
+		def.finish();
+		byte compString[] = new byte[data.length];
+		int compSize = def.deflate(compString);
+		String str = new String(compString, StandardCharsets.UTF_8).trim();
+		def.end();
+		return str.getBytes();
+	}
+
+	public static byte[] deCompress(byte data[]) throws DataFormatException {
+		Inflater inf = new Inflater();
+		inf.setInput(data);
+		byte orgString[] = new byte[data.length];
+		int orgSize = inf.inflate(orgString);
+		String str = new String(orgString, StandardCharsets.UTF_8).trim();
+		inf.end();
+		return str.getBytes();
+	}
+
 	public static final String getPathService(String requestPath, Map<String, Object> payload, Tenant tenant) {
-		
-		if(requestPath.startsWith("GET/packages"))
+
+		if (requestPath.startsWith("GET/packages"))
 			return requestPath.split("/")[1];
 		try {
 			String URLAliasFilePath = PropertyManager.getPackagePath(tenant) + "URLAliasMapping.properties";
@@ -664,7 +664,6 @@ public class ServiceUtils {
 					}
 				});
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				ServiceUtils.printException(rp.getSessionID() + " Could not stream body thread.", e);
 			}
@@ -688,23 +687,11 @@ public class ServiceUtils {
 			RuntimePipeline rp = RuntimePipeline.getPipeline(sessionId);
 			final HttpServerExchange exchange = rp.getExchange();
 			rp.payload.put("@bodyStream", exchange.getInputStream());
-			/*
-			 * ExecutorService threadpool = Executors.newCachedThreadPool();
-			 *
-			 * @SuppressWarnings("unchecked") Future<Long> futureTask = (Future<Long>)
-			 * threadpool.submit(() -> { try { exchange.startBlocking();
-			 * rp.payload.put("@bodyStream", exchange.getInputStream()); } catch (Exception
-			 * e) { e.printStackTrace(); ServiceUtils.printException(rp.getSessionID() +
-			 * " Could not stream body thread.", e); } }); while (!futureTask.isDone()) { //
-			 * System.out.println("FutureTask is not finished yet..."); Thread.sleep(10); }
-			 * threadpool.shutdown();
-			 */
 			if (rp.payload.get("@bodyStream") != null) {
 				InputStream is = (InputStream) rp.payload.get("@bodyStream");
 				rp.payload.remove("@bodyStream");
 				return is;
 			}
-
 		} catch (Exception e) {
 			throw new SnippetException(dataPipeLine, e.getMessage(), e);
 		}
@@ -713,81 +700,63 @@ public class ServiceUtils {
 
 	public static void copyDirectory(String sourceDirectoryLocation, String destinationDirectoryLocation)
 			throws IOException {
-		LOGGER.info("Copying files from : "+sourceDirectoryLocation.toString());
-		LOGGER.info("Copying files to : "+destinationDirectoryLocation.toString());
-		
+		LOGGER.info("Copying files from : " + sourceDirectoryLocation.toString());
+		LOGGER.info("Copying files to : " + destinationDirectoryLocation.toString());
+
 		FileUtils.copyDirectory(new File(sourceDirectoryLocation), new File(destinationDirectoryLocation));
-		/*Path src=new File(sourceDirectoryLocation).toPath();
-		File dst=new File(destinationDirectoryLocation);
-		dst.mkdirs();
-		Path dest=dst.toPath();
-		
-		try (Stream<Path> stream = Files.walk(src)) {
-			  stream.parallel().forEach(source -> copy(source, dest.resolve(src.relativize(source))));
-		}*/
-		LOGGER.info("Tenant instance created: "+destinationDirectoryLocation.toString());
+		LOGGER.info("Tenant instance created: " + destinationDirectoryLocation.toString());
 	}
-	
-	private static void copy(Path source, Path dest) {
-		try {
-			//LOGGER.info("From: "+source.toAbsolutePath().toString());
-			//LOGGER.info("To: "+dest.toAbsolutePath().toString());
-			if(source.toFile().isDirectory()) {
-				if(!source.toFile().exists())
-					source.toFile().mkdir();
-			}else
-				Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
-		  
-		} catch (Exception e) {
-			printException("Failed while copying "+source.toString()+"\n to \n"+dest.toString(), e);
-		  //throw new RuntimeException(e.getMessage(), e);
-		}
-	}
-	
+
 	public static String initNewTenant(String name, AuthAccount account) {
 		try {
-			if(Tenant.exists(name))
-				throw new Exception("Tenant already exists or null. Tenant Name : "+name);
-			
-			List<String> groups=null;
-			if(account.getAuthProfile()!=null)
-				groups=(List<String>) account.getAuthProfile().get("groups");
-			if("default".equals(name)) {
-				groups=new ArrayList<String>();
-				groups.add(AuthAccount.STATIC_ADMIN_GROUP);
-				groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
-				account.getAuthProfile().put("groups",groups);
+			if (Tenant.exists(name)) {
+				String msg = ("Tenant already exists or null. Tenant Name : " + name);
+				LOGGER.error(msg);
+				return msg;
 			}
-			if(groups==null)
-				throw new Exception("Claim 'groups' is required in jwt access_token : "+name);
+			List<String> groups = null;
+			if (account.getAuthProfile() != null)
+				groups = (List<String>) account.getAuthProfile().get("groups");
+			if (groups == null) {
+				groups = new ArrayList<String>();
+				LOGGER.warn(
+						"Claim name 'groups' and 'tenant' are required in jwt access_token to allow users to use same tenant otherwise new user will have an option to create his own tenant. Tenant:"
+								+ name);
+			}
 			account.getAuthProfile().put("tenant", name);
-			String src=PropertyManager.getPackagePath(null)+"released"+File.separator+"core";
-			String dest=PropertyManager.getPackagePath(Tenant.getTenant(name));
+			String src = PropertyManager.getPackagePath(null) + "released" + File.separator + "core";
+			String dest = PropertyManager.getPackagePath(Tenant.getTenant(name));
+
+			groups.add(AuthAccount.STATIC_ADMIN_GROUP);
+			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
+			account.getAuthProfile().put("groups", groups);
+			account.getAuthProfile().put("tenant", name);
+			UserProfileManager.addUser(account);
+			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
+			// }
 			copyDirectory(src, dest);
 			Security.setupTenantSecurity(Tenant.getTenant(name));
-			LOGGER.info("Starting newly created tenant("+name+")......................");
+			LOGGER.info("Starting newly created tenant(" + name + ")......................");
 			startTenantServices(name);
-			if("default".equals(name)) {
-				UserProfileManager.addUser(account);
-				LOGGER.info("New user("+account.getUserId()+") added for the tenant "+name+" successfully.");
-			}
-			
 			UserProfileManager.newTenant(name);
-			LOGGER.info("New tenant with name "+name+" created successfully.");
-			//Serc addPublicPrefixPath("/tenant/default/files/gui/middleware/pub/server/ui/welcome/", Tenant.getTenant("default"));
+			LOGGER.info("New tenant with name " + name + " created successfully.");
+			// Serc
+			// addPublicPrefixPath("/tenant/default/files/gui/middleware/pub/server/ui/welcome/",
+			// Tenant.getTenant("default"));
 		} catch (Exception e) {
-			printException("Failed to create tenant with name "+name, e);
+			printException("Failed to create tenant with name " + name, e);
 			return e.getMessage();
 		}
 		return "Done";
 	}
-	
+
 	public static void startTenantServices(String tenant) throws SnippetException {
 		String uuid = UUID.randomUUID().toString();
-		RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant),uuid, uuid, null, "GET/execute/packages.middleware.pub.server.core.service.main",
+		RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant), uuid, uuid, null,
+				"GET/execute/packages.middleware.pub.server.core.service.main",
 				"/execute/packages.middleware.pub.server.core.service.main");
-		LOGGER.trace("RP created for "+tenant);
-		LOGGER.trace("Executing startup servies for "+tenant);
+		LOGGER.trace("RP created for " + tenant);
+		LOGGER.trace("Executing startup servies for " + tenant);
 		rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
 	}
 
@@ -797,7 +766,7 @@ public class ServiceUtils {
 
 		for (String location : paths) {
 			File file = new File(location);
-			LOGGER.info("Class file path: "+ file.getAbsolutePath());
+			LOGGER.info("Class file path: " + file.getAbsolutePath());
 			if (file.getName().contains("ekamw"))
 				LOGGER.info(file.getAbsolutePath());
 			if (file.isFile())
@@ -816,9 +785,9 @@ public class ServiceUtils {
 			return ((Pac4jAccount) context.getAuthenticatedAccount()).getProfile();
 		return null;
 	}
-	
+
 	public static AuthAccount getCurrentLoggedInAuthAccount(HttpServerExchange exchange) throws SnippetException {
-		if(getCurrentLoggedInUserProfile(exchange)==null)
+		if (getCurrentLoggedInUserProfile(exchange) == null)
 			return null;
 		return UserProfileManager.getUserProfileManager().getAccount(getCurrentLoggedInUserProfile(exchange));
 	}
@@ -826,19 +795,15 @@ public class ServiceUtils {
 	public static final String[] getJarPaths(String path, String packagePath) throws Exception {
 		URL urls[] = null;
 		String paths[] = null;
-		// String packagePath=PropertyManager.getPackagePath();
-		LOGGER.info(" 780 JAR PATH: " + packagePath + path);
+		LOGGER.info("JAR PATH: " + packagePath + path);
 		File file = new File(packagePath + path);
-
 		if (file.isDirectory()) {
 			File files[] = file.listFiles();
-
 			if (files.length > 0) {
 				urls = new URL[files.length];
 				paths = new String[files.length];
 				int indx = 0;
 				for (File fileItem : files) {
-
 					if (fileItem.getName().endsWith(".jar")) {
 
 						urls[indx] = fileItem.toURL();
@@ -847,24 +812,11 @@ public class ServiceUtils {
 					}
 				}
 				if (indx > 0) {
-					// DynamicJarClassLoader dynamicJarClassLoader=new DynamicJarClassLoader(urls,
-					// customClassLoader);
-					// URLClassLoader urljl=new URLClassLoader(urls, customClassLoader);
-					// urljl.d
 					LOGGER.info("JAR PATH(" + indx + "): " + packagePath + path);
 					return paths;
-					// dataPipeline.getPayload().put("package", pname.toString() + " reloaded
-					// successfully");
 				}
-				// else dataPipeline.getPayload().put("package", pname.toString() + " jars not
-				// found at location '"+file.getAbsolutePath()+"'");
-
 			}
-			// dataPipeline.getPayload().put("package", pname.toString() + " no jars found
-			// at location '"+file.getAbsolutePath()+"'");
 		}
-		// dataPipeline.getPayload().put("package", pname.toString() + " could not find
-		// directory or it's empty '"+file.getAbsolutePath()+"'");
 		return null;
 	}
 

@@ -8,11 +8,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.pac4j.core.profile.UserProfile;
 
+import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
@@ -28,7 +32,7 @@ public class UserProfileManager implements IdentityManager {
 	private static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
 	private static final Set<String> tenants = new HashSet();
 	private static UserProfileManager upm = null;
-
+	public static Logger LOGGER = LogManager.getLogger(UserProfileManager.class);
 	public static final Map<String, Object> getUsers() throws SystemException {
 		if (PropertyManager.hasfileChanged("profiles.json") || usersMap.size() == 0) {
 			try {
@@ -102,8 +106,23 @@ public class UserProfileManager implements IdentityManager {
 			}
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
-			if (account.getUserId().equals("admin"))
-				user.put("password", "admin");
+			if (account.getUserId().equals("admin")) {
+				
+				Scanner in = new Scanner(System.in);
+				String pass=null;
+				while(pass==null) {
+					LOGGER.info("Creating Admin account for default teant.\nPlease endter strong password:");
+					pass=in.nextLine();
+					LOGGER.info("\nRe-enter your password:");
+					String again=in.nextLine();
+					if(!pass.equals(again)) {
+						pass=null;
+						LOGGER.info("Password did not match. Try again.");
+					}
+				}
+				
+				user.put("password", pass);
+			}
 			umap.put(account.getUserId(), user);
 			map.put("users", umap);
 			map.put("tenants", getTenants());
@@ -209,7 +228,7 @@ public class UserProfileManager implements IdentityManager {
 		if (user != null) {
 			Map<String, Object> profile = (Map<String, Object>) user.get("profile");
 			String tenant = (String) profile.get("tenant");
-			if (up != null && up.getAttribute("access_token") != null) {
+			if (up != null && up.getAttribute("access_token") != null && profile==null) {
 				profile = createDefaultProfile(up,tenant);
 				// profile.put("tenant", tenant);
 			}
@@ -237,21 +256,27 @@ public class UserProfileManager implements IdentityManager {
 			if (bat != null) {
 				String jwt = bat.getValue();
 				if (jwt != null) {
-					jwtMap = JWTParser.parse(jwt).getJWTClaimsSet().toJSONObject();
-					groups = (List<String>) jwtMap.get("groups");
-					tenant = (String) jwtMap.get("tenant");
-					if (groups == null)
-						groups = (List<String>) jwtMap.get("Groups");
+					try {
+						jwtMap = JWTParser.parse(jwt).getJWTClaimsSet().toJSONObject();
+					} catch (Exception ignored) {}
+					if(jwtMap!=null) {
+						groups = (List<String>) jwtMap.get("groups");
+						tenant = (String) jwtMap.get("tenant");
+						if (groups == null)
+							groups = (List<String>) jwtMap.get("Groups");
+					}
 				}
 			}else {
 				tenant=(String) up.getAttribute("tenant");
-				groups = (List<String>)up.getAttribute("groups");
+				if(up.getAttribute("groups")!=null)
+					groups = (List<String>)up.getAttribute("groups");
 			}
 		} catch (Exception e) {
 			ServiceUtils.printException("Failed while get token from UserProfile", e);
 		}
 		// String groups[] = { "Guest" };
-		groups.add("guest");
+		if(groups.size()==0)
+			groups.add("guest");
 		profile.put("groups", groups);
 		if(tenant!=null)
 			profile.put("tenant",tenant);
