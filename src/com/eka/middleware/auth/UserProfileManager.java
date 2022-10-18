@@ -20,6 +20,7 @@ import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 
@@ -33,6 +34,7 @@ public class UserProfileManager implements IdentityManager {
 	private static final Set<String> tenants = new HashSet();
 	private static UserProfileManager upm = null;
 	public static Logger LOGGER = LogManager.getLogger(UserProfileManager.class);
+	
 	public static final Map<String, Object> getUsers() throws SystemException {
 		if (PropertyManager.hasfileChanged("profiles.json") || usersMap.size() == 0) {
 			try {

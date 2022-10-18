@@ -268,7 +268,10 @@ public class DataPipeline {
 	}
 
 	public Map getAsMap(String pointer) {
-		Map<String, Object> myMap = (Map<String, Object>) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Map<String, Object> myMap = null;
+		if(obj!=null)
+			myMap=(Map<String, Object>) getValueByPointer(pointer);
 		return myMap;
 	}
 
@@ -287,32 +290,50 @@ public class DataPipeline {
 	}
 
 	public Integer getAsInteger(String pointer) {
-		Integer val = (Integer) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Integer val = null;
+		if(obj!=null)
+			val=(Integer) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Double getAsNumber(String pointer) {
-		Double val = (Double) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Double val = null;
+		if(obj!=null)
+			val=(Double) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Byte getAsByte(String pointer) {
-		Byte val = (Byte) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Byte val = null;
+		if(obj!=null)
+			val=(Byte) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Date getAsDate(String pointer) {
-		Date val = (Date) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Date val = null;
+		if(obj!=null)
+			val=(Date) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Boolean getAsBoolean(String pointer) {
-		Boolean val = (Boolean) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Boolean val = null;
+		if(obj!=null)
+			val = Boolean.valueOf((String)obj);
 		return val;
 	}
 
 	public String getAsString(String pointer) {
-		String val = (String) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		String val = null;
+		if(obj!=null)
+			val=(String) getValueByPointer(pointer);
 		return val;
 	}
 

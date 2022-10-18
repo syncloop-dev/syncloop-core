@@ -3,9 +3,11 @@ package com.eka.middleware.template;
 import java.util.Map;
 
 import com.eka.middleware.heap.HashMap;
+import com.eka.middleware.service.ServiceUtils;
 
 public class Tenant {
-private String name;
+private final String name;
+public final String id;
 private static Map<String, Tenant> tenantMap=new HashMap();
 
 public static Tenant getTenant(String name) {
@@ -31,14 +33,11 @@ public static boolean exists(String name) {
 
 private Tenant(String name) {
 	this.name=name;
+	this.id = ServiceUtils.generateUUID(System.currentTimeMillis()+"");
 }
 
 public String getName() {
 	return name;
-}
-
-public void setName(String name) {
-	this.name = name;
 }
 
 }

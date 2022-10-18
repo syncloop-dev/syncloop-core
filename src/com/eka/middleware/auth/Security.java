@@ -9,6 +9,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -127,8 +128,9 @@ public static void main(String[] args) {
 	}
 
 	private static PublicKey getPublicKey(byte[] key) throws Exception {
-		//X509EncodedKeySpec privateKeySpec = new X509EncodedKeySpec(key, "RSA");
-		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(key);
+		X509EncodedKeySpec spec = new X509EncodedKeySpec(key, "RSA");
+//		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(key);
+//		RSAPublicKeySpec spec=new RSAPublicKeySpec
 		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 		PublicKey publicKey = keyFactory.generatePublic(spec);
 		return publicKey;
@@ -137,7 +139,7 @@ public static void main(String[] args) {
 	public static String getSecureString(final String data,final String publicKey) throws Exception {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
 		//String publicKey = ServiceUtils.getServerProperty("middleware.server.public.key");
-		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey(Base64.getDecoder().decode(publicKey.getBytes())));
+		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey(Base64.getDecoder().decode(publicKey.getBytes(StandardCharsets.UTF_8))));
 		cipher.update(data.getBytes());
 		byte[] cipherText = cipher.doFinal();
 		cipherText=Base64.getEncoder().encode(cipherText);
