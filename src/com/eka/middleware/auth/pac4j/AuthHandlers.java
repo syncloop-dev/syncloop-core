@@ -126,9 +126,17 @@ public class AuthHandlers {
 					Config cfg = AuthConfigFactory.getBasicDirectAuthConfig();
 					hh = SecurityHandler.build(hh, cfg);
 				} else {
-					Deque<String> dq = new ArrayDeque<>();
-					dq.add(token);
-					exchange.getQueryParameters().put("Authorization_BearerToken", dq);
+					//Deque<String> dq = new ArrayDeque<>();
+					//dq.add(token);
+					try {
+						token=ServiceUtils.decrypt(token, AuthConfigFactory.KEY);
+					} catch (Exception e) {
+						exchange.getResponseSender().send("Invalid Token");
+						exchange.endExchange();
+						return;
+					}
+					
+					exchange.getRequestHeaders().put(HttpString.tryFromString("Authorization"), token);
 					Config cfg = AuthConfigFactory.getJWTAuthClientConfig();
 					hh = SecurityHandler.build(hh, cfg);
 				}

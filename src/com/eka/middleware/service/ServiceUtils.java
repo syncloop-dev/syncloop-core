@@ -12,7 +12,10 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 //import java.util.HashMap;
@@ -28,6 +31,9 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -740,9 +746,7 @@ public class ServiceUtils {
 			startTenantServices(name);
 			UserProfileManager.newTenant(name);
 			LOGGER.info("New tenant with name " + name + " created successfully.");
-			// Serc
-			// addPublicPrefixPath("/tenant/default/files/gui/middleware/pub/server/ui/welcome/",
-			// Tenant.getTenant("default"));
+
 		} catch (Exception e) {
 			printException("Failed to create tenant with name " + name, e);
 			return e.getMessage();
@@ -790,6 +794,46 @@ public class ServiceUtils {
 		if (getCurrentLoggedInUserProfile(exchange) == null)
 			return null;
 		return UserProfileManager.getUserProfileManager().getAccount(getCurrentLoggedInUserProfile(exchange));
+	}
+
+	public static SecretKeySpec setKey(final String myKey) {
+		SecretKeySpec secretKey=null;
+		byte[] key;
+		MessageDigest sha = null;
+		try {
+			key = myKey.getBytes("UTF-8");
+			sha = MessageDigest.getInstance("SHA-1");
+			key = sha.digest(key);
+			key = Arrays.copyOf(key, 16);
+			secretKey = new SecretKeySpec(key, "AES");
+		} catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
+			printException("Could not create secretKey.", e);
+		}
+		return secretKey;
+	}
+
+	public static String encrypt(final String strToEncrypt, final SecretKeySpec secretKey) {
+		try {
+			//setKey(secret);
+			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+			return Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes("UTF-8")));
+		} catch (Exception e) {
+			printException("Error while encrypting: " , e);
+		}
+		return null;
+	}
+
+	public static String decrypt(final String strToDecrypt, final SecretKeySpec secretKey) {
+		try {
+			//setKey(secret);
+			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
+			cipher.init(Cipher.DECRYPT_MODE, secretKey);
+			return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
+		} catch (Exception e) {
+			printException("Error while decrypting: " , e);
+		}
+		return null;
 	}
 
 	public static final String[] getJarPaths(String path, String packagePath) throws Exception {

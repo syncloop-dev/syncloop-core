@@ -114,6 +114,7 @@ public class ThreadManager {
 					Cookie cookie = new CookieImpl("tenant");
 					cookie.setValue(tenantName);
 					exchange.getResponseHeaders().put(Headers.STATUS, 400);
+					exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=utf-8");
 					exchange.getResponseSender().send("<html><body><a href='/tenant/"+tenantName + pureRequestPath
 							+ "'>Re-direct to my workspace.</a><body></html>");
 					exchange.setResponseCookie(cookie);

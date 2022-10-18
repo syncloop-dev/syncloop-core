@@ -35,7 +35,7 @@ import io.undertow.server.session.SessionCookieConfig;
 public class MiddlewareServer {
 	public static Logger LOGGER = LogManager.getLogger(MiddlewareServer.class);
 	private static String local_IP="localhost";
-	public static String JWT_MASALA="17a0dab4-991c-47b6-91c6-109e640a817f";
+	//public static String JWT_MASALA="17a0dab4-991c-47b6-91c6-109e640a817f";
 	private static Map<String, Long> lastModifiedMap = new ConcurrentHashMap<String, Long>();
 
 	public static void main(final String[] args) throws SystemException {

@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.pac4j.core.authorization.authorizer.RequireAnyRoleAuthorizer;
@@ -14,7 +16,7 @@ import org.pac4j.core.client.direct.AnonymousClient;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.config.ConfigFactory;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
-import org.pac4j.http.client.direct.ParameterClient;
+import org.pac4j.http.client.direct.HeaderClient;
 import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
 import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
 import org.pac4j.jwt.config.signature.SecretSignatureConfiguration;
@@ -23,7 +25,6 @@ import org.pac4j.oidc.client.OidcClient;
 import org.pac4j.oidc.config.OidcConfiguration;
 
 import com.eka.middleware.auth.manager.BasicAuthenticator;
-import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
@@ -31,6 +32,9 @@ import com.nimbusds.jose.JWSAlgorithm;
 
 public class AuthConfigFactory implements ConfigFactory {
 	public static Logger LOGGER = LogManager.getLogger(AuthConfigFactory.class);
+	private static final String JWT_MASALA=ServiceUtils.generateUUID(System.nanoTime()+"");
+	public static final SecretSignatureConfiguration secConf=new SecretSignatureConfiguration(JWT_MASALA);
+	public static final SecretKeySpec KEY=ServiceUtils.setKey(JWT_MASALA);
 	private static Config newConfig(Client clnt) {
 		final Config config = new Config(clnt);
 		config.addAuthorizer("admin", new RequireAnyRoleAuthorizer("ROLE_ADMIN"));
@@ -65,10 +69,8 @@ public class AuthConfigFactory implements ConfigFactory {
 
 	public static Config getJWTAuthClientConfig() {
 		if (JWTAuthClientConfig == null) {
-			final ParameterClient client = new ParameterClient("Authorization_BearerToken",
-					new JwtAuthenticator(new SecretSignatureConfiguration(MiddlewareServer.JWT_MASALA)));
-			client.setSupportGetRequest(true);
-			client.setSupportPostRequest(false);
+			final HeaderClient client = new HeaderClient("Authorization",
+					new JwtAuthenticator(secConf));
 			JWTAuthClientConfig = newConfig(client);
 		}
 		return JWTAuthClientConfig;
