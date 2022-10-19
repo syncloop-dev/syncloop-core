@@ -79,13 +79,14 @@ public class Security {
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/welcome/", Tenant.getTenant("default"));
 		// addPublicPrefixPath("/files/gui/middleware/pub/server/ui/welcome/",
 		// Tenant.getTenant("dev"));
-		path.addExactPath("/jwt",
+		path.addPrefixPath("/jwt",
 				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
 		paths.add("/jwt");
-		path.addExactPath("/JWT",
+		path.addPrefixPath("/JWT",
 				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
 		paths.add("/JWT");
-
+		
+		
 //	path.addPrefixPath("/public", SecurityHandler.build(AuthHandlers.defaultHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 //	publicPaths.add("/public");
 		path.addPrefixPath("/", AuthHandlers.mainHandler);
@@ -268,8 +269,14 @@ public static void main(String[] args) {
 		resourcePath = "/tenant/" + dp.rp.getTenant().getName() + resourcePath;
 		String basePath = (String) props.get("basePath");
 		String reDirectURI = basePath + "/callback" + resourcePath + "?client_name=OidcClient";
+		
+		paths.add("/jwt"+resourcePath);
+		path.addExactPath("/jwt"+resourcePath, SecurityHandler.build(AuthHandlers.mainHandler, conf));
+		LOGGER.debug("JWT endpoint");
+		LOGGER.debug("/jwt"+resourcePath);
 		paths.add(resourcePath);
 		path.addExactPath(resourcePath, SecurityHandler.build(AuthHandlers.mainHandler, conf));
+		
 		paths.add("/callback" + resourcePath);
 		path.addExactPath("/callback" + resourcePath, CallbackHandler.build(conf, null));
 		return "Login url=" + basePath + loginPath + ", Redirect_uri=" + reDirectURI;
