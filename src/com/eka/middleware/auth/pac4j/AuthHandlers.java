@@ -103,10 +103,12 @@ public class AuthHandlers {
 				HeaderValues hv = headers.get(HttpString.tryFromString("Authorization"));
 				String authorization = null;
 				boolean isBearer = false;
+				boolean isBasic = false;
 				if (hv != null) {
 					authorization = exchange.getRequestHeaders().get(HttpString.tryFromString("Authorization"))
 							.getFirst();
 					isBearer = authorization.startsWith("Bearer ");
+					isBasic = authorization.startsWith("Basic ");
 				}
 				String token = null;
 				if (isBearer)
@@ -123,8 +125,16 @@ public class AuthHandlers {
 						cookie.setValue(tenantName);
 						exchange.setResponseCookie(cookie);
 					}
-					Config cfg = AuthConfigFactory.getBasicDirectAuthConfig();
-					hh = SecurityHandler.build(hh, cfg);
+
+					isBasic = true; //Temp Code.
+					if (isBasic) {
+						Config cfg = AuthConfigFactory.getBasicDirectAuthConfig();
+						hh = SecurityHandler.build(hh, cfg);
+					} else {
+						exchange.getResponseSender().send("Please login");
+						exchange.endExchange();
+						return ;
+					}
 				} else {
 					//Deque<String> dq = new ArrayDeque<>();
 					//dq.add(token);

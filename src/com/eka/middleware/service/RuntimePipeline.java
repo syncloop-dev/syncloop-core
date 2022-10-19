@@ -77,9 +77,7 @@ public class RuntimePipeline {
 		HttpServerExchange exchange=getExchange();
 		if(exchange==null)
 			return;
-		exchange.getResponseHeaders().clear();
-		exchange.setStatusCode(StatusCodes.FOUND);
-	    exchange.getResponseHeaders().put(Headers.LOCATION, path);
+		ServiceUtils.redirectRequest(exchange, path);
 	}
 
 	public boolean isDestroyed() {

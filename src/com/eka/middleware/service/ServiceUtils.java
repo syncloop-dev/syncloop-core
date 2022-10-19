@@ -35,6 +35,8 @@ import java.util.zip.ZipOutputStream;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -914,5 +916,18 @@ public class ServiceUtils {
 	public static String replaceAllIgnoreRegx(String source, String search, String replace) {
 
 		return StringUtils.join(source.split(Pattern.quote(search)), replace);
+	}
+
+	/**
+	 * @param exchange
+	 * @param path
+	 * @throws SnippetException
+	 */
+	public static void redirectRequest(HttpServerExchange exchange, String path) throws SnippetException {
+		if(exchange==null)
+			return;
+		exchange.getResponseHeaders().clear();
+		exchange.setStatusCode(StatusCodes.FOUND);
+		exchange.getResponseHeaders().put(Headers.LOCATION, path);
 	}
 }
