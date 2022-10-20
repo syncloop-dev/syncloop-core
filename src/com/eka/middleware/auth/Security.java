@@ -54,7 +54,7 @@ import io.undertow.server.handlers.PathHandler;
 public class Security {
 	private static final PathHandler path = new PathHandler();
 	public static final String defaultTenantPage = "/tenant/default/files/gui/middleware/pub/server/ui/tenant/newTenant.html";
-	public static final String defaultWelcomePage = "/tenant/default/files/gui/middleware/pub/server/ui/welcome/index.html";
+	public static final String defaultWelcomePage = "/tenant/default/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html";
 	private static final Set<String> paths = new HashSet<String>();
 	private static final Set<String> publicPaths = new HashSet<String>();
 	private static Map<String, List<String>> publicPrefixPathsMap = new ConcurrentHashMap();
@@ -77,6 +77,12 @@ public class Security {
 				SecurityHandler.build(AuthHandlers.defaultHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/welcome/", Tenant.getTenant("default"));
+		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/icons/", Tenant.getTenant("default"));
+		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/css/", Tenant.getTenant("default"));
+		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/img/", Tenant.getTenant("default"));
+		//addPublicPrefixPath("/execute/packages.middleware.pub.security.login.main", Tenant.getTenant("default"));
+		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/javascript/middleware.js", Tenant.getTenant("default"));
+
 		// addPublicPrefixPath("/files/gui/middleware/pub/server/ui/welcome/",
 		// Tenant.getTenant("dev"));
 		path.addPrefixPath("/jwt",
@@ -177,7 +183,7 @@ public static void main(String[] args) {
 				ThreadManager::processRequest);
 
 		/*
-		 * Handler to answer question “is authentication required”. Always requires
+		 * Handler to answer question ï¿½is authentication requiredï¿½. Always requires
 		 * authentication.
 		 */
 		final AuthenticationConstraintHandler authenticationConstraintHandler = new AuthenticationConstraintHandler(

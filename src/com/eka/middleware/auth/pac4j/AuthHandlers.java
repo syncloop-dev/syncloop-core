@@ -1,9 +1,11 @@
 package com.eka.middleware.auth.pac4j;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.exception.http.HttpAction;
@@ -45,6 +47,8 @@ import io.undertow.util.StatusCodes;
  * @since 1.0.0
  */
 public class AuthHandlers {
+
+	private static final Logger LOGGER = LogManager.getLogger(AuthHandlers.class);
 
 	public static HttpHandler indexHandler() {
 		return exchange -> {
@@ -104,7 +108,9 @@ public class AuthHandlers {
 				String authorization = null;
 				boolean isBearer = false;
 				boolean isBasic = false;
-				if (hv != null) {
+				boolean isForm = true;
+				Cookie loginKey = exchange.getRequestCookie("login_key");
+				if (null == loginKey && hv != null) {
 					authorization = exchange.getRequestHeaders().get(HttpString.tryFromString("Authorization"))
 							.getFirst();
 					isBearer = authorization.startsWith("Bearer ");
@@ -126,15 +132,33 @@ public class AuthHandlers {
 						exchange.setResponseCookie(cookie);
 					}
 
-					isBasic = true; //Temp Code.
-					if (isBasic) {
-						Config cfg = AuthConfigFactory.getBasicDirectAuthConfig();
-						hh = SecurityHandler.build(hh, cfg);
-					} else {
-						exchange.getResponseSender().send("Please login");
-						exchange.endExchange();
+					if (null != loginKey) {
+						isBasic = true;
+						exchange.getRequestHeaders().put(HttpString.tryFromString("Authorization"), "Basic " + loginKey.getValue());
+					} else if (isForm) {
+						isBasic = true;
+						Map<String, Deque<String>> map = exchange.getQueryParameters();
+						if (null != map && !map.isEmpty()) {
+							String username = map.get("username").getFirst();
+							String password = map.get("password").getFirst();
+							exchange.getRequestHeaders().put(HttpString.tryFromString("Authorization"), "Basic " +
+									Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8)));
+							Cookie cookie = new CookieImpl("login_key");
+							cookie.setValue(Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8)));
+							cookie.setPath("/");
+							exchange.setResponseCookie(cookie);
+						}
+					}
+
+
+					if (!isBasic && exchange.getRequestPath().contains(".html")) {
+						ServiceUtils.redirectRequest(exchange, "/tenant/default/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html?r="
+									+ URLEncoder.encode(exchange.getRequestURL(), "UTF-8"));
 						return ;
 					}
+
+					Config cfg = AuthConfigFactory.getBasicDirectAuthConfig();
+					hh = SecurityHandler.build(hh, cfg);
 				} else {
 					//Deque<String> dq = new ArrayDeque<>();
 					//dq.add(token);
@@ -237,9 +261,12 @@ public class AuthHandlers {
 		return exchange -> {
 			FormClient formClient = (FormClient) config.getClients().findClient("FormClient").get();
 			StringBuilder sb = new StringBuilder();
+
+			LOGGER.info("Callback Url ::: {}", formClient.getCallbackUrl());
+
 			sb.append("<html><body>");
 			sb.append("<form action=\"").append(formClient.getCallbackUrl())
-					.append("?client_name=FormClient\" method=\"POST\">");
+					.append("?client_name=FormClient\" method=\"GET\">");
 			sb.append("<input type=\"text\" name=\"username\" value=\"\" />");
 			sb.append("<p />");
 			sb.append("<input type=\"password\" name=\"password\" value=\"\" />");
