@@ -49,16 +49,19 @@ import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 
 public class Security {
 	private static final PathHandler path = new PathHandler();
-	public static final String defaultTenantPage = "/tenant/default/files/gui/middleware/pub/server/ui/tenant/newTenant.html";
-	public static final String defaultWelcomePage = "/tenant/default/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html";
+	public static final String defaultTenantPage = "/files/gui/middleware/pub/server/ui/tenant/newTenant.html";
+	public static final String defaultWelcomePage = "/files/gui/middleware/pub/server/ui/welcome/index.html";
+	public static final String defaultLoginPage = "/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html";
 	private static final Set<String> paths = new HashSet<String>();
 	private static final Set<String> publicPaths = new HashSet<String>();
 	private static Map<String, List<String>> publicPrefixPathsMap = new ConcurrentHashMap();
 	private static Map<String, List<String>> publicExactPathsMap = new ConcurrentHashMap();
+	public final static Map<String, Config> loginExactPathsMap = new ConcurrentHashMap();
 	private static Map<String, String> defaultNewUserPathMap = new ConcurrentHashMap();
 	public static Logger LOGGER = LogManager.getLogger(Security.class);
 	public static String PRIVATE_PROPERTY_KEY_NAME="ekamw.private.key";
@@ -68,33 +71,23 @@ public class Security {
 	}
 
 	public static PathHandler init() throws Exception {
-		// LOGGER.info("Initializing security.......\nEnter master password controller
-		// code:");
-		// Scanner in = new Scanner(System.in);
-		// String pass=null;
-
 		path.addExactPath("/",
 				SecurityHandler.build(AuthHandlers.defaultHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/welcome/", Tenant.getTenant("default"));
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/icons/", Tenant.getTenant("default"));
-		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/css/", Tenant.getTenant("default"));
-		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/img/", Tenant.getTenant("default"));
-		//addPublicPrefixPath("/execute/packages.middleware.pub.security.login.main", Tenant.getTenant("default"));
+		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/", Tenant.getTenant("default"));
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/javascript/middleware.js", Tenant.getTenant("default"));
+		addLoginExactPath(Tenant.getTenant("default"), defaultLoginPage);
+//		addLoginExactPath("/login",Tenant.getTenant("default"), 
+//				CallbackHandler.build(AuthConfigFactory.getFormClientAuthConfig(defaultLoginPage,Tenant.getTenant("default")), null));
 
-		// addPublicPrefixPath("/files/gui/middleware/pub/server/ui/welcome/",
-		// Tenant.getTenant("dev"));
 		path.addPrefixPath("/jwt",
 				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
 		paths.add("/jwt");
 		path.addPrefixPath("/JWT",
 				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
 		paths.add("/JWT");
-		
-		
-//	path.addPrefixPath("/public", SecurityHandler.build(AuthHandlers.defaultHandler(), AuthConfigFactory.getAnonymousClientConfig()));
-//	publicPaths.add("/public");
 		path.addPrefixPath("/", AuthHandlers.mainHandler);
 		paths.add("/");
 		path.addExactPath("/keycloak", getKeyCloakAuthenticator("keycloak.json"));
@@ -201,15 +194,17 @@ public static void main(String[] args) {
 
 	public static void setupTenantSecurity(final Tenant tenant) {
 		Security.generateKeyPair(tenant.getName());
-		addPublicPrefixPath("/tenant/" + tenant.getName() + "/files/gui/middleware/pub/server/ui/welcome/",
-				Tenant.getTenant("default"));
+		String tenantPath="/tenant/" + tenant.getName();
+		addPublicPrefixPath(tenantPath + "/files/gui/middleware/pub/server/ui/welcome/",Tenant.getTenant("default"));
 		List<String> tennatPublicExactPaths = publicExactPathsMap.get(tenant.getName());
 		if (tennatPublicExactPaths != null && tennatPublicExactPaths.size() > 0)
 			tennatPublicExactPaths.forEach(path -> Security.addPublicExactPath(path, tenant));
 
 		List<String> tennatPublicPrefixPaths = publicPrefixPathsMap.get(tenant.getName());
 		if (tennatPublicPrefixPaths != null && tennatPublicPrefixPaths.size() > 0)
-			tennatPublicPrefixPaths.forEach(path -> Security.addPublicExactPath(path, tenant));
+			tennatPublicPrefixPaths.forEach(path -> Security.addPublicPrefixPath(path, tenant));
+		
+		addLoginExactPath(tenant, defaultLoginPage);
 	}
 
 	public static void addPublicPrefixPath(String resourcePrefixPath, Tenant tenant) {
@@ -240,6 +235,18 @@ public static void main(String[] args) {
 			path.addExactPath("/tenant/" + tenant.getName() + "/" + resourceExactPath,
 					SecurityHandler.build(AuthHandlers.indexHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 		}
+	}
+	
+	public static void addLoginExactPath(Tenant tenant, String loginUrl) {
+		Config config = loginExactPathsMap.get(tenant.getName());
+		String tenantPath="/tenant/" + tenant.getName();
+		String loginFormActionPath=tenantPath+"/authenticate";
+		if (config == null) {
+			config=AuthConfigFactory.getFormClientAuthConfig(loginUrl,tenant,"/authenticate");
+			loginExactPathsMap.put(tenant.getName(), config);
+		}
+		HttpHandler handler = CallbackHandler.build(config);
+		path.addExactPath(loginFormActionPath,handler);
 	}
 
 	public static boolean isPublic(String path, String tenantName) {

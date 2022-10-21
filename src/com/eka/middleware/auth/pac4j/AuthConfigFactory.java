@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -17,6 +18,7 @@ import org.pac4j.core.config.Config;
 import org.pac4j.core.config.ConfigFactory;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
 import org.pac4j.http.client.direct.HeaderClient;
+import org.pac4j.http.client.indirect.FormClient;
 import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
 import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
 import org.pac4j.jwt.config.signature.SecretSignatureConfiguration;
@@ -28,6 +30,7 @@ import com.eka.middleware.auth.manager.BasicAuthenticator;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
 import com.nimbusds.jose.JWSAlgorithm;
 
 public class AuthConfigFactory implements ConfigFactory {
@@ -51,8 +54,8 @@ public class AuthConfigFactory implements ConfigFactory {
 
 	public Config build(Object... parameters) {
 		final AnonymousClient anonymousClient = new AnonymousClient();
-		final Clients clients = new Clients("http://localhost:8080/callback", anonymousClient);
-		return newConfig(clients);
+		//final Clients clients = new Clients("http://localhost:8080/callback", anonymousClient);
+		return newConfig(anonymousClient);
 	}
 
 	private static Config DirectBasicAuthClientConfig;
@@ -63,6 +66,30 @@ public class AuthConfigFactory implements ConfigFactory {
 			DirectBasicAuthClientConfig = newConfig(client);
 		}
 		return DirectBasicAuthClientConfig;
+	}
+	
+	private static Config indirectBasicAuthClientConfig;
+	
+	public static Config getBasicAuthConfig() {
+		if (indirectBasicAuthClientConfig == null) {
+			final IndirectBasicAuthClient client = new IndirectBasicAuthClient(new BasicAuthenticator());
+			client.setCallbackUrl("/login");
+			indirectBasicAuthClientConfig = newConfig(client);
+		}
+		return indirectBasicAuthClientConfig;
+	}
+	
+	private static final Map<String, Config> formClientAuthClientConfigMap=new ConcurrentHashMap<>();
+	
+	public static Config getFormClientAuthConfig(String loginURL,Tenant tenant, String authenticationPath) {
+		Config formClientAuthClientConfig=formClientAuthClientConfigMap.get(tenant.id);
+		if (formClientAuthClientConfig == null) {
+			final FormClient client = new FormClient("/tenant/"+tenant.getName()+loginURL,new BasicAuthenticator());
+			client.setCallbackUrl("/tenant/"+tenant.getName()+authenticationPath);
+			formClientAuthClientConfig = newConfig(client);
+			formClientAuthClientConfigMap.put(tenant.id, formClientAuthClientConfig);
+		}
+		return formClientAuthClientConfig;
 	}
 
 	private static Config JWTAuthClientConfig;

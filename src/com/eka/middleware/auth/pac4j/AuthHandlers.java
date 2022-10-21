@@ -91,10 +91,10 @@ public class AuthHandlers {
 				AuthAccount acc = ServiceUtils.getCurrentLoggedInAuthAccount(exchange);
 				Cookie cookie = exchange.getRequestCookie("tenant");
 				String tenantName = null;
-				if(cookie!=null)
-					tenantName=cookie.getValue();
+				if (cookie != null)
+					tenantName = cookie.getValue();
 				else
-					cookie=new CookieImpl("tenant");
+					cookie = new CookieImpl("tenant");
 				if (acc != null && acc.getAuthProfile() != null && acc.getAuthProfile().get("tenant") != null)
 					tenantName = (String) acc.getAuthProfile().get("tenant");
 				if (tenantName == null || tenantName.trim().length() == 0)
@@ -108,9 +108,8 @@ public class AuthHandlers {
 				String authorization = null;
 				boolean isBearer = false;
 				boolean isBasic = false;
-				boolean isForm = true;
-				Cookie loginKey = exchange.getRequestCookie("login_key");
-				if (null == loginKey && hv != null) {
+
+				if (hv != null) {
 					authorization = exchange.getRequestHeaders().get(HttpString.tryFromString("Authorization"))
 							.getFirst();
 					isBearer = authorization.startsWith("Bearer ");
@@ -119,57 +118,46 @@ public class AuthHandlers {
 				String token = null;
 				if (isBearer)
 					token = authorization.replace("Bearer ", "");
-				if (token == null) {
-					String rqp = exchange.getRequestPath();
-					if (rqp != null && !rqp.startsWith("/tenant/")) {
-						Cookie cookie = exchange.getRequestCookie("tenant");
-						if(cookie==null)
-							cookie=new CookieImpl("tenant");
-						String tenantName = cookie.getValue();
-						if (tenantName == null || tenantName.trim().length() == 0)
-							tenantName = "default";
-						cookie.setValue(tenantName);
-						exchange.setResponseCookie(cookie);
-					}
 
-					if (null != loginKey) {
-						isBasic = true;
-						exchange.getRequestHeaders().put(HttpString.tryFromString("Authorization"), "Basic " + loginKey.getValue());
-					} else if (isForm) {
-						isBasic = true;
-						Map<String, Deque<String>> map = exchange.getQueryParameters();
-						if (null != map && !map.isEmpty()) {
-							String username = map.get("username").getFirst();
-							String password = map.get("password").getFirst();
-							exchange.getRequestHeaders().put(HttpString.tryFromString("Authorization"), "Basic " +
-									Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8)));
-							Cookie cookie = new CookieImpl("login_key");
-							cookie.setValue(Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8)));
-							cookie.setPath("/");
+				if (token == null) {
+					String tenantName = null;
+					String rqp = exchange.getRequestPath();
+					if (rqp != null) {
+
+						String rsrcTokens[] = ("b" + rqp).split("/");
+						if (rsrcTokens[1].equalsIgnoreCase("tenant")) {
+							tenantName = rsrcTokens[2];
+						}
+						if (tenantName == null) {
+							Cookie cookie = exchange.getRequestCookie("tenant");
+							if (cookie == null)
+								cookie = new CookieImpl("tenant");
+							tenantName = cookie.getValue();
+							if (tenantName == null || tenantName.trim().length() == 0)
+								tenantName = "default";
+							cookie.setValue(tenantName);
 							exchange.setResponseCookie(cookie);
 						}
 					}
-
-
-					if (!isBasic && exchange.getRequestPath().contains(".html")) {
-						ServiceUtils.redirectRequest(exchange, "/tenant/default/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html?r="
-									+ URLEncoder.encode(exchange.getRequestURL(), "UTF-8"));
-						return ;
+					if(tenantName==null)
+						tenantName="default";
+					Config cfg = Security.loginExactPathsMap.get(tenantName);
+					if(cfg==null) {
+						exchange.getResponseSender().send("Security has not been initialized for tenant '"+tenantName+"'.");
+						exchange.endExchange();
+						return;
 					}
-
-					Config cfg = AuthConfigFactory.getBasicDirectAuthConfig();
 					hh = SecurityHandler.build(hh, cfg);
+
 				} else {
-					//Deque<String> dq = new ArrayDeque<>();
-					//dq.add(token);
 					try {
-						token=ServiceUtils.decrypt(token, AuthConfigFactory.KEY);
+						token = ServiceUtils.decrypt(token, AuthConfigFactory.KEY);
 					} catch (Exception e) {
 						exchange.getResponseSender().send("Invalid Token");
 						exchange.endExchange();
 						return;
 					}
-					
+
 					exchange.getRequestHeaders().put(HttpString.tryFromString("Authorization"), token);
 					Config cfg = AuthConfigFactory.getJWTAuthClientConfig();
 					hh = SecurityHandler.build(hh, cfg);

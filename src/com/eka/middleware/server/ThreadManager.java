@@ -1,6 +1,7 @@
 package com.eka.middleware.server;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -110,23 +111,17 @@ public class ThreadManager {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch");
 					tenantName = (String) account.getAuthProfile().get("tenant");
 					exchange.getResponseHeaders().clear();
-//					if(!method.equalsIgnoreCase("GET")) {
+
 					Cookie cookie = new CookieImpl("tenant");
 					cookie.setValue(tenantName);
 					exchange.getResponseHeaders().put(Headers.STATUS, 400);
 					exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=utf-8");
-					exchange.getResponseSender().send("<html><body><a href='/tenant/"+tenantName + pureRequestPath
+					exchange.getResponseSender().send("<html><body><a href='/tenant/" + tenantName + pureRequestPath
 							+ "'>Re-direct to my workspace.</a><body></html>");
 					exchange.setResponseCookie(cookie);
 					exchange.endExchange();
 					return;
-//					}
-//					exchange.setStatusCode(StatusCodes.FOUND);
-//					exchange.getResponseHeaders().put(Headers.LOCATION, pureRequestPath+"?"+exchange.getQueryString());
-//					Cookie cookie = new CookieImpl("tenant", tenantName);
-//					exchange.setResponseCookie(cookie);
-//					exchange.endExchange();
-//					return;
+
 				}
 				if (tenantName != null) {
 					exchange.setResponseCookie(new CookieImpl("tenant", tenantName));
@@ -149,15 +144,13 @@ public class ThreadManager {
 			Tenant tenant = Tenant.getTenant(tenantName);
 			RuntimePipeline rp = null;
 			Boolean logTransaction = true;
-			// Map<String, Object> pathParams=new HashMap<String, Object>();
+
 			if (requestPath != null && requestPath.length() > 1) {
 				String resource = null;
 				Tenant.getTenant(tenantName);
 				Map<String, Object> pathParams = new HashMap<String, Object>();
 				pathParams.put("pathParameters", "");
-				// if (requestPath.startsWith(method + "/execute"))
-				// resource = requestPath.replace(method + "/execute/", "");
-				// else
+				
 				resource = ServiceUtils.getPathService(requestPath, pathParams, tenant);
 
 				if (resource == null) {
@@ -175,19 +168,16 @@ public class ThreadManager {
 					}
 					return;
 				}
-
-				// pathParams.put("resourcePath", requestPath);
-
+				
 				try {
 					exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
 					logTransaction = exchange.getQueryParameters().containsKey("logTransaction");
-					// "custom.GenerateUUID.main";
+
 					String uuid = ServiceUtils.generateUUID(requestAddress + "" + System.nanoTime());
 
 					rp = RuntimePipeline.create(tenant, uuid, null, exchange, resource, requestPath);
 
 					boolean isAllowed = false;
-					// if(account.getAuthProfile().get("groups"))
 					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account, requestPath);
 
 					if (!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
