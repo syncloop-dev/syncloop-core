@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.HashSet;
 //import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +36,6 @@ import java.util.zip.ZipOutputStream;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
-import io.undertow.util.Headers;
-import io.undertow.util.StatusCodes;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -70,12 +69,18 @@ import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import io.undertow.io.Receiver.FullBytesCallback;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.handlers.form.FormParserFactory.Builder;
+import io.undertow.server.session.Session;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Sessions;
+import io.undertow.util.StatusCodes;
 
 public class ServiceUtils {
 	// private static final Properties serverProperties = new Properties();
@@ -714,6 +719,79 @@ public class ServiceUtils {
 		FileUtils.copyDirectory(new File(sourceDirectoryLocation), new File(destinationDirectoryLocation));
 		LOGGER.info("Tenant instance created: " + destinationDirectoryLocation.toString());
 	}
+	
+	public static String setupRequestPath(HttpServerExchange exchange) {
+		String tenantName = null;
+		String rqp = exchange.getRequestPath();
+		if (rqp != null) {
+			String rsrcTokens[] = ("b" + rqp).split("/");
+			if (rsrcTokens[1].equalsIgnoreCase("tenant")) {
+				tenantName = rsrcTokens[2];
+				ServiceUtils.setupCookie(exchange, tenantName, null);
+			}
+			if (tenantName == null) {
+				Cookie cookie = ServiceUtils.setupCookie(exchange, tenantName, null);
+				tenantName=getTenantName(cookie);
+				exchange.setRequestPath("/tenant/"+tenantName+rqp);
+				exchange.setResponseCookie(cookie);
+			}
+		}
+		return tenantName;
+	}
+	
+	public static Cookie setupCookie(HttpServerExchange exchange,String tenantName, String token) {
+		Cookie cookie = exchange.getRequestCookie("tenant");
+		if(cookie==null) {
+			if(tenantName==null)
+				tenantName="default";
+			cookie=new CookieImpl("tenant", tenantName);
+			cookie.setPath("/");
+			exchange.setResponseCookie(cookie);
+		}
+		if(tenantName==null)
+			tenantName=getTenantName(cookie);
+		else if(getToken(cookie)==null)
+			cookie.setValue(tenantName);
+		cookie.setSecure(true);
+		if(token!=null){
+			cookie.setValue(tenantName+" "+token);
+		}
+		cookie.setPath("/");
+		//exchange.
+//		((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);
+//		exchange.responseCookies().forEach(null);
+//		exchange.remove
+		
+		return cookie;
+	}
+	
+	public static void clearSession(HttpServerExchange exchange) {
+		Session session = Sessions.getSession(exchange);
+		if (session == null)
+			return;
+		HashSet<String> names = new HashSet<>(session.getAttributeNames());
+		for (String attribute : names) {
+			session.removeAttribute(attribute);
+		}
+	}
+
+	public static String getToken(Cookie cookie) {
+		String value=cookie.getValue();
+		String tokenize[]=value.split(" ");
+		String token=null;
+		
+		if(tokenize.length>=2)
+			token=tokenize[1];
+		
+		return token;
+	}
+	public static String getTenantName(Cookie cookie) {
+		String value=cookie.getValue();
+		String tokenize[]=value.split(" ");
+		String tenantName=tokenize[0];
+		return tenantName;
+	}
+	
 
 	public static String initNewTenant(String name, AuthAccount account) {
 		try {

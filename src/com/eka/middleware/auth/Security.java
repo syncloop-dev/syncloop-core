@@ -9,7 +9,6 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +49,9 @@ import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.PathHandler;
 
 public class Security {
@@ -248,7 +250,7 @@ public static void main(String[] args) {
 		HttpHandler handler = CallbackHandler.build(config);
 		path.addExactPath(loginFormActionPath,handler);
 	}
-
+	
 	public static boolean isPublic(String path, String tenantName) {
 		List<String> tennatPublicPaths = publicPrefixPathsMap.get(tenantName);
 		if (tennatPublicPaths != null) {

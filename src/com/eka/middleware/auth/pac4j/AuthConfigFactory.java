@@ -86,6 +86,7 @@ public class AuthConfigFactory implements ConfigFactory {
 		if (formClientAuthClientConfig == null) {
 			final FormClient client = new FormClient("/tenant/"+tenant.getName()+loginURL,new BasicAuthenticator());
 			client.setCallbackUrl("/tenant/"+tenant.getName()+authenticationPath);
+			//client.`
 			formClientAuthClientConfig = newConfig(client);
 			formClientAuthClientConfigMap.put(tenant.id, formClientAuthClientConfig);
 		}

@@ -70,7 +70,7 @@ public class BasicAuthenticator extends SimpleTestUsernamePasswordAuthenticator 
         
         final var profile = new CommonProfile();
         profile.setId(username);
-        profile.addAttribute(Pac4jConstants.USERNAME, username);
+        profile.addAttribute(Pac4jConstants.USERNAME, account.getUserId());
         credentials.setUserProfile(profile);
         LOGGER.trace("Adding profile: "+profile+"...........");
     }//*/

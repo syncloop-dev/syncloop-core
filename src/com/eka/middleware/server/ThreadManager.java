@@ -48,8 +48,19 @@ public class ThreadManager {
 
 		});
 	}
-
+	
 	public static final void processRequest(final HttpServerExchange exchange) {
+		String tenantName=ServiceUtils.setupRequestPath(exchange);
+		Cookie cookie = ServiceUtils.setupCookie(exchange, tenantName, null);
+		String rqp = exchange.getRequestPath();
+		processRequest(exchange, cookie);
+	}
+
+	public static final void processRequest(final HttpServerExchange exchange,final Cookie cookie) {
+		//final Cookie cookie = ServiceUtils.setupCookie(exchange, null, null);
+		
+		//if()
+		final String tenantName=ServiceUtils.getTenantName(cookie);
 		String requestAddress = exchange.toString() + "@" + Integer.toHexString(System.identityHashCode(exchange));
 		String method = exchange.getRequestMethod().toString();
 		String pureRequestPath = exchange.getRequestPath();
@@ -64,28 +75,26 @@ public class ThreadManager {
 		}
 		if (account != null) {
 			String rsrcTokens[] = requestPath.split("/");
-			String tenantName = null;
+			//String tenantName = null;
 			if ("tenant".equalsIgnoreCase(rsrcTokens[1])) {
-				tenantName = rsrcTokens[2];
+				//tenantName = rsrcTokens[2];
 				requestPath = requestPath.replace("/" + rsrcTokens[1] + "/" + rsrcTokens[2], "");
 				pureRequestPath = pureRequestPath.replace("/" + rsrcTokens[1] + "/" + rsrcTokens[2], "");
 			}
 
 			if (account.getUserId().equalsIgnoreCase("anonymous")) {
-				Cookie cookie = exchange.getRequestCookie("tenant");
-				if (cookie != null)
-					tenantName = cookie.getValue();
-				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null) {
-					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
-					cookie = new CookieImpl("tenant", tenantName);
-				}
-
-				if (tenantName == null) {
-					exchange.getResponseSender().send(
-							"You need to pass query parameter tenant=<your tenant name>\n Example:https://console.ekamw.org/my/url?tenant=n9 \n*Note: Tenant name is case sensitive.");
-					exchange.endExchange();
-					return;
-				} else if (!Security.isPublic(pureRequestPath, tenantName)) {
+//				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null) {
+//					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
+//					cookie = new CookieImpl("tenant", tenantName);
+//				}
+//
+//				if (tenantName == null) {
+//					exchange.getResponseSender().send(
+//							"You need to pass query parameter tenant=<your tenant name>\n Example:https://console.ekamw.org/my/url?tenant=n9 \n*Note: Tenant name is case sensitive.");
+//					exchange.endExchange();
+//					return;
+//				} else 
+				if (!Security.isPublic(pureRequestPath, tenantName)) {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or not public");
 					exchange.getResponseHeaders().clear();
 					exchange.getResponseHeaders().put(Headers.STATUS, 400);
@@ -109,25 +118,24 @@ public class ThreadManager {
 						&& account.getAuthProfile().get("tenant") != null
 						&& !((String) account.getAuthProfile().get("tenant")).equalsIgnoreCase(tenantName)) {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch");
-					tenantName = (String) account.getAuthProfile().get("tenant");
+					String profileTenantName = (String) account.getAuthProfile().get("tenant");
 					exchange.getResponseHeaders().clear();
 
-					Cookie cookie = new CookieImpl("tenant");
-					cookie.setValue(tenantName);
+					//Cookie cookie = new CookieImpl("tenant");
+					//cookie.setValue(tenantName);
 					exchange.getResponseHeaders().put(Headers.STATUS, 400);
 					exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=utf-8");
-					exchange.getResponseSender().send("<html><body><a href='/tenant/" + tenantName + pureRequestPath
+					exchange.getResponseSender().send("<html><body><a href='/tenant/" + profileTenantName + pureRequestPath
 							+ "'>Re-direct to my workspace.</a><body></html>");
 					exchange.setResponseCookie(cookie);
 					exchange.endExchange();
 					return;
-
 				}
 				if (tenantName != null) {
 					exchange.setResponseCookie(new CookieImpl("tenant", tenantName));
 				}
 			}
-			if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
+			/*if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
 				tenantName = (String) account.getAuthProfile().get("tenant");
 			} else {
 				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null)
@@ -140,7 +148,7 @@ public class ThreadManager {
 					groups.add("guest");
 					account.getAuthProfile().put("groups", groups);
 				}
-			}
+			}*/
 			Tenant tenant = Tenant.getTenant(tenantName);
 			RuntimePipeline rp = null;
 			Boolean logTransaction = true;
@@ -328,6 +336,10 @@ public class ThreadManager {
 				}
 			}
 		} else {
+			exchange.getResponseHeaders().clear();
+			exchange.getResponseSender().send("Access denied");
+			/*
+			
 			String rqp = exchange.getRequestPath();
 			if (rqp != null && !rqp.startsWith("/tenant/")) {
 				Cookie cookie = exchange.getRequestCookie("tenant");
@@ -345,7 +357,7 @@ public class ThreadManager {
 						"/tenant/" + tenantName + rqp + "?" + exchange.getQueryString());
 				cookie = new CookieImpl("tenant", tenantName);
 				exchange.setResponseCookie(cookie);
-			}
+			}*/
 		}
 	}
 

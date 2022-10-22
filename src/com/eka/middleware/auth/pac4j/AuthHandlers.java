@@ -23,6 +23,7 @@ import org.pac4j.undertow.http.UndertowHttpActionAdapter;
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.ResourceAuthenticator;
 import com.eka.middleware.auth.Security;
+import com.eka.middleware.auth.manager.JWT;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ThreadManager;
 import com.eka.middleware.service.ServiceUtils;
@@ -52,16 +53,7 @@ public class AuthHandlers {
 
 	public static HttpHandler indexHandler() {
 		return exchange -> {
-			String rqp = exchange.getRequestPath();
-			if (rqp != null && !rqp.startsWith("/tenant/")) {
-				exchange.getResponseHeaders().clear();
-				exchange.setStatusCode(StatusCodes.FOUND);
-				exchange.getResponseHeaders().put(Headers.LOCATION, "/tenant/default" + rqp);
-				Cookie cookie = new CookieImpl("tenant", "default");
-				exchange.setResponseCookie(cookie);
-				exchange.endExchange();
-			} else
-				ThreadManager.processRequest(exchange);
+			ThreadManager.processRequest(exchange);
 		};
 	}
 
@@ -86,21 +78,17 @@ public class AuthHandlers {
 		public void handleRequest(final HttpServerExchange exchange) throws Exception {
 			final SecurityContext context = exchange.getSecurityContext();
 			List<UserProfile> profiles = getProfiles(exchange);
-
+			String tenantName=ServiceUtils.setupRequestPath(exchange);
+			Cookie cookie=ServiceUtils.setupCookie(exchange, tenantName, null);
+			
 			if (profiles != null) {
 				AuthAccount acc = ServiceUtils.getCurrentLoggedInAuthAccount(exchange);
-				Cookie cookie = exchange.getRequestCookie("tenant");
-				String tenantName = null;
-				if (cookie != null)
-					tenantName = cookie.getValue();
-				else
-					cookie = new CookieImpl("tenant");
-				if (acc != null && acc.getAuthProfile() != null && acc.getAuthProfile().get("tenant") != null)
-					tenantName = (String) acc.getAuthProfile().get("tenant");
-				if (tenantName == null || tenantName.trim().length() == 0)
-					tenantName = "default";
-				cookie.setValue(tenantName);
-				ThreadManager.processRequest(exchange);
+				String token=ServiceUtils.getToken(cookie);
+				if(token==null) {
+					token=JWT.generate(exchange);
+					cookie=ServiceUtils.setupCookie(exchange, (String)acc.getAuthProfile().get("tenant"), token);
+				}
+				ThreadManager.processRequest(exchange,cookie);
 			} else {
 				HttpHandler hh = this;
 				HeaderMap headers = exchange.getRequestHeaders();
@@ -115,32 +103,11 @@ public class AuthHandlers {
 					isBearer = authorization.startsWith("Bearer ");
 					isBasic = authorization.startsWith("Basic ");
 				}
-				String token = null;
+				String token = ServiceUtils.getToken(cookie);
 				if (isBearer)
 					token = authorization.replace("Bearer ", "");
 
 				if (token == null) {
-					String tenantName = null;
-					String rqp = exchange.getRequestPath();
-					if (rqp != null) {
-
-						String rsrcTokens[] = ("b" + rqp).split("/");
-						if (rsrcTokens[1].equalsIgnoreCase("tenant")) {
-							tenantName = rsrcTokens[2];
-						}
-						if (tenantName == null) {
-							Cookie cookie = exchange.getRequestCookie("tenant");
-							if (cookie == null)
-								cookie = new CookieImpl("tenant");
-							tenantName = cookie.getValue();
-							if (tenantName == null || tenantName.trim().length() == 0)
-								tenantName = "default";
-							cookie.setValue(tenantName);
-							exchange.setResponseCookie(cookie);
-						}
-					}
-					if(tenantName==null)
-						tenantName="default";
 					Config cfg = Security.loginExactPathsMap.get(tenantName);
 					if(cfg==null) {
 						exchange.getResponseSender().send("Security has not been initialized for tenant '"+tenantName+"'.");
@@ -196,7 +163,9 @@ public class AuthHandlers {
 	 * SecurityHandler.build(hh, cfg); } hh.handleRequest(exchange); }
 	 */
 	public static HttpHandler notProtectedIndex = exchange -> {
-		ThreadManager.processRequest(exchange);
+		String tenantName=ServiceUtils.setupRequestPath(exchange);
+		Cookie cookie=ServiceUtils.setupCookie(exchange, tenantName, null);
+		ThreadManager.processRequest(exchange,cookie);
 	};
 
 	public static HttpHandler authenticatedJsonHandler = exchange -> {
