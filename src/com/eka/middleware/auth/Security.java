@@ -80,7 +80,7 @@ public class Security {
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/icons/", Tenant.getTenant("default"));
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/", Tenant.getTenant("default"));
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/javascript/middleware.js", Tenant.getTenant("default"));
-		addLoginExactPath(Tenant.getTenant("default"), defaultLoginPage);
+//		addLoginExactPath(Tenant.getTenant("default"), defaultLoginPage);
 //		addLoginExactPath("/login",Tenant.getTenant("default"), 
 //				CallbackHandler.build(AuthConfigFactory.getFormClientAuthConfig(defaultLoginPage,Tenant.getTenant("default")), null));
 
@@ -281,14 +281,15 @@ public static void main(String[] args) {
 		// props.put("tenant", dp.rp.getTenant().getName());
 		String loginPath = resourcePath;
 		Config conf = AuthConfigFactory.getOIDCAuthClientConfig(props, dp.rp.getTenant().getName());
+		String jwtPath="/tenant/" + dp.rp.getTenant().getName()+ "/jwt" + resourcePath;
 		resourcePath = "/tenant/" + dp.rp.getTenant().getName() + resourcePath;
 		String basePath = (String) props.get("basePath");
 		String reDirectURI = basePath + "/callback" + resourcePath + "?client_name=OidcClient";
 		
-		paths.add("/jwt"+resourcePath);
-		path.addExactPath("/jwt"+resourcePath, SecurityHandler.build(AuthHandlers.mainHandler, conf));
-		LOGGER.debug("JWT endpoint");
-		LOGGER.debug("/jwt"+resourcePath);
+		paths.add(jwtPath);
+		path.addExactPath(jwtPath, SecurityHandler.build(AuthHandlers.mainHandler, conf));
+		LOGGER.info("JWT endpoint");
+		LOGGER.info(jwtPath);
 		paths.add(resourcePath);
 		path.addExactPath(resourcePath, SecurityHandler.build(AuthHandlers.mainHandler, conf));
 		

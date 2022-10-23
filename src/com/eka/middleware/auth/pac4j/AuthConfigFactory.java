@@ -35,9 +35,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 
 public class AuthConfigFactory implements ConfigFactory {
 	public static Logger LOGGER = LogManager.getLogger(AuthConfigFactory.class);
-	private static final String JWT_MASALA=ServiceUtils.generateUUID(System.nanoTime()+"");
-	public static final SecretSignatureConfiguration secConf=new SecretSignatureConfiguration(JWT_MASALA);
-	public static final SecretKeySpec KEY=ServiceUtils.setKey(JWT_MASALA);
+	//private static final String JWT_MASALA=ServiceUtils.generateUUID(System.nanoTime()+"");
 	private static Config newConfig(Client clnt) {
 		final Config config = new Config(clnt);
 		config.addAuthorizer("admin", new RequireAnyRoleAuthorizer("ROLE_ADMIN"));
@@ -95,10 +93,10 @@ public class AuthConfigFactory implements ConfigFactory {
 
 	private static Config JWTAuthClientConfig;
 
-	public static Config getJWTAuthClientConfig() {
+	public static Config getJWTAuthClientConfig(Tenant tenant) {
 		if (JWTAuthClientConfig == null) {
 			final HeaderClient client = new HeaderClient("Authorization",
-					new JwtAuthenticator(secConf));
+					new JwtAuthenticator(tenant.secConf));
 			JWTAuthClientConfig = newConfig(client);
 		}
 		return JWTAuthClientConfig;

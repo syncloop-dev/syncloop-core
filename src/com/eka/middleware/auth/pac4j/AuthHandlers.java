@@ -26,7 +26,9 @@ import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.manager.JWT;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ThreadManager;
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
+import com.eka.middleware.template.Tenant;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
@@ -118,15 +120,18 @@ public class AuthHandlers {
 
 				} else {
 					try {
-						token = ServiceUtils.decrypt(token, AuthConfigFactory.KEY);
+						//String privKey=PropertyManager.getGlobalProperties(tenantName).getProperty(Security.PRIVATE_PROPERTY_KEY_NAME);
+		            	//token=Security.getNormalString(token,privKey);
+						token = ServiceUtils.decrypt(token, tenantName);
 					} catch (Exception e) {
+						exchange.setStatusCode(401);
 						exchange.getResponseSender().send("Invalid Token");
 						exchange.endExchange();
 						return;
 					}
 
 					exchange.getRequestHeaders().put(HttpString.tryFromString("Authorization"), token);
-					Config cfg = AuthConfigFactory.getJWTAuthClientConfig();
+					Config cfg = AuthConfigFactory.getJWTAuthClientConfig(Tenant.getTenant(tenantName));
 					hh = SecurityHandler.build(hh, cfg);
 				}
 				hh.handleRequest(exchange);

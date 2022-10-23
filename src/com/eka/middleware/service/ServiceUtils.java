@@ -17,7 +17,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 //import java.util.HashMap;
 import java.util.List;
@@ -835,6 +837,7 @@ public class ServiceUtils {
 	}
 
 	public static void startTenantServices(String tenant) throws SnippetException {
+		Security.setupTenantSecurity(Tenant.getTenant(tenant));
 		String uuid = UUID.randomUUID().toString();
 		RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant), uuid, uuid, null,
 				"GET/execute/packages.middleware.pub.server.core.service.main",
@@ -876,7 +879,7 @@ public class ServiceUtils {
 		return UserProfileManager.getUserProfileManager().getAccount(getCurrentLoggedInUserProfile(exchange));
 	}
 
-	public static SecretKeySpec setKey(final String myKey) {
+	public static SecretKeySpec getKey(final String myKey) {
 		SecretKeySpec secretKey=null;
 		byte[] key;
 		MessageDigest sha = null;
@@ -892,11 +895,11 @@ public class ServiceUtils {
 		return secretKey;
 	}
 
-	public static String encrypt(final String strToEncrypt, final SecretKeySpec secretKey) {
+	public static String encrypt(final String strToEncrypt, final String tenantName) {
 		try {
 			//setKey(secret);
 			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+			cipher.init(Cipher.ENCRYPT_MODE, Tenant.getTenant(tenantName).KEY);
 			return Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes("UTF-8")));
 		} catch (Exception e) {
 			printException("Error while encrypting: " , e);
@@ -904,22 +907,29 @@ public class ServiceUtils {
 		return null;
 	}
 
-	public static String decrypt(final String strToDecrypt, final SecretKeySpec secretKey) {
+	public static String decrypt(final String strToDecrypt, final String tenantName) throws Exception {
 		try {
 			//setKey(secret);
 			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
-			cipher.init(Cipher.DECRYPT_MODE, secretKey);
+			cipher.init(Cipher.DECRYPT_MODE, Tenant.getTenant(tenantName).KEY);
 			return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
 		} catch (Exception e) {
 			printException("Error while decrypting: " , e);
+			throw e;
 		}
-		return null;
+	}
+	
+	public static Date addHoursToDate(Date date, int hours) {
+	    Calendar calendar = Calendar.getInstance();
+	    calendar.setTime(date);
+	    calendar.add(Calendar.HOUR_OF_DAY, hours);
+	    return calendar.getTime();
 	}
 
 	public static final String[] getJarPaths(String path, String packagePath) throws Exception {
 		URL urls[] = null;
 		String paths[] = null;
-		LOGGER.info("JAR PATH: " + packagePath + path);
+		LOGGER.debug("JAR PATH: " + packagePath + path);
 		File file = new File(packagePath + path);
 		if (file.isDirectory()) {
 			File files[] = file.listFiles();
@@ -936,7 +946,7 @@ public class ServiceUtils {
 					}
 				}
 				if (indx > 0) {
-					LOGGER.info("JAR PATH(" + indx + "): " + packagePath + path);
+					LOGGER.debug("JAR PATH(" + indx + "): " + packagePath + path);
 					return paths;
 				}
 			}

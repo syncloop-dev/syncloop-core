@@ -134,6 +134,28 @@ public class UserProfileManager implements IdentityManager {
 			throw new SystemException("EKA_MWS_1001", e);
 		}
 	}
+	
+	public static void updateUser(AuthAccount account) throws SystemException {
+		try {
+			final Map<String, Object> map = new HashMap();
+			final Map<String, Object> umap = getUsers();
+			Object existingUser = umap.get(account.getUserId());
+			if (existingUser == null) {
+				throw new Exception("User not found: " + account.getUserId());
+			}
+			String password=(String) ((Map)existingUser).get("password");
+			Map<String, Object> user = new HashMap();
+			user.put("profile", account.getAuthProfile());
+			user.put("password", password);
+			umap.put(account.getUserId(), user);
+			map.put("users", umap);
+			map.put("tenants", getTenants());
+			String json = ServiceUtils.toPrettyJson(map);
+			PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+		} catch (Exception e) {
+			throw new SystemException("EKA_MWS_1001", e);
+		}
+	}
 
 	public static void removeUser(String id) throws SystemException {
 		try {

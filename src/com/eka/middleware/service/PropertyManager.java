@@ -48,6 +48,13 @@ public class PropertyManager {
 		// tenantDir="";
 		return ServiceUtils.getServerProperty("middleware.server.home.dir") + "tenants/" + tenantDir + "/";
 	}
+	
+	private static String getPackagePathByTenantName(String tenantName) {
+		String tenantDir = tenantName;
+		// if(tenantName.equals("dev"))
+		// tenantDir="";
+		return ServiceUtils.getServerProperty("middleware.server.home.dir") + "tenants/" + tenantDir + "/";
+	}
 
 	public static final Properties getProperties(DataPipeline dataPipeLine, String fileName) throws SnippetException {
 		String packageName = dataPipeLine.getCurrentResource();
@@ -96,7 +103,7 @@ public class PropertyManager {
 	}
 
 	public static Properties getGlobalProperties(String tenantName) {
-		String packagePath = PropertyManager.getPackagePath(Tenant.getTenant(tenantName)) + "packages/";
+		String packagePath = PropertyManager.getPackagePathByTenantName(tenantName) + "packages/";
 		String packageName = "global";
 		String path = packageName + "/dependency/config/global.properties";
 		File uriFile = new File(packagePath + "/" + path);
