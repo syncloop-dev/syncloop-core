@@ -64,8 +64,8 @@ public class AuthHandlers {
 			exchange.getResponseHeaders().clear();
 			exchange.setStatusCode(StatusCodes.FOUND);
 			exchange.getResponseHeaders().put(Headers.LOCATION, Security.defaultWelcomePage);
-			Cookie cookie = new CookieImpl("tenant", "default");
-			exchange.setResponseCookie(cookie);
+			//Cookie cookie = new CookieImpl("tenant", "default");
+			//exchange.setResponseCookie(cookie);
 			exchange.endExchange();
 		};
 	}

@@ -131,9 +131,9 @@ public class ThreadManager {
 					exchange.endExchange();
 					return;
 				}
-				if (tenantName != null) {
-					exchange.setResponseCookie(new CookieImpl("tenant", tenantName));
-				}
+//				if (tenantName != null) {
+//					exchange.setResponseCookie(new CookieImpl("tenant", tenantName));
+//				}
 			}
 			/*if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
 				tenantName = (String) account.getAuthProfile().get("tenant");

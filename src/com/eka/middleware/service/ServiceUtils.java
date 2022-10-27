@@ -723,19 +723,27 @@ public class ServiceUtils {
 	}
 	
 	public static String setupRequestPath(HttpServerExchange exchange) {
+		
+		Cookie cookie = exchange.getRequestCookie("tenant");
 		String tenantName = null;
+		String token=null;
+		if(cookie!=null) {
+			tenantName=ServiceUtils.getTenantName(cookie);
+			token=ServiceUtils.getToken(cookie);
+		}
+		
 		String rqp = exchange.getRequestPath();
-		if (rqp != null) {
+		if (rqp != null && tenantName==null) {
 			String rsrcTokens[] = ("b" + rqp).split("/");
 			if (rsrcTokens[1].equalsIgnoreCase("tenant")) {
 				tenantName = rsrcTokens[2];
-				ServiceUtils.setupCookie(exchange, tenantName, null);
+				ServiceUtils.setupCookie(exchange, tenantName, token);
 			}
 			if (tenantName == null) {
-				Cookie cookie = ServiceUtils.setupCookie(exchange, tenantName, null);
-				tenantName=getTenantName(cookie);
+				Cookie cukie = ServiceUtils.setupCookie(exchange, tenantName, token);
+				tenantName=getTenantName(cukie);
 				exchange.setRequestPath("/tenant/"+tenantName+rqp);
-				exchange.setResponseCookie(cookie);
+				exchange.setResponseCookie(cukie);
 			}
 		}
 		return tenantName;
@@ -759,6 +767,7 @@ public class ServiceUtils {
 			cookie.setValue(tenantName+" "+token);
 		}
 		cookie.setPath("/");
+		exchange.setResponseCookie(cookie);
 		//exchange.
 //		((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);
 //		exchange.responseCookies().forEach(null);
