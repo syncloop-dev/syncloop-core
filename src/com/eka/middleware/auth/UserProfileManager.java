@@ -1,5 +1,6 @@
 package com.eka.middleware.auth;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -135,7 +136,7 @@ public class UserProfileManager implements IdentityManager {
 		}
 	}
 	
-	public static void updateUser(AuthAccount account) throws SystemException {
+	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
 		try {
 			final Map<String, Object> map = new HashMap();
 			final Map<String, Object> umap = getUsers();
@@ -144,6 +145,8 @@ public class UserProfileManager implements IdentityManager {
 				throw new Exception("User not found: " + account.getUserId());
 			}
 			String password=(String) ((Map)existingUser).get("password");
+			if(pass!=null)
+				password=new String(pass,StandardCharsets.UTF_8);
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
 			user.put("password", password);
