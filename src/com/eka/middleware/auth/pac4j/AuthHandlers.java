@@ -42,13 +42,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
-/**
- * A collection of basic handlers printing dynamic html for the demo
- * application.
- * 
- * @author Michael Remond
- * @since 1.0.0
- */
 public class AuthHandlers {
 
 	private static final Logger LOGGER = LogManager.getLogger(AuthHandlers.class);

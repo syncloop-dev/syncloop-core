@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Maps;
 import io.undertow.security.idm.Account;
 
 public class AuthAccount implements Account{
@@ -46,6 +47,13 @@ public class AuthAccount implements Account{
 
 	public Map<String, Object> getAuthProfile() {
 		return profile;
+	}
+
+	public void addProfileAttribute(String name, Object value) {
+		if (null == profile) {
+			profile = Maps.newHashMap();
+		}
+		profile.put(name, value);
 	}
 
 	public void setProfile(Map<String, Object> profile) {
