@@ -83,17 +83,6 @@ public class ThreadManager {
 			}
 
 			if (account.getUserId().equalsIgnoreCase("anonymous")) {
-//				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null) {
-//					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
-//					cookie = new CookieImpl("tenant", tenantName);
-//				}
-//
-//				if (tenantName == null) {
-//					exchange.getResponseSender().send(
-//							"You need to pass query parameter tenant=<your tenant name>\n Example:https://console.ekamw.org/my/url?tenant=n9 \n*Note: Tenant name is case sensitive.");
-//					exchange.endExchange();
-//					return;
-//				} else 
 				if (!Security.isPublic(pureRequestPath, tenantName)) {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or not public");
 					exchange.getResponseHeaders().clear();
@@ -120,9 +109,6 @@ public class ThreadManager {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch");
 					String profileTenantName = (String) account.getAuthProfile().get("tenant");
 					exchange.getResponseHeaders().clear();
-
-					//Cookie cookie = new CookieImpl("tenant");
-					//cookie.setValue(tenantName);
 					exchange.getResponseHeaders().put(Headers.STATUS, 400);
 					exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=utf-8");
 					exchange.getResponseSender().send("<html><body><a href='/tenant/" + profileTenantName + pureRequestPath
@@ -131,24 +117,7 @@ public class ThreadManager {
 					exchange.endExchange();
 					return;
 				}
-//				if (tenantName != null) {
-//					exchange.setResponseCookie(new CookieImpl("tenant", tenantName));
-//				}
 			}
-			/*if (account.getAuthProfile() != null && account.getAuthProfile().get("tenant") != null) {
-				tenantName = (String) account.getAuthProfile().get("tenant");
-			} else {
-				if (exchange.getQueryParameters().get("tenant") != null && tenantName == null)
-					tenantName = exchange.getQueryParameters().get("tenant").getFirst();
-				else {
-					tenantName = "default";
-					account.getAuthProfile().put("tenant", tenantName);
-					List<String> groups = new ArrayList<String>();
-					groups.add("default");
-					groups.add("guest");
-					account.getAuthProfile().put("groups", groups);
-				}
-			}*/
 			Tenant tenant = Tenant.getTenant(tenantName);
 			RuntimePipeline rp = null;
 			Boolean logTransaction = true;
@@ -226,8 +195,13 @@ public class ThreadManager {
 									String value = new String(Base64.getDecoder().decode(v.getFirst()));
 									Map<String, Object> map = ServiceUtils.jsonToMap("{\"root\":" + value + "}");
 									rpf.payload.put(key, map.get("root"));
-								} else
+								} else if(v.size()==1)
 									rpf.payload.put(k, v.getFirst());
+								else {
+									final List<String> list=new ArrayList<>();
+									v.forEach(x->{list.add(x);});
+									rpf.payload.put(k, list);
+								}
 							}
 						});
 					// rp.payload.putAll(exchange.getQueryParameters());// put("parameters",
