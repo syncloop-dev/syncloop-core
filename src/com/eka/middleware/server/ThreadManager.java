@@ -20,6 +20,7 @@ import com.eka.middleware.auth.ResourceAuthenticator;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.auth.manager.AuthorizationRequest;
+import com.eka.middleware.auth.manager.JWT;
 import com.eka.middleware.service.RuntimePipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.MultiPart;
@@ -109,11 +110,17 @@ public class ThreadManager {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch");
 					String profileTenantName = (String) account.getAuthProfile().get("tenant");
 					exchange.getResponseHeaders().clear();
-					exchange.getResponseHeaders().put(Headers.STATUS, 400);
-					exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=utf-8");
-					exchange.getResponseSender().send("<html><body><a href='/tenant/" + profileTenantName + pureRequestPath
-							+ "'>Re-direct to my workspace.</a><body></html>");
+					String tntName=(String) account.getAuthProfile().get("tenant");
+					String token=JWT.generate(exchange);
+					cookie.setValue(tntName+" "+token);
 					exchange.setResponseCookie(cookie);
+					String tenantPath="/tenant/" + profileTenantName + pureRequestPath;
+					ServiceUtils.redirectRequest(exchange, tenantPath);
+					//exchange.getResponseHeaders().put(Headers.STATUS, 400);
+					//exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=utf-8");
+					
+					//exchange.getResponseSender().send("<html><body><a href='/tenant/" + profileTenantName + pureRequestPath
+					//		+ "'>Re-direct to my workspace.</a><body></html>");
 					exchange.endExchange();
 					return;
 				}
@@ -171,7 +178,7 @@ public class ThreadManager {
 					if (!isAllowed) {
 						if (logTransaction == true)
 							LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), resource, "resource"));
-						String userId = rp.getCurrentLoggedInUserProfile().getId();
+						String userId = account.getUserId();
 						if (logTransaction == true)
 							LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(),
 									"User(" + userId + ") is not in a consumer group.", "permission"));

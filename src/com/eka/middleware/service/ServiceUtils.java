@@ -50,6 +50,7 @@ import org.pac4j.undertow.account.Pac4jAccount;
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.auth.pac4j.AuthHandlers;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.ServiceManager;
@@ -726,6 +727,13 @@ public class ServiceUtils {
 		
 		Cookie cookie = exchange.getRequestCookie("tenant");
 		String tenantName = null;
+		try {
+			AuthAccount acc=UserProfileManager.getUserProfileManager()
+					.getAccount(ServiceUtils.getCurrentLoggedInUserProfile(exchange));
+			tenantName=(String)acc.getAuthProfile().get("tenant");
+		} catch (Exception ignore) {
+			
+		}
 		String token=null;
 		if(cookie!=null) {
 			tenantName=ServiceUtils.getTenantName(cookie);
@@ -1020,7 +1028,7 @@ public class ServiceUtils {
 	 * @param path
 	 * @throws SnippetException
 	 */
-	public static void redirectRequest(HttpServerExchange exchange, String path) throws SnippetException {
+	public static void redirectRequest(HttpServerExchange exchange, String path) {
 		if(exchange==null)
 			return;
 		exchange.getResponseHeaders().clear();

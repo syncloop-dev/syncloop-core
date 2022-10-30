@@ -38,7 +38,10 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
 //		if(authAccount.getAuthProfile()!=null && authAccount.getAuthProfile().get("tenant")!=null)
 //			packagePath=PropertyManager.getPackagePath((String) authAccount.getAuthProfile().get("tenant"));
 //		else
-		packagePath=PropertyManager.getPackagePath(Tenant.getTenant((String)authAccount.getAuthProfile().get("tenant")));
+		String tenantName=(String)authAccount.getAuthProfile().get("tenant");
+		if(tenantName==null)
+			tenantName="default";
+		packagePath=PropertyManager.getPackagePathByTenantName(tenantName);
 		String path = (packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".service"); 
 		File file=new File(path);
 		if(!file.exists()) {
@@ -81,6 +84,7 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
 		}else {
 			Map<String, Object> profile = authAccount.getAuthProfile();
             List<String> userGroups=(List<String>)profile.get("groups");
+            canConsume=false;
             for(String group: userGroups){
                     if(AuthAccount.STATIC_ADMIN_GROUP.equals(group)){
                       canConsume=true;
@@ -90,7 +94,6 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
                         break;
                     }
                }
-			canConsume=false;
 		}
 	} catch (Exception e) {
 		e.printStackTrace();

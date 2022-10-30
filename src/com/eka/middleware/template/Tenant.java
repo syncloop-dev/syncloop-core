@@ -29,7 +29,7 @@ public class Tenant {
 		synchronized (syncObject) {
 			try {
 				if (name == null)
-					name = "NA.DEFAULT";
+					name = "default";
 				if (tenantMap.get(name) == null) {
 					tenantMap.put(name, new Tenant(name));
 				}

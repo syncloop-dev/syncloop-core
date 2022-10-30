@@ -1,8 +1,7 @@
 package com.eka.middleware.auth.pac4j;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,8 +11,6 @@ import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.core.util.Pac4jConstants;
 import org.pac4j.http.client.indirect.FormClient;
-import org.pac4j.jwt.config.signature.SecretSignatureConfiguration;
-import org.pac4j.jwt.profile.JwtGenerator;
 import org.pac4j.undertow.account.Pac4jAccount;
 import org.pac4j.undertow.context.UndertowSessionStore;
 import org.pac4j.undertow.context.UndertowWebContext;
@@ -21,12 +18,9 @@ import org.pac4j.undertow.handler.SecurityHandler;
 import org.pac4j.undertow.http.UndertowHttpActionAdapter;
 
 import com.eka.middleware.auth.AuthAccount;
-import com.eka.middleware.auth.ResourceAuthenticator;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.manager.JWT;
-import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.server.ThreadManager;
-import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.Tenant;
 
@@ -35,7 +29,6 @@ import io.undertow.security.idm.Account;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
@@ -115,6 +108,7 @@ public class AuthHandlers {
 					try {
 						//String privKey=PropertyManager.getGlobalProperties(tenantName).getProperty(Security.PRIVATE_PROPERTY_KEY_NAME);
 		            	//token=Security.getNormalString(token,privKey);
+						//tenantName=acc
 						token = ServiceUtils.decrypt(token, tenantName);
 					} catch (Exception e) {
 						cookie.setExpires(new Date(System.currentTimeMillis()-1000));
@@ -135,34 +129,7 @@ public class AuthHandlers {
 
 		}
 	};
-	/*
-	 * public static HttpHandler oidcIndex = exchange -> { StringBuilder sb = new
-	 * StringBuilder(); sb.append("<h1>protected area</h1>");
-	 * sb.append("<a href=\"..\">Back</a><br />"); sb.append("<br /><br />");
-	 * sb.append("profiles: "); sb.append(getProfiles(exchange));
-	 * sb.append("<br />");
-	 * 
-	 * sendEnd(exchange, sb); }; /*
-	 * 
-	 * 
-	 * exchange -> { final SecurityContext context = exchange.getSecurityContext();
-	 * Account authAccount= null; if(context!=null)
-	 * authAccount=context.getAuthenticatedAccount(); if(authAccount!=null)
-	 * ThreadManager.processRequest(exchange); else { HttpHandler hh=protectedIndex;
-	 * } };
-	 * 
-	 * String authType=null; if(exchange.getQueryParameters()!=null &&
-	 * exchange.getQueryParameters().get("AuthType")!=null &&
-	 * exchange.getQueryParameters().get("AuthType").size()>0)
-	 * authType=exchange.getQueryParameters().get("AuthType").getFirst();
-	 * if(ResourceAuthenticator.isPublic(exchange))
-	 * ThreadManager.processRequest(exchange); else { HttpHandler hh=this; final
-	 * SecurityContext context = exchange.getSecurityContext(); Account authAccount=
-	 * null; if(context!=null) authAccount=context.getAuthenticatedAccount();
-	 * if(authAccount==null) { Config
-	 * cfg=AuthConfigFactory.getBasicDirectAuthConfig(); hh =
-	 * SecurityHandler.build(hh, cfg); } hh.handleRequest(exchange); }
-	 */
+
 	public static HttpHandler notProtectedIndex = exchange -> {
 		String tenantName=ServiceUtils.setupRequestPath(exchange);
 		Cookie cookie=ServiceUtils.setupCookie(exchange, tenantName, null);

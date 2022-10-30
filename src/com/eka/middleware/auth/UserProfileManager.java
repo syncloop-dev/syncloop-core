@@ -301,8 +301,10 @@ public class UserProfileManager implements IdentityManager {
 			ServiceUtils.printException("Failed while get token from UserProfile", e);
 		}
 		// String groups[] = { "Guest" };
-		if(groups.size()==0)
+		if(groups.size()==0) {
 			groups.add("guest");
+			groups.add("default");
+		}
 		profile.put("groups", groups);
 		if(tenant!=null)
 			profile.put("tenant",tenant);
