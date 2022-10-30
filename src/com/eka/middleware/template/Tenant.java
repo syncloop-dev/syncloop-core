@@ -65,8 +65,7 @@ public class Tenant {
 		
 		if (key == null)
 			throw new Exception("Tenant public key not found or tenant not found. Tenant name: " + name);
-		key=Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(key.getBytes()))+
-				"-"+Base64.getEncoder().encodeToString(MessageDigest.getInstance("MD5").digest(key.getBytes()));
+		key=Base64.getEncoder().encodeToString(key.substring(0, 32).getBytes());
 		this.id = key;
 		secConf = new SecretSignatureConfiguration(id);
 		KEY = ServiceUtils.getKey(id);

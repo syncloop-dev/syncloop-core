@@ -117,8 +117,11 @@ public class AuthHandlers {
 		            	//token=Security.getNormalString(token,privKey);
 						token = ServiceUtils.decrypt(token, tenantName);
 					} catch (Exception e) {
+						cookie.setExpires(new Date(System.currentTimeMillis()-1000));
+						cookie.setDiscard(true);
+						exchange.setResponseCookie(cookie);
 						exchange.setStatusCode(401);
-						exchange.getResponseSender().send("Invalid Token");
+						exchange.getResponseSender().send("Token expired. Please reload/relogin page.");
 						exchange.endExchange();
 						return;
 					}

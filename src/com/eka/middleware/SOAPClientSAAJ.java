@@ -1,6 +1,7 @@
 package com.eka.middleware;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,12 +18,14 @@ import jakarta.xml.soap.SOAPEnvelope;
 import jakarta.xml.soap.SOAPException;
 import jakarta.xml.soap.SOAPMessage;
 import jakarta.xml.soap.SOAPPart;
-
+//import io.timeandspace.cronscheduler.CronScheduler;
 public class SOAPClientSAAJ {
 
     // SAAJ - SOAP Client Testing
     public static void main(String args[]) {
-    	
+    	Duration syncPeriod = Duration.ofSeconds(5);
+		//CronScheduler cron = CronScheduler.create(syncPeriod);
+		
     	File dir=new File("");
     	File files[]= dir.listFiles();
     	for (File file : files) {

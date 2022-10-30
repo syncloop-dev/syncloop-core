@@ -194,19 +194,19 @@ public static void main(String[] args) {
 		return securityInitialHandler;
 	}
 
-	public static void setupTenantSecurity(final Tenant tenant) {
-		Security.generateKeyPair(tenant.getName());
-		String tenantPath="/tenant/" + tenant.getName();
+	public static void setupTenantSecurity(final String tenantName) {
+		Security.generateKeyPair(tenantName);
+		String tenantPath="/tenant/" + tenantName;
 		addPublicPrefixPath(tenantPath + "/files/gui/middleware/pub/server/ui/welcome/",Tenant.getTenant("default"));
-		List<String> tennatPublicExactPaths = publicExactPathsMap.get(tenant.getName());
+		List<String> tennatPublicExactPaths = publicExactPathsMap.get(tenantName);
 		if (tennatPublicExactPaths != null && tennatPublicExactPaths.size() > 0)
-			tennatPublicExactPaths.forEach(path -> Security.addPublicExactPath(path, tenant));
+			tennatPublicExactPaths.forEach(path -> Security.addPublicExactPath(path, Tenant.getTenant(tenantName)));
 
-		List<String> tennatPublicPrefixPaths = publicPrefixPathsMap.get(tenant.getName());
+		List<String> tennatPublicPrefixPaths = publicPrefixPathsMap.get(tenantName);
 		if (tennatPublicPrefixPaths != null && tennatPublicPrefixPaths.size() > 0)
-			tennatPublicPrefixPaths.forEach(path -> Security.addPublicPrefixPath(path, tenant));
+			tennatPublicPrefixPaths.forEach(path -> Security.addPublicPrefixPath(path, Tenant.getTenant(tenantName)));
 		
-		addLoginExactPath(tenant, defaultLoginPage);
+		addLoginExactPath(Tenant.getTenant(tenantName), defaultLoginPage);
 	}
 
 	public static void addPublicPrefixPath(String resourcePrefixPath, Tenant tenant) {

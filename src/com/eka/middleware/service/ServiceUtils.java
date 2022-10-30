@@ -751,7 +751,7 @@ public class ServiceUtils {
 	
 	public static Cookie setupCookie(HttpServerExchange exchange,String tenantName, String token) {
 		Cookie cookie = exchange.getRequestCookie("tenant");
-		if(cookie==null) {
+		if(cookie==null || cookie.isDiscard()) {
 			if(tenantName==null)
 				tenantName="default";
 			cookie=new CookieImpl("tenant", tenantName);
@@ -822,7 +822,7 @@ public class ServiceUtils {
 			}
 			account.getAuthProfile().put("tenant", name);
 			String src = PropertyManager.getPackagePath(null) + "released" + File.separator + "core";
-			String dest = PropertyManager.getPackagePath(Tenant.getTenant(name));
+			String dest = PropertyManager.getPackagePathByTenantName(name);
 
 			groups.add(AuthAccount.STATIC_ADMIN_GROUP);
 			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
@@ -832,7 +832,7 @@ public class ServiceUtils {
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
 			copyDirectory(src, dest);
-			Security.setupTenantSecurity(Tenant.getTenant(name));
+			Security.setupTenantSecurity(name);
 			LOGGER.info("Starting newly created tenant(" + name + ")......................");
 			startTenantServices(name);
 			UserProfileManager.newTenant(name);
@@ -846,7 +846,7 @@ public class ServiceUtils {
 	}
 
 	public static void startTenantServices(String tenant) throws SnippetException {
-		Security.setupTenantSecurity(Tenant.getTenant(tenant));
+		Security.setupTenantSecurity(tenant);
 		String uuid = UUID.randomUUID().toString();
 		RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant), uuid, uuid, null,
 				"GET/execute/packages.middleware.pub.server.core.service.main",

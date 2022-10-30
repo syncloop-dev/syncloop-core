@@ -123,7 +123,6 @@ public class UserProfileManager implements IdentityManager {
 						LOGGER.info("Password did not match. Try again.");
 					}
 				}
-				
 				user.put("password", pass);
 			}
 			umap.put(account.getUserId(), user);

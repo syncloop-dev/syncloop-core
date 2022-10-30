@@ -49,7 +49,7 @@ public class PropertyManager {
 		return ServiceUtils.getServerProperty("middleware.server.home.dir") + "tenants/" + tenantDir + "/";
 	}
 	
-	private static String getPackagePathByTenantName(String tenantName) {
+	public static String getPackagePathByTenantName(String tenantName) {
 		String tenantDir = tenantName;
 		// if(tenantName.equals("dev"))
 		// tenantDir="";
@@ -125,7 +125,7 @@ public class PropertyManager {
 	}
 
 	public static void saveGlobalProperties(String tenantName, Properties props) {
-		String packagePath = PropertyManager.getPackagePath(Tenant.getTenant(tenantName)) + "packages/";
+		String packagePath = PropertyManager.getPackagePathByTenantName(tenantName) + "packages/";
 		String packageName = "global";
 		String path = packageName + "/dependency/config/global.properties";
 		saveProperties(packagePath + "/" + path, props, "global properties");
