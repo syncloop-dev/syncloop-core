@@ -33,6 +33,7 @@ import io.undertow.security.idm.PasswordCredential;
 public class UserProfileManager implements IdentityManager {
 	private static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
 	private static final Set<String> tenants = new HashSet();
+	private static final Set<String> groups = new HashSet();
 	private static UserProfileManager upm = null;
 	public static Logger LOGGER = LogManager.getLogger(UserProfileManager.class);
 	
@@ -45,7 +46,11 @@ public class UserProfileManager implements IdentityManager {
 					final Map<String, Object> map = ServiceUtils.jsonToMap(json);
 					final Map<String, Object> umap = ((Map<String, Object>) map.get("users"));
 					List<String> tenantList = (List<String>) map.get("tenants");
-					tenantList.forEach(v -> tenants.add(v));
+					if(tenantList!=null)
+						tenantList.forEach(v -> tenants.add(v));
+					List<String> groupList = (List<String>) map.get("groups");
+					if(groupList!=null)
+						groupList.forEach(v -> groups.add(v));
 					umap.forEach((k, v) -> {
 						Map<String, Object> user = (Map<String, Object>) v;
 						if (user.get("password") != null) {
@@ -84,8 +89,26 @@ public class UserProfileManager implements IdentityManager {
 			String json = new String(bytes);
 			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
 			tenantList = (List<String>) map.get("tenants");
+			tenants.addAll(tenantList);
 		}
 		return new ArrayList(tenants);
+	}
+	
+	public static List<String> getGroups() {
+		byte bytes[] = null;
+		try {
+			bytes = PropertyManager.readConfigurationFile("profiles.json");
+		} catch (SystemException e) {
+			ServiceUtils.printException("Failed while loading group list", e);
+		}
+		List<String> groupList = null;
+		if (bytes != null) {
+			String json = new String(bytes);
+			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
+			groupList = (List<String>) map.get("groups");
+			groups.addAll(groupList);
+		}
+		return new ArrayList(groups);
 	}
 
 	public static void newTenant(String name) throws Exception {
@@ -94,6 +117,19 @@ public class UserProfileManager implements IdentityManager {
 		tenantList.add(name);
 		tenants.add(name);
 		map.put("tenants", tenantList);
+		map.put("groups", getGroups());
+		map.put("users", getUsers());
+		String json = ServiceUtils.toPrettyJson(map);
+		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+	}
+	
+	public static void newGroup(String name) throws Exception {
+		final Map<String, Object> map = new HashMap();
+		List<String> groupList = getGroups();
+		groupList.add(name);
+		groups.add(name);
+		map.put("groups", groupList);
+		map.put("tenants", getTenants());
 		map.put("users", getUsers());
 		String json = ServiceUtils.toPrettyJson(map);
 		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
