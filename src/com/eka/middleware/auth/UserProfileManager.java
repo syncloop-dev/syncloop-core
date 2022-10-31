@@ -134,6 +134,18 @@ public class UserProfileManager implements IdentityManager {
 		String json = ServiceUtils.toPrettyJson(map);
 		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
 	}
+	
+	public static void removeGroup(String name) throws Exception {
+		final Map<String, Object> map = new HashMap();
+		List<String> groupList = getGroups();
+		groupList.remove(name);
+		groups.remove(name);
+		map.put("groups", groupList);
+		map.put("tenants", getTenants());
+		map.put("users", getUsers());
+		String json = ServiceUtils.toPrettyJson(map);
+		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+	}
 
 	public static void addUser(AuthAccount account) throws SystemException {
 		try {
