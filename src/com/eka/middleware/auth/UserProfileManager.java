@@ -1,34 +1,22 @@
 package com.eka.middleware.auth;
 
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.pac4j.core.profile.UserProfile;
-
-import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
-import com.eka.middleware.template.Tenant;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.pac4j.core.profile.UserProfile;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Principal;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UserProfileManager implements IdentityManager {
 	private static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
@@ -196,7 +184,8 @@ public class UserProfileManager implements IdentityManager {
 				password=new String(pass,StandardCharsets.UTF_8);
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
-			user.put("password", password);
+			String passHash = "[#]" + ServiceUtils.generateUUID(password + account.getUserId());
+			user.put("password", passHash);
 			umap.put(account.getUserId(), user);
 			map.put("users", umap);
 			map.put("tenants", getTenants());
