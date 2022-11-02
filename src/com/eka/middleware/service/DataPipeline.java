@@ -324,8 +324,9 @@ public class DataPipeline {
 	public Boolean getAsBoolean(String pointer) {
 		Object obj=getValueByPointer(pointer);
 		Boolean val = null;
-		if(obj!=null)
-			val = ((Boolean) obj).booleanValue();
+		if(obj!=null) {
+			val = Boolean.valueOf(obj.toString());
+		}
 		return val;
 	}
 
