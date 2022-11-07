@@ -85,7 +85,7 @@ public class ThreadManager {
 
 			if (account.getUserId().equalsIgnoreCase("anonymous")) {
 				if (!Security.isPublic(pureRequestPath, tenantName)) {
-					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or not public");
+					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or path not public. Make sure you are using right tenant name('"+tenantName+"'). Name is case sensitive. Clear your cookies retry with correct tenant name.");
 					exchange.getResponseHeaders().clear();
 					exchange.getResponseHeaders().put(Headers.STATUS, 400);
 					exchange.getResponseSender()
@@ -170,7 +170,7 @@ public class ThreadManager {
 						String newUserPath = Security.gerDefaultNewUserPath(tenantName);
 						if (newUserPath == null)
 							newUserPath = Security.defaultTenantPage;
-						exchange.getResponseHeaders().put(Headers.LOCATION, newUserPath);
+						exchange.getResponseHeaders().put(Headers.LOCATION, "/tenant/"+tenantName+newUserPath);
 						exchange.endExchange();
 						return;
 					}

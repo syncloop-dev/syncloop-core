@@ -8,6 +8,8 @@ import org.apache.logging.log4j.Logger;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.exception.http.HttpAction;
+import org.pac4j.core.logout.handler.DefaultLogoutHandler;
+import org.pac4j.core.logout.handler.LogoutHandler;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.core.util.Pac4jConstants;
 import org.pac4j.http.client.indirect.FormClient;
@@ -29,6 +31,7 @@ import io.undertow.security.idm.Account;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
@@ -45,11 +48,11 @@ public class AuthHandlers {
 		};
 	}
 
-	public static HttpHandler defaultHandler() {
+	public static HttpHandler defaultWelcomePageHandler(final String path) {
 		return exchange -> {
 			exchange.getResponseHeaders().clear();
 			exchange.setStatusCode(StatusCodes.FOUND);
-			exchange.getResponseHeaders().put(Headers.LOCATION, Security.defaultWelcomePage);
+			exchange.getResponseHeaders().put(Headers.LOCATION, path);
 			//Cookie cookie = new CookieImpl("tenant", "default");
 			//exchange.setResponseCookie(cookie);
 			exchange.endExchange();
@@ -62,6 +65,18 @@ public class AuthHandlers {
 		exchange.endExchange();
 	}
 
+	public static HttpHandler logoutHandler = new HttpHandler() {
+		public void handleRequest(final HttpServerExchange exchange) throws Exception {
+			exchange.getRequestCookies().clear();
+			exchange.getResponseCookies().clear();
+			exchange.setRequestCookie(null);
+			exchange.setResponseCookie(null);
+			LogoutHandler lh=new DefaultLogoutHandler();
+			ServiceUtils.redirectRequest(exchange, Security.defaultLoginPage);
+			exchange.endExchange();
+		}
+	};
+	
 	public static HttpHandler mainHandler = new HttpHandler() {
 		public void handleRequest(final HttpServerExchange exchange) throws Exception {
 			final SecurityContext context = exchange.getSecurityContext();
