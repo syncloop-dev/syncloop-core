@@ -101,7 +101,8 @@ public class ThreadManager {
 				groups.add("administrators");
 				groups.add("guest");
 				account.getAuthProfile().put("groups", groups);
-				exchange.setResponseCookie(cookie);
+				if(!ServiceUtils.isApiCall(exchange))
+					exchange.setResponseCookie(cookie);
 
 			} else {
 				if (tenantName != null && account.getAuthProfile() != null
@@ -113,7 +114,8 @@ public class ThreadManager {
 					String tntName=(String) account.getAuthProfile().get("tenant");
 					String token=JWT.generate(exchange);
 					cookie.setValue(tntName+" "+token);
-					exchange.setResponseCookie(cookie);
+					if(!ServiceUtils.isApiCall(exchange))
+						exchange.setResponseCookie(cookie);
 					String tenantPath="/tenant/" + profileTenantName + pureRequestPath;
 					ServiceUtils.redirectRequest(exchange, tenantPath);
 					//exchange.getResponseHeaders().put(Headers.STATUS, 400);

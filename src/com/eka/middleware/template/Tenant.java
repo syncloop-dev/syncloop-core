@@ -72,7 +72,7 @@ public class Tenant {
 		jwtGenerator = new JwtGenerator(secConf);
 		Date expiryDate=new Date();
 		expiryDate=ServiceUtils.addHoursToDate(expiryDate, 24);
-		jwtGenerator.setExpirationTime(expiryDate);
+		//jwtGenerator.setExpirationTime(expiryDate);
 	}
 
 	public String getName() {

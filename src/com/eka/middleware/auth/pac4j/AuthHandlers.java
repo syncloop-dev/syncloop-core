@@ -121,14 +121,12 @@ public class AuthHandlers {
 
 				} else {
 					try {
-						//String privKey=PropertyManager.getGlobalProperties(tenantName).getProperty(Security.PRIVATE_PROPERTY_KEY_NAME);
-		            	//token=Security.getNormalString(token,privKey);
-						//tenantName=acc
 						token = ServiceUtils.decrypt(token, tenantName);
 					} catch (Exception e) {
 						cookie.setExpires(new Date(System.currentTimeMillis()-1000));
 						cookie.setDiscard(true);
-						exchange.setResponseCookie(cookie);
+						if(!ServiceUtils.isApiCall(exchange))
+							exchange.setResponseCookie(cookie);
 						exchange.setStatusCode(401);
 						exchange.getResponseSender().send("Token expired. Please reload/relogin page.");
 						exchange.endExchange();

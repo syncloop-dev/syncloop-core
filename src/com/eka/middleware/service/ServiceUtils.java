@@ -775,7 +775,8 @@ public class ServiceUtils {
 			cookie.setValue(tenantName+" "+token);
 		}
 		cookie.setPath("/");
-		exchange.setResponseCookie(cookie);
+		if(!ServiceUtils.isApiCall(exchange))
+			exchange.setResponseCookie(cookie);
 		//exchange.
 //		((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);
 //		exchange.responseCookies().forEach(null);
