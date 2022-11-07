@@ -1035,4 +1035,18 @@ public class ServiceUtils {
 		exchange.setStatusCode(StatusCodes.FOUND);
 		exchange.getResponseHeaders().put(Headers.LOCATION, path);
 	}
+
+	/**
+	 * @param exchange
+	 * @return
+	 */
+	public static boolean isApiCall(HttpServerExchange exchange) {
+
+		if (exchange.getRequestURL().endsWith(".html") || exchange.getRequestURL().endsWith(".js") ||
+				exchange.getRequestURL().endsWith(".css")) {
+			return false;
+		}
+
+		return true;
+	}
 }
