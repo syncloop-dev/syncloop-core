@@ -79,12 +79,19 @@ public class Security {
 //		addLoginExactPath("/login",Tenant.getTenant("default"), 
 //				CallbackHandler.build(AuthConfigFactory.getFormClientAuthConfig(defaultLoginPage,Tenant.getTenant("default")), null));
 
-		path.addPrefixPath("/jwt",
+		path.addExactPath("/basic/jwt",
 				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
+		paths.add("/basic/jwt");
+		path.addExactPath("/basic/JWT",
+				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
+		paths.add("/basic/JWT");
+		
 		paths.add("/jwt");
-		path.addPrefixPath("/JWT",
-				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
+		path.addPrefixPath("/jwt",AuthHandlers.mainHandler);
+		
 		paths.add("/JWT");
+		path.addPrefixPath("/JWT",AuthHandlers.mainHandler);
+		
 		path.addPrefixPath("/", AuthHandlers.mainHandler);
 		paths.add("/");
 		path.addExactPath("/keycloak", getKeyCloakAuthenticator("keycloak.json"));
