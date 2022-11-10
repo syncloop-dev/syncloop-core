@@ -735,23 +735,31 @@ public class ServiceUtils {
 			
 		}
 		String token=null;
-		if(cookie!=null) {
+		if(cookie!=null && tenantName==null) {
 			tenantName=ServiceUtils.getTenantName(cookie);
 			token=ServiceUtils.getToken(cookie);
 		}
 		
 		String rqp = exchange.getRequestPath();
-		if (rqp != null && tenantName==null) {
-			String rsrcTokens[] = ("b" + rqp).split("/");
+		String rsrcTokens[]=null;
+		if(rqp!=null)
+			rsrcTokens = ("b" + rqp).split("/");
+		
+		if (rsrcTokens != null) {
 			if (rsrcTokens[1].equalsIgnoreCase("tenant")) {
-				tenantName = rsrcTokens[2];
+				String tName = rsrcTokens[2];
+				if(tenantName==null)
+					tenantName=tName;
+				if(!tName.equals(tenantName))
+					exchange.setRequestPath(rqp.replace("/tenant/"+tName,"/tenant/"+tenantName));
 				ServiceUtils.setupCookie(exchange, tenantName, token);
 			}
 			if (tenantName == null) {
 				Cookie cukie = ServiceUtils.setupCookie(exchange, tenantName, token);
 				tenantName=getTenantName(cukie);
 				exchange.setRequestPath("/tenant/"+tenantName+rqp);
-				exchange.setResponseCookie(cukie);
+				if(!ServiceUtils.isApiCall(exchange))
+					exchange.setResponseCookie(cukie);
 			}
 		}
 		return tenantName;
@@ -764,7 +772,8 @@ public class ServiceUtils {
 				tenantName="default";
 			cookie=new CookieImpl("tenant", tenantName);
 			cookie.setPath("/");
-			exchange.setResponseCookie(cookie);
+			if(!ServiceUtils.isApiCall(exchange))
+				exchange.setResponseCookie(cookie);
 		}
 		if(tenantName==null)
 			tenantName=getTenantName(cookie);
