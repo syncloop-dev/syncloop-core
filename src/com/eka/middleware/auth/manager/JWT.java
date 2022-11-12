@@ -28,7 +28,7 @@ public class JWT {
             	id=up.getId();
             AuthAccount authacc=UserProfileManager.getAccount(id, up);
             //Map<String, Object> tempProfile= UserProfileManager.createDefaultProfile(up, null);
-            profile.setId(up.getId());
+            profile.setId(id);
             profile.addAttribute(Pac4jConstants.USERNAME, up.getId());
             profile.addAttribute("tenant", authacc.getAuthProfile().get("tenant"));
             profile.addAttribute("groups", authacc.getAuthProfile().get("groups"));

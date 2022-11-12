@@ -850,6 +850,7 @@ public class ServiceUtils {
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
 			copyDirectory(src, dest);
+			Security.generateKeyPair(name);
 			Security.setupTenantSecurity(name);
 			LOGGER.info("Starting newly created tenant(" + name + ")......................");
 			startTenantServices(name);

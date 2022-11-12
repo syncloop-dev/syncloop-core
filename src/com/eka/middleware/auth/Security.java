@@ -199,7 +199,7 @@ public static void main(String[] args) {
 	}
 
 	public static void setupTenantSecurity(final String tenantName) {
-		Security.generateKeyPair(tenantName);
+		//Security.generateKeyPair(tenantName);
 		String tenantPath="/tenant/" + tenantName;
 		addPublicPrefixPath(tenantPath + "/files/gui/middleware/pub/server/ui/welcome/",Tenant.getTenant(tenantName));
 		List<String> tennatPublicExactPaths = publicExactPathsMap.get(tenantName);

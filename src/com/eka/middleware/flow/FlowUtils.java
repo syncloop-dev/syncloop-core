@@ -128,37 +128,38 @@ public class FlowUtils {
 				case "ELV": // Evaluate Local Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getMyConfig(expressionKey);
-						if(expressionValue!=null)
+						if (expressionValue != null)
 							map.put(expressionKey, expressionValue);
 					}
 					break;
 				case "EGV": // Evaluate Global Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getGlobalConfig(expressionKey);
-						if(expressionValue!=null)
+						if (expressionValue != null)
 							map.put(expressionKey, expressionValue);
 					}
 					break;
 				case "EEV": // Evaluate Expression Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getValueByPointer(expressionKey) + "";
-						if(expressionValue!=null)
+						if (expressionValue != null)
 							map.put(expressionKey, expressionValue);
 					}
 					break;
 				case "EPV": // Evaluate Package Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getMyPackageConfig(expressionKey);
-						if(expressionValue!=null)
+						if (expressionValue != null)
 							map.put(expressionKey, expressionValue);
 					}
 					break;
 				}
 				for (String expressionKey : expressions) {
-					if(map.get(expressionKey)!=null)
+					if (map.get(expressionKey) != null)
 						value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
 					else
-						throw new SnippetException(dp, "Could not resolve expression '#{"+expressionKey+"}'.", new Exception("Property not set properly"));
+						throw new SnippetException(dp, "Could not resolve expression '#{" + expressionKey + "}'.",
+								new Exception("Property not set properly"));
 				}
 			}
 
@@ -236,7 +237,7 @@ public class FlowUtils {
 						ServiceUtils.printException(function, e);
 						throw e;
 					}
-					
+
 					String typePath = leader.getOutTypePath();
 					String tokens[] = typePath.split(Pattern.quote("/"));
 					String typeOfVariable = tokens[tokens.length - 1];
@@ -244,13 +245,13 @@ public class FlowUtils {
 					// concurrently. So we create a new function for each map using leader line id.
 					String functionName = "jsFunc_" + leader.getId() + "_applyLogic";
 					boolean isFunctionAvailable = false;
-					
+
 					String jsFunction = function;
 					expressions = extractExpressions(function);
 					try {
 						Context ctx = ScriptEngineContextManager.findContext(threadSafeName);
-						if(ctx==null)
-							ctx=ScriptEngineContextManager.getContext(threadSafeName);
+						if (ctx == null)
+							ctx = ScriptEngineContextManager.getContext(threadSafeName);
 						synchronized (ctx) {
 							try {
 								isFunctionAvailable = (boolean) eval("(" + functionName + "!=null);", ctx, "boolean");
@@ -282,7 +283,7 @@ public class FlowUtils {
 								dp.setValueByPointer(leader.getTo(), val, leader.getOutTypePath());
 						}
 					} catch (Exception e) {
-						ServiceUtils.printException("Some problem executing this javascript: "+function, e);
+						ServiceUtils.printException("Some problem executing this javascript: " + function, e);
 						throw e;
 					}
 				} else
@@ -420,30 +421,85 @@ public class FlowUtils {
 		if (jva != null) {
 			// outPutData=
 			for (JsonValue jsonValue : jva) {
-				getKeyTypePair(jsonValue, null, null, mapPointers, mapPointerData);
-
+				//getKeyTypePair(jsonValue, null, null, mapPointers, mapPointerData);
+				validationParser(jsonValue, null, null, dp);
 			}
-		}
-		dp.log("Document pointers:-", Level.TRACE);
-		mapPointers.forEach((k, v) -> dp.log(k + " : " + v, Level.TRACE));
+		}/*
+		dp.log("Document pointers:-");// , Level.TRACE);
+		mapPointers.forEach((k, v) -> dp.log(k + " : " + v));// , Level.TRACE));
 		dp.log("Document data:-", Level.TRACE);
-		mapPointerData.forEach((k, v) -> dp.log(k + " : " + v.toString(), Level.TRACE));
+		mapPointerData.forEach((k, v) -> dp.log(k + " : " + v.toString()));// , Level.TRACE));
 
 		Set<String> keys = mapPointers.keySet();
 		for (String key : keys) {
 			String typePath = mapPointers.get(key);
 			JsonObject data = mapPointerData.get(key);
-			if (data != null && !data.isEmpty()) {
-				Map<String, Object> m = ServiceUtils.jsonToMap(data.toString());
-				final Map<String, String> dataMap = new HashMap<String, String>();
-				m.forEach((k, v) -> {
-					if (v != null && (v + "").trim().length() > 0)
-						dataMap.put(k, v + "");
-				});
-				Function.validate(dp, key, typePath, dataMap);
-			}
+			functionalValidation(dp, data, key, typePath);
+		}*/
+	}
+
+	private static void functionalValidation(DataPipeline dp, JsonObject data, String key, String typePath)
+			throws SnippetException {
+		if (data != null && !data.isEmpty()) {
+			Map<String, Object> m = ServiceUtils.jsonToMap(data.toString());
+			final Map<String, String> dataMap = new HashMap<String, String>();
+			m.forEach((k, v) -> {
+				if (v != null && (v + "").trim().length() > 0)
+					dataMap.put(k, v + "");
+			});
+			Object object = dp.getValueByPointer(key);
+			Function.validate(dp, key, typePath, dataMap, object);
 		}
 	}
+
+	private static void validationParser(JsonValue jsonValue, String key, String typePath, DataPipeline dp)
+			throws SnippetException {
+
+		String type = jsonValue.asJsonObject().getString("type");
+
+		if (key == null)
+			key = jsonValue.asJsonObject().getString("text");
+		else
+			key += "/" + jsonValue.asJsonObject().getString("text");
+
+		if (typePath == null)
+			typePath = type;
+		else
+			typePath += "/" + type;
+		JsonObject data = jsonValue.asJsonObject().getJsonObject("data");
+		JsonValue jv = jsonValue.asJsonObject().get("children");
+		List<Object> list = null;
+		if (type.endsWith("List"))
+			list = (List<Object>) dp.get(key);
+		if (list != null && list.size() > 0) {
+			for (int i = 0; i < list.size(); i++) {
+				String k=key+"/"+i;
+				dataValidator(data, jv, k, typePath, dp);
+			}
+		}else
+			dataValidator(data, jv, key, typePath, dp);
+	}
+	
+	private static void dataValidator(JsonObject data,JsonValue jv,String key, String typePath, DataPipeline dp) throws SnippetException {
+		if (jv != null && !jv.asJsonArray().isEmpty()) {
+			JsonArray jva = jv.asJsonArray();
+			for (JsonValue jsonVal : jva) {
+				validationParser(jsonVal, key, typePath, dp);
+			}
+		} else {
+			functionalValidation(dp, data, key, typePath);
+		}
+	}
+
+	/*
+	 * public static String getAbsolutePath(String pointer, String typePath) {
+	 * pointer = "//" + pointer; pointer = pointer.replace("///", "").replace("//",
+	 * "").replace("#", ""); String tokenizeType[] = typePath.split("/"); String[]
+	 * tokenize = pointer.split("/"); String absPath = ""; if (tokenizeType.length
+	 * == 1) absPath = pointer; else { for (int i = 0; i < tokenize.length; i++) {
+	 * String key = tokenize[i]; String type = tokenizeType[i]; absPath=key;
+	 * if(type.endsWith("List")) { absPath+="" } } } }
+	 */
 
 	private static void getKeyTypePair(JsonValue jsonValue, String key, String typePath,
 			Map<String, String> mapPointers, Map<String, JsonObject> mapPointerData) {
