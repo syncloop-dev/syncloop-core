@@ -14,18 +14,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 
 public class SQL {
-	public static Logger LOGGER = LogManager.getLogger(SQL.class);
+	//public static Logger LOGGER = LogManager.getLogger(SQL.class);
 public static List<Map<String,Object>> DQL(String sqlCode, List<Map<String,Object>> sqlParameters,Connection myCon,DataPipeline dp, boolean logQuery) throws Exception{
 	List<Map<String,Object>> outputDocList=new ArrayList<Map<String,Object>>();
 	
@@ -165,12 +164,14 @@ public static Connection getConnection(String jdbcConnection,DataPipeline dp) th
 	Properties jdbcProperties=new Properties();
 	String pPath=PropertyManager.getPackagePath(dp.rp.getTenant());
 	String connectionPropFile=pPath+"packages"+jdbcConnection+".jdbc";
-	LOGGER.debug("connectionPropFile:\n"+connectionPropFile);
+	dp.log("connectionPropFile:\n"+connectionPropFile, Level.DEBUG);
+	//LOGGER.debug("connectionPropFile:\n"+connectionPropFile);
 	jdbcProperties.load(new FileInputStream(new File(connectionPropFile)));
 	
 	String connectionUrl=jdbcProperties.getProperty("url");
 	connectionUrl=connectionUrl.replace("#{PackageConfig}", dp.getMyPackageConfigPath());
-	LOGGER.debug("connectionUrl:\n"+connectionUrl);
+	//LOGGER.debug("connectionUrl:\n"+connectionUrl);
+	dp.log("connectionPropFile:\n"+connectionPropFile, Level.DEBUG);
 	String driver=jdbcProperties.getProperty("driver");
 	String username=jdbcProperties.getProperty("username");
 	String password=jdbcProperties.getProperty("password");

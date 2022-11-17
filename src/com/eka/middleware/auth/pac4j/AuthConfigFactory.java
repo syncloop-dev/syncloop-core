@@ -66,6 +66,15 @@ public class AuthConfigFactory implements ConfigFactory {
 		return DirectBasicAuthClientConfig;
 	}
 	
+	private static Config LogouConf;
+
+	public static Config getLogoutConfig() {
+		if (LogouConf == null) {
+			LogouConf = new Config();
+		}
+		return LogouConf;
+	}
+	
 	private static Config indirectBasicAuthClientConfig;
 	
 	public static Config getBasicAuthConfig() {
@@ -91,14 +100,16 @@ public class AuthConfigFactory implements ConfigFactory {
 		return formClientAuthClientConfig;
 	}
 
-	private static Config JWTAuthClientConfig;
+	//private static Config JWTAuthClientConfig;
 
 	public static Config getJWTAuthClientConfig(Tenant tenant) {
+		Config JWTAuthClientConfig=tenant.JWTAuthClientConfig;
 		if (JWTAuthClientConfig == null) {
 			final HeaderClient client = new HeaderClient("Authorization",
 					new JwtAuthenticator(tenant.secConf));
 			JWTAuthClientConfig = newConfig(client);
 		}
+		tenant.JWTAuthClientConfig=JWTAuthClientConfig;
 		return JWTAuthClientConfig;
 	}
 

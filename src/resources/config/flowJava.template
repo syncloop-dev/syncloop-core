@@ -13,10 +13,11 @@ import javax.json.JsonValue;
 import com.eka.middleware.service.PropertyManager;
 import java.util.*;
 import java.net.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class #className {
 
-	static JsonObject mainflowJsonObject=null;
+	private static final Map<String,JsonObject> mainflowJsonObjectMap=new ConcurrentHashMap<String,JsonObject>();
 	static final String syncBlock=new String("sync");
 	public static final void main(DataPipeline dataPipeline) throws SnippetException{
 		String fqn="#package.#className";
@@ -42,12 +43,15 @@ public final class #className {
 	    
 	    
 		try{
+		  JsonObject mainflowJsonObject=mainflowJsonObjectMap.get(dataPipeline.rp.getTenant().id);
 		  if(mainflowJsonObject==null)
 			synchronized(syncBlock){
 			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
-			  if(mainflowJsonObject==null)
+			  if(mainflowJsonObject==null){
 				  mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+				  mainflowJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainflowJsonObject);
+			  }
 			}
 		  FlowResolver.execute(dataPipeline,mainflowJsonObject);
 		}catch(Throwable e) {

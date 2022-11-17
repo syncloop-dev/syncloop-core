@@ -267,6 +267,24 @@ public class ServiceUtils {
 	}
 
 	public static final void printException(String msg, Exception e) {
+		String logLine=getLogLine(e, msg);
+		LOGGER.error(logLine);
+	}
+	
+	public static final void printException(Tenant tenant,String msg, Exception e) {
+		String logLine=getLogLine(e, msg);
+		tenant.logError(null, logLine);
+		LOGGER.error(logLine);
+	}
+	
+	public static final void printException(DataPipeline dp, String msg, Exception e) {
+		String logLine=getLogLine(e, msg);
+		dp.log(logLine, Level.ERROR);
+		LOGGER.error(logLine);
+
+	}
+
+	private static String getLogLine(Exception e, String msg) {
 		StringBuilder sb = new StringBuilder();
 		StackTraceElement[] stackTrace = e.getStackTrace();
 		sb.append(msg);
@@ -279,10 +297,9 @@ public class ServiceUtils {
 			sb.append(stackTraceElement.toString());
 			sb.append("\n");
 		}
-		LOGGER.error(sb.toString());
-
+		return sb.toString();
 	}
-
+	
 	public static final String getServerProperty(String key) {
 		String val = null;
 		try {
@@ -333,6 +350,7 @@ public class ServiceUtils {
 			String URLAliasFilePath = PropertyManager.getPackagePath(tenant) + "URLAliasMapping.properties";
 			if (requestPath.contains("//")) {
 				LOGGER.log(Level.INFO, requestPath);
+				tenant.logInfo(null,requestPath);
 				return null;
 			}
 			if (requestPath.endsWith("/")) {
@@ -388,7 +406,7 @@ public class ServiceUtils {
 			return serviceName;
 
 		} catch (Exception e) {
-			ServiceUtils.printException("Failed during evaluating resource path", e);
+			ServiceUtils.printException(tenant,"Failed during evaluating resource path", e);
 		}
 		return null;
 	}
@@ -465,7 +483,7 @@ public class ServiceUtils {
 				MultiPart mp = new MultiPart(formDataMap);
 				rp.payload.put("*multiPartRequest", mp);
 			} catch (Exception e) {
-				ServiceUtils.printException(rp.getSessionID() + " Could not stream file thread.", e);
+				ServiceUtils.printException(rp.getTenant(),rp.getSessionID() + " Could not stream file thread.", e);
 			}
 //				});
 //
@@ -607,7 +625,7 @@ public class ServiceUtils {
 			handleBodyResponse(rp.getExchange(), mp);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			ServiceUtils.printException(rp.getSessionID() + " Could not stream body thread.", e);
+			ServiceUtils.printException(rp.getTenant(),rp.getSessionID() + " Could not stream body thread.", e);
 		}
 //		try {
 //			ExecutorService threadpool = Executors.newCachedThreadPool();
@@ -681,7 +699,7 @@ public class ServiceUtils {
 				});
 			} catch (Exception e) {
 				e.printStackTrace();
-				ServiceUtils.printException(rp.getSessionID() + " Could not stream body thread.", e);
+				ServiceUtils.printException(rp.getTenant(),rp.getSessionID() + " Could not stream body thread.", e);
 			}
 
 			if (payload.get("@body") != null) {
@@ -802,6 +820,7 @@ public class ServiceUtils {
 		for (String attribute : names) {
 			session.removeAttribute(attribute);
 		}
+		session.invalidate(exchange);
 	}
 
 	public static String getToken(Cookie cookie) {
@@ -852,10 +871,13 @@ public class ServiceUtils {
 			copyDirectory(src, dest);
 			Security.generateKeyPair(name);
 			Security.setupTenantSecurity(name);
+			Tenant.getTenant(name).logInfo(null, "New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			LOGGER.info("Starting newly created tenant(" + name + ")......................");
+			Tenant.getTenant(name).logInfo(null, "Starting newly created tenant(" + name + ")......................");
 			startTenantServices(name);
 			UserProfileManager.newTenant(name);
 			LOGGER.info("New tenant with name " + name + " created successfully.");
+			Tenant.getTenant(name).logInfo(null, "New tenant with name " + name + " created and started successfully.");
 
 		} catch (Exception e) {
 			printException("Failed to create tenant with name " + name, e);
@@ -930,7 +952,7 @@ public class ServiceUtils {
 			cipher.init(Cipher.ENCRYPT_MODE, Tenant.getTenant(tenantName).KEY);
 			return Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes("UTF-8")));
 		} catch (Exception e) {
-			printException("Error while encrypting: " , e);
+			printException(Tenant.getTenant(tenantName), "Error while encrypting: " , e);
 		}
 		return null;
 	}
@@ -942,7 +964,7 @@ public class ServiceUtils {
 			cipher.init(Cipher.DECRYPT_MODE, Tenant.getTenant(tenantName).KEY);
 			return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
 		} catch (Exception e) {
-			printException("Error while decrypting: " , e);
+			printException(Tenant.getTenant(tenantName), "Error while decrypting: " , e);
 			throw e;
 		}
 	}
@@ -1059,5 +1081,9 @@ public class ServiceUtils {
 		}
 
 		return true;
+	}
+	
+	public static void logInfo(String tenantName,String serviceName, String message) {
+		Tenant.getTenant(tenantName).logError(serviceName , message);
 	}
 }

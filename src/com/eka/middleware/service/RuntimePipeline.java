@@ -69,7 +69,7 @@ public class RuntimePipeline {
 			bw.write(json+",");
 			bw.newLine();
 		} catch (Exception e) {
-			ServiceUtils.printException("Exception while saving snapshot.", e);
+			ServiceUtils.printException(getTenant(),"Exception while saving snapshot.", e);
 		}
 	}
 	
@@ -178,7 +178,7 @@ public class RuntimePipeline {
 			bw.close();
 			bw=null;
 		}catch (Exception e) {
-			ServiceUtils.printException("Exception while closing snapshot file.", e);
+			ServiceUtils.printException(getTenant(),"Exception while closing snapshot file.", e);
 		}
 		RuntimePipeline rtp = pipelines.get(sessionId);
 		ScriptEngineContextManager.removeContext(dataPipeLine.getUniqueThreadName());

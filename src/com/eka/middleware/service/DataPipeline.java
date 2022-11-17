@@ -34,10 +34,12 @@ import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
+import com.eka.middleware.flow.Switch;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.template.Tenant;
 
 import io.undertow.server.HttpServerExchange;
 
@@ -353,7 +355,7 @@ public class DataPipeline {
 
 			return ServiceUtils.toJson(payloadStack.get(currentResource));
 		} catch (Exception e) {
-			ServiceUtils.printException("Could not convert datapipeline '" + rp.getSessionID() + "' to Json", e);
+			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Json", e);
 		}
 		;
 		return null;
@@ -366,7 +368,7 @@ public class DataPipeline {
 				wrapperRootName = "root";
 			return ServiceUtils.toXml(payloadStack.get(currentResource), wrapperRootName);
 		} catch (Exception e) {
-			ServiceUtils.printException("Could not convert datapipeline '" + rp.getSessionID() + "' to Xml", e);
+			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Xml", e);
 		}
 		return null;
 	}
@@ -380,7 +382,7 @@ public class DataPipeline {
 
 			return ServiceUtils.toYaml(payloadStack.get(currentResource));
 		} catch (Exception e) {
-			ServiceUtils.printException("Could not convert datapipeline '" + rp.getSessionID() + "' to Yaml", e);
+			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Yaml", e);
 		}
 		;
 		return null;
@@ -391,7 +393,7 @@ public class DataPipeline {
 		File file = new File(packagePath + "/packages/" + (resource.replace(".", "/")) + "_" + name
 				+ "_dataPipeline.json");
 
-		LOGGER.info("Saving dataPipeline: " + file.getAbsolutePath());
+		log("Saving dataPipeline: " + file.getAbsolutePath());
 		String dirname = file.getAbsolutePath().replace(file.getName(), "");
 		File dir = new File(dirname);
 		if (!dir.exists())
@@ -416,7 +418,7 @@ public class DataPipeline {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			ServiceUtils.printException("Could not save pipeline", e);
+			ServiceUtils.printException(this,"Could not save pipeline", e);
 		}
 	}
 
@@ -435,7 +437,7 @@ public class DataPipeline {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			ServiceUtils.printException("Could not save pipeline", e);
+			ServiceUtils.printException(this,"Could not save pipeline", e);
 		}
 	}
 
@@ -449,7 +451,7 @@ public class DataPipeline {
 			String json = ServiceUtils.toPrettyJson(map);
 			rp.writeSnapshot(resource, json);
 		} catch (Exception e) {
-			ServiceUtils.printException("Exception while taking snapshot.", e);
+			ServiceUtils.printException(this,"Exception while taking snapshot.", e);
 		}
 	}
 
@@ -540,7 +542,7 @@ public class DataPipeline {
 		// inside it's own class function so we get the
 		// stack that called the last public function that
 		// called this method
-		// LOGGER.info("Current stack resource: " + currentResource);
+		// log("Current stack resource: " + currentResource);
 		return currentResource;// ste[3].getClassName() + "." + ste[3].getMethodName();
 	}
 
@@ -715,7 +717,7 @@ public class DataPipeline {
 				metaData.put("status", "Completed");
 				return asyncOutputDoc;
 			} catch (Exception e) {
-				ServiceUtils.printException("Exception caused on async operation correlationID: " + correlationID
+				ServiceUtils.printException(this,"Exception caused on async operation correlationID: " + correlationID
 						+ ". Batch Id: " + metaData.get("batchId"), e);
 				metaData.put("status", "Failed");
 				asyncOutputDoc.put("error", e.getMessage());
@@ -805,7 +807,7 @@ public class DataPipeline {
 			}
 			PropertyManager.saveProperties(path, props,"Properties saved at "+new Date().toString());
 		} catch (Exception e) {
-			ServiceUtils.printException("Failed to save properties '"+path+"'", e);
+			ServiceUtils.printException(this,"Failed to save properties '"+path+"'", e);
 		} 
 	}
 	
@@ -849,9 +851,22 @@ public class DataPipeline {
 		if (level == null)
 			level = Level.INFO;
 		String resource=callingResource;
+		
 		if(resource==null)
 			resource=currentResource;
 		String log = ServiceUtils.getFormattedLogLine(getCorrelationId(), resource, msg);
+		
+		if(Level.INFO.intLevel()==level.intLevel()) {
+			rp.getTenant().logInfo(resource, log);
+		}else if(Level.WARN.intLevel()==level.intLevel()) {
+			rp.getTenant().logWarn(resource, log);
+		}else if(Level.DEBUG.intLevel()==level.intLevel()) {
+			rp.getTenant().logDebug(resource, log);
+		}else if(Level.ERROR.intLevel()==level.intLevel()) {
+			rp.getTenant().logError(resource, log);
+		}else if(Level.TRACE.intLevel()==level.intLevel()) {
+			rp.getTenant().logTrace(resource, log);
+		}
 		LOGGER.log(level, log);
 	}
 
@@ -903,7 +918,7 @@ public class DataPipeline {
 				return httpServerExchange.getHostAndPort();
 			}
 		} catch (SnippetException e) {
-			ServiceUtils.printException("Exchange not initialized..", e);
+			ServiceUtils.printException(this,"Exchange not initialized..", e);
 		}
 		return "localhost";
 	}

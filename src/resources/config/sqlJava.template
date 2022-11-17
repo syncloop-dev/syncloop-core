@@ -12,17 +12,23 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 import java.util.Properties;
 import com.eka.middleware.service.PropertyManager;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class #className {
 
-	static JsonObject mainSqlJsonObject=null;
+	private static final Map<String,JsonObject> mainSqlJsonObjectMap=new ConcurrentHashMap<String,JsonObject>();
 	static final String syncBlock=new String("sync");
 	public static final void main(DataPipeline dataPipeline) throws SnippetException{
 		try{
+		  JsonObject mainSqlJsonObject=mainSqlJsonObjectMap.get(dataPipeline.rp.getTenant().id);
 		  if(mainSqlJsonObject==null)
 			synchronized(syncBlock){
 			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
+			  if(mainSqlJsonObject==null){
+				  mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+				  mainSqlJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainSqlJsonObject);
+			  }
 			  if(mainSqlJsonObject==null)
 				  mainSqlJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
 			}

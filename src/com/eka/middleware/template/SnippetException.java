@@ -18,6 +18,7 @@ public class SnippetException extends Exception {
         message = e.getMessage();
         if (propagate) {
             ServiceUtils.printException(dataPipeLine.getSessionId() + "    " + dataPipeLine.getCorrelationId() + "    " + errMsg, this);
+            ServiceUtils.printException(dataPipeLine, errMsg, this);
         }
     }
 }

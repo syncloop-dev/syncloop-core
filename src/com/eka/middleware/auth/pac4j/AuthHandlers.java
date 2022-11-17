@@ -9,7 +9,7 @@ import org.pac4j.core.client.Client;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.logout.handler.DefaultLogoutHandler;
-import org.pac4j.core.logout.handler.LogoutHandler;
+import org.pac4j.undertow.handler.LogoutHandler;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.core.util.Pac4jConstants;
 import org.pac4j.http.client.indirect.FormClient;
@@ -67,12 +67,18 @@ public class AuthHandlers {
 
 	public static HttpHandler logoutHandler = new HttpHandler() {
 		public void handleRequest(final HttpServerExchange exchange) throws Exception {
-			exchange.getRequestCookies().clear();
-			exchange.getResponseCookies().clear();
-			exchange.setRequestCookie(null);
-			exchange.setResponseCookie(null);
-			LogoutHandler lh=new DefaultLogoutHandler();
+			//LogoutHandler lh=new LogoutHandler(AuthConfigFactory.getLogoutConfig(),"/?defaulturlafterlogout");
+			Cookie ck=exchange.getRequestCookie("tenant");
+			ck.setValue(null);
+			ck.setDiscard(true);
+			//lh.handleRequest(exchange);
+			//exchange.setRequestCookie(ck);
+			//exchange.setResponseCookie(ck);
+			Date expiry=new Date(System.currentTimeMillis());
+			exchange.requestCookies().forEach(k->k.setMaxAge(-10));
+			exchange.responseCookies().forEach(k->k.setMaxAge(-10));
 			ServiceUtils.redirectRequest(exchange, Security.defaultLoginPage);
+			ServiceUtils.clearSession(exchange);
 			exchange.endExchange();
 		}
 	};

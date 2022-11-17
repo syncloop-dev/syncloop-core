@@ -86,7 +86,7 @@ public class Function {
 				dp.log("Pointer : " + pointer + " :" + response + " : " + description, Level.WARN);
 
 		} catch (Exception e) {
-			ServiceUtils.printException("Exception while validating "+pointer+" of type "+typePath, e);
+			ServiceUtils.printException(dp,"Exception while validating "+pointer+" of type "+typePath, e);
 			throw new SnippetException(dp, "Exception while validating "+pointer+" of type "+typePath, e);
 		}
 

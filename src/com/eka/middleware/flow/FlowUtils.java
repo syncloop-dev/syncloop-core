@@ -49,7 +49,7 @@ public class FlowUtils {
 				}
 			return xPathValues;
 		} catch (Exception e) {
-			ServiceUtils.printException("Something went wrong while parsing xpath(" + xPaths + ")", e);
+			ServiceUtils.printException(dp,"Something went wrong while parsing xpath(" + xPaths + ")", e);
 			throw new SnippetException(dp, "Something went wrong while parsing xpath(" + xPaths + ")", e);
 		}
 	}
@@ -64,7 +64,7 @@ public class FlowUtils {
 			String threadSafeName = dp.getUniqueThreadName();
 			return (boolean) eval(con, threadSafeName, "boolean");
 		} catch (Exception e) {
-			ServiceUtils.printException("Something went wrong while parsing condition(" + condition + "), " + con, e);
+			ServiceUtils.printException(dp,"Something went wrong while parsing condition(" + condition + "), " + con, e);
 			throw new SnippetException(dp, "Something went wrong while parsing condition(" + condition + "), " + con,
 					e);
 
@@ -234,7 +234,7 @@ public class FlowUtils {
 						function = new String(Base64.getDecoder().decode(function));
 						function = function.replaceAll("[\\r\\n]+", "");
 					} catch (Exception e) {
-						ServiceUtils.printException(function, e);
+						ServiceUtils.printException(dp,function, e);
 						throw e;
 					}
 
@@ -283,14 +283,14 @@ public class FlowUtils {
 								dp.setValueByPointer(leader.getTo(), val, leader.getOutTypePath());
 						}
 					} catch (Exception e) {
-						ServiceUtils.printException("Some problem executing this javascript: " + function, e);
+						ServiceUtils.printException(dp,"Some problem executing this javascript: " + function, e);
 						throw e;
 					}
 				} else
 					successful = copy(leader.getFrom(), leader.getTo(), leader.getOutTypePath(), dp);
 			}
 		} catch (Exception e) {
-			ServiceUtils.printException(
+			ServiceUtils.printException(dp,
 					"Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'", e);
 			throw new Exception(
 					"Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'");

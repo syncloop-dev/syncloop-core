@@ -118,7 +118,7 @@ public class PropertyManager {
 				loadServerProperties(bais, props);
 				propertiesMap.put(path, props);
 			} catch (Exception e) {
-				ServiceUtils.printException("Failed while loading global properties for '" + tenantName + "'", e);
+				ServiceUtils.printException(Tenant.getTenant(tenantName), "Failed while loading global properties for '" + tenantName + "'", e);
 			}
 		}
 		return props;

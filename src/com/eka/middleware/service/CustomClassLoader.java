@@ -17,6 +17,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -24,14 +25,14 @@ import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 
 public class CustomClassLoader extends ClassLoader {
-	DataPipeline dp=null;
+	final DataPipeline dp;
 	public CustomClassLoader(String fqn, String[] paths, ClassLoader parent, DataPipeline dp) {
 		this.dp=dp;
 		if (paths != null && paths.length > 0)
 			try {
 				loadCustomJars(fqn, paths);
 			} catch (Exception e) {
-				ServiceUtils.printException("Loading custom jars failed: ", e);
+				ServiceUtils.printException(dp,"Loading custom jars failed: ", e);
 			}
 	}
 
@@ -43,7 +44,7 @@ public class CustomClassLoader extends ClassLoader {
 		try {
 			List<String> classNames = new ArrayList<String>();
 			LOGGER.trace("Loading jars for class '" + fqn + "'");
-
+			
 			for (String path : paths) {
 				if (path != null && path.length() > 0) {
 					final JarFile jar = new JarFile(new File(path));
@@ -52,13 +53,15 @@ public class CustomClassLoader extends ClassLoader {
 				}
 			}
 
-			if (isFailed)
-				LOGGER.info("Loading jars for class '" + fqn + "' completed with errors");
+			if (isFailed) {
+				LOGGER.error("Loading jars for class '" + fqn + "' completed with errors");
+				dp.log("Loading jars for class '" + fqn + "' completed with errors", Level.ERROR);
+			}
 			else
 				LOGGER.trace("Loading jars for class '" + fqn + "' completed successfully");
 		} catch (Throwable e) {
 			isFailed = true;
-			ServiceUtils.printException("Failed to find dependent class '" + className + "'", new Exception(e));
+			ServiceUtils.printException(dp,"Failed to find dependent class '" + className + "'", new Exception(e));
 		}
 	}
 
@@ -84,8 +87,10 @@ public class CustomClassLoader extends ClassLoader {
 					bao = null;
 					is = null;
 					String clsName = nextElement.getName().replace("/", ".").replace(".class", "");
-					if (jarBytes == null)
+					if (jarBytes == null) {
 						LOGGER.info("Could not load class from jar '" + clsName);
+						dp.log("Could not load class from jar '" + clsName);
+					}
 					else {
 						jeMap.put(clsName, jarBytes);
 						classNames.add(clsName);
@@ -130,7 +135,7 @@ public class CustomClassLoader extends ClassLoader {
 
 			}
 		} catch (Exception e) {
-			ServiceUtils.printException("Class Not found '" + name + "'", e);
+			ServiceUtils.printException(dp,"Class Not found '" + name + "'", e);
 			throw new ClassNotFoundException(name);
 		}
 	}
@@ -163,7 +168,7 @@ public class CustomClassLoader extends ClassLoader {
 							.toURI();// ServiceManager.class.getResource(fileName).toURI();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			ServiceUtils.printException("Failed to create URI '"
+			ServiceUtils.printException(dp,"Failed to create URI '"
 					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//",
 							"/")
 					+ "'", e);
@@ -189,11 +194,11 @@ public class CustomClassLoader extends ClassLoader {
 				inputStream = null;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				ServiceUtils.printException("Failed to close inputStream", e);
+				ServiceUtils.printException(dp,"Failed to close inputStream", e);
 			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
-			ServiceUtils.printException("Class file not found '"
+			ServiceUtils.printException(dp,"Class file not found '"
 					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//",
 							"/")
 					+ "'", e);
@@ -204,7 +209,7 @@ public class CustomClassLoader extends ClassLoader {
 				try {
 					inputStream.close();
 				} catch (IOException e) {
-					ServiceUtils.printException("Failed to close inputStream in finally block", e);
+					ServiceUtils.printException(dp,"Failed to close inputStream in finally block", e);
 				}
 		}
 		return buffer;

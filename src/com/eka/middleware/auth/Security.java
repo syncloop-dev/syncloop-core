@@ -239,6 +239,7 @@ public static void main(String[] args) {
 			path.addPrefixPath("/tenant/" + tenant.getName() + resourcePrefixPath,
 					SecurityHandler.build(AuthHandlers.indexHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 			LOGGER.info("Public prefix path: "+tenant.getName()+": "+resourcePrefixPath);
+			tenant.logInfo(null, resourcePrefixPath);
 		}
 		
 	}
@@ -256,6 +257,7 @@ public static void main(String[] args) {
 			path.addExactPath("/tenant/" + tenant.getName() + "/" + resourceExactPath,
 					SecurityHandler.build(AuthHandlers.indexHandler(), AuthConfigFactory.getAnonymousClientConfig()));
 			LOGGER.info("Public exact path: "+tenant.getName()+": "+resourceExactPath);
+			tenant.logInfo(null, "Public exact path: "+tenant.getName()+": "+resourceExactPath);
 		}
 		
 	}
@@ -310,7 +312,9 @@ public static void main(String[] args) {
 		paths.add(jwtPath);
 		path.addExactPath(jwtPath, SecurityHandler.build(AuthHandlers.mainHandler, conf));
 		LOGGER.info("JWT endpoint");
+		dp.log("JWT endpoint");
 		LOGGER.info(jwtPath);
+		dp.log(jwtPath);
 		paths.add(resourcePath);
 		path.addExactPath(resourcePath, SecurityHandler.build(AuthHandlers.mainHandler, conf));
 		

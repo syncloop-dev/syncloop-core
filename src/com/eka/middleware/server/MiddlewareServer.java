@@ -73,20 +73,24 @@ public class MiddlewareServer {
 					ServiceUtils.initNewTenant("default", authAcc);
 				}else {
 					LOGGER.info("Starting default tenant......................");
+					defaultTenant.logDebug(null, "Starting default tenant......................");
 					ServiceUtils.startTenantServices("default");
 				}
 				
 				Thread.sleep(500);
 				for (String tenant: tenants) {
-					dirPath=PropertyManager.getPackagePath(Tenant.getTenant(tenant))+"packages";
+					Tenant tent=Tenant.getTenant(tenant);
+					dirPath=PropertyManager.getPackagePath(tent)+"packages";
 					dir=new File(dirPath);
 					LOGGER.trace("Tenant directory: "+dirPath);
+					//tent.logInfo("", dirPath);
 					if(!dir.exists()) {
 						LOGGER.trace("Tenant directory not found: "+dirPath);
 						continue;
 					}
 					if(!"default".equalsIgnoreCase(tenant)) {
 						LOGGER.info("Starting "+tenant+" tenant......................");
+						tent.logDebug(null, "Starting "+tenant+" tenant......................");
 						ServiceUtils.startTenantServices(tenant);
 						Thread.sleep(500);
 					}
