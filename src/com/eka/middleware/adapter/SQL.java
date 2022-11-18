@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
@@ -175,16 +176,30 @@ public static Connection getConnection(String jdbcConnection,DataPipeline dp) th
 	String driver=jdbcProperties.getProperty("driver");
 	String username=jdbcProperties.getProperty("username");
 	String password=jdbcProperties.getProperty("password");
+	String pool=jdbcProperties.getProperty("pool");
+	String timeOut=jdbcProperties.getProperty("timeout");
+	int pooling=0;
+	if(pool!=null) {
+		pooling=Integer.parseInt(pool.trim());
+	}
+	
+	int timeOt=0;
+	if(timeOut!=null) {
+		timeOt=Integer.parseInt(timeOut.trim());
+	}
 	
 	Class.forName(driver);
     
 	Connection myCon = null;
 
-	if(username!=null)
-		myCon=DriverManager.getConnection(connectionUrl,username,password);
-	else
-		myCon=DriverManager.getConnection(connectionUrl);
-	
+	if(username!=null) {
+		//myCon=DriverManager.getConnection(connectionUrl,username,password);
+		myCon=DBCPDataSource.getConnection(connectionPropFile, connectionUrl, username, password, pooling,timeOt);
+	}
+	else {
+		//myCon=DriverManager.getConnection(connectionUrl);
+		myCon=DBCPDataSource.getConnection(connectionPropFile, connectionUrl, null, null, pooling,timeOt);
+	}
 	return myCon;
 }
 

@@ -1,6 +1,5 @@
 package com.eka.middleware.auth;
 
-import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -11,7 +10,6 @@ import java.security.SecureRandom;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
@@ -24,34 +22,18 @@ import javax.crypto.Cipher;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.keycloak.adapters.AdapterDeploymentContext;
-import org.keycloak.adapters.KeycloakDeployment;
-import org.keycloak.adapters.KeycloakDeploymentBuilder;
-import org.keycloak.adapters.NodesRegistrationManagement;
-import org.keycloak.adapters.undertow.UndertowAuthenticationMechanism;
-import org.keycloak.adapters.undertow.UndertowUserSessionManagement;
-import org.keycloak.representations.adapters.config.AdapterConfig;
 import org.pac4j.core.config.Config;
 import org.pac4j.undertow.handler.CallbackHandler;
 import org.pac4j.undertow.handler.SecurityHandler;
 
 import com.eka.middleware.auth.pac4j.AuthConfigFactory;
 import com.eka.middleware.auth.pac4j.AuthHandlers;
-import com.eka.middleware.server.ThreadManager;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.Tenant;
 
-import io.undertow.security.api.AuthenticationMode;
-import io.undertow.security.handlers.AuthenticationCallHandler;
-import io.undertow.security.handlers.AuthenticationConstraintHandler;
-import io.undertow.security.handlers.AuthenticationMechanismsHandler;
-import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.PathHandler;
 
 public class Security {
@@ -79,10 +61,10 @@ public class Security {
 //		addLoginExactPath("/login",Tenant.getTenant("default"), 
 //				CallbackHandler.build(AuthConfigFactory.getFormClientAuthConfig(defaultLoginPage,Tenant.getTenant("default")), null));
 
-		path.addExactPath("/basic/jwt",
+		path.addExactPath("/jwt/basic",
 				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
 		paths.add("/basic/jwt");
-		path.addExactPath("/basic/JWT",
+		path.addExactPath("/JWT/basic",
 				SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getBasicDirectAuthConfig()));
 		paths.add("/basic/JWT");
 		
@@ -94,7 +76,7 @@ public class Security {
 		
 		path.addPrefixPath("/", AuthHandlers.mainHandler);
 		paths.add("/");
-		path.addExactPath("/keycloak", getKeyCloakAuthenticator("keycloak.json"));
+//		path.addExactPath("/keycloak", getKeyCloakAuthenticator("keycloak.json"));
 		
 		path.addExactPath("/logout", AuthHandlers.logoutHandler);
 		return path;
@@ -160,7 +142,7 @@ public static void main(String[] args) {
 		return new String(decipheredText);
 	}
 
-	public static SecurityInitialHandler getKeyCloakAuthenticator(String keycloakJsonFileName) throws Exception {
+/*	public static SecurityInitialHandler getKeyCloakAuthenticator(String keycloakJsonFileName) throws Exception {
 
 		UserProfileManager identityManager = UserProfileManager.create();
 		String keycloakJson = PropertyManager.getConfigFolderPath() + keycloakJsonFileName;
@@ -175,28 +157,21 @@ public static void main(String[] args) {
 				adapterDeploymentContext, new UndertowUserSessionManagement(), new NodesRegistrationManagement(), 443,
 				"");
 
-		/* Handlers will be invoked in reverse order of declaration. */
-
-		/* Innermost handler; causes the AuthenticationMechanism(s) to be invoked. */
 		final AuthenticationCallHandler authenticationCallHandler = new AuthenticationCallHandler(
 				ThreadManager::processRequest);
 
-		/*
-		 * Handler to answer question �is authentication required�. Always requires
-		 * authentication.
-		 */
 		final AuthenticationConstraintHandler authenticationConstraintHandler = new AuthenticationConstraintHandler(
 				authenticationCallHandler);
 
-		/* Handler to install AuthenticationMechanism(s). */
+
 		final AuthenticationMechanismsHandler authenticationMechanismsHandler = new AuthenticationMechanismsHandler(
 				authenticationConstraintHandler, Arrays.asList(keycloakAuthMech));
 
-		/* Outermost handler: installs SecurityContext. */
+
 		final SecurityInitialHandler securityInitialHandler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE,
 				identityManager, authenticationMechanismsHandler);
 		return securityInitialHandler;
-	}
+	}*/
 
 	public static void setupTenantSecurity(final String tenantName) {
 		//Security.generateKeyPair(tenantName);
