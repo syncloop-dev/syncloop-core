@@ -40,7 +40,7 @@ public final class #className {
 			dataPipeline.put("error", e.getMessage());
 			//dataPipeline.setResponseStatus(500);
 			dataPipeline.put("status", "SQL Service error");
-			new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
+			throw new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
 		}
 	}
 }
