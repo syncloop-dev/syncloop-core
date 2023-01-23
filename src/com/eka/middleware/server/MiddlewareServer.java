@@ -1,13 +1,19 @@
 package com.eka.middleware.server;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -39,6 +45,17 @@ public class MiddlewareServer {
 	private static Map<String, Long> lastModifiedMap = new ConcurrentHashMap<String, Long>();
 
 	public static void main(final String[] args) throws SystemException {
+
+		if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))) {
+			try {
+				BootBuild.bootBuild();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			LOGGER.info("No Container Deployment");
+		}
+
 		try {
 			PropertyManager.initConfig(args);
 			local_IP=PropertyManager.getLocal_IP();
@@ -147,5 +164,82 @@ public class MiddlewareServer {
 
 	public static String getConfigFolderPath() {
 		return PropertyManager.getConfigFolderPath();
+	}
+
+	private static class BootBuild {
+		/**
+		 *
+		 */
+		private static void bootBuild() throws Exception {
+
+			String distributionName = "eka-distribution-v1.4.zip";
+			if (Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
+				distributionName = "eka-distribution-community-v1.4.zip";
+			}
+
+			File eka = new File("./eka/version");
+			if (eka.exists()) {
+				LOGGER.info("Build already existed.");
+			} else {
+				if (new File("./" + distributionName).exists()) {
+					LOGGER.info("Found Build.");
+				} else {
+					LOGGER.info("Build Downloading...");
+					InputStream in = new URL("https://eka-distribution.s3.us-west-1.amazonaws.com/" + distributionName).openStream();
+					Files.copy(in, Paths.get(distributionName), StandardCopyOption.REPLACE_EXISTING);
+					LOGGER.info("Build Download Completed.");
+				}
+
+				LOGGER.info("Unzipping build...");
+				byte[] buffer = new byte[1024];
+				ZipInputStream zis = new ZipInputStream(new FileInputStream("./" + distributionName));
+				ZipEntry zipEntry = zis.getNextEntry();
+				while (zipEntry != null) {
+					File newFile = newFile(new File(""), zipEntry);
+					if (zipEntry.isDirectory()) {
+						if (!newFile.isDirectory() && !newFile.mkdirs()) {
+							throw new IOException("Failed to create directory " + newFile);
+						}
+					} else {
+						// fix for Windows-created archives
+						File parent = newFile.getParentFile();
+						if (!parent.isDirectory() && !parent.mkdirs()) {
+							throw new IOException("Failed to create directory " + parent);
+						}
+
+						// write file content
+						FileOutputStream fos = new FileOutputStream(newFile);
+						int len;
+						while ((len = zis.read(buffer)) > 0) {
+							fos.write(buffer, 0, len);
+						}
+						fos.close();
+					}
+					zipEntry = zis.getNextEntry();
+				}
+				zis.closeEntry();
+				zis.close();
+			}
+		}
+
+		/**
+		 * @param destinationDir
+		 * @param zipEntry
+		 * @return
+		 * @throws IOException
+		 */
+		private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
+			File destFile = new File(destinationDir, zipEntry.getName());
+
+			String destDirPath = destinationDir.getCanonicalPath();
+			String destFilePath = destFile.getCanonicalPath();
+
+			//if (!destFilePath.startsWith("/" + destDirPath + File.separator)) {
+				//System.out.println(destFilePath);
+				//throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
+			//}
+
+			return destFile;
+		}
 	}
 }

@@ -75,8 +75,8 @@ public class AuthHandlers {
 			//exchange.setRequestCookie(ck);
 			//exchange.setResponseCookie(ck);
 			Date expiry=new Date(System.currentTimeMillis());
-			exchange.requestCookies().forEach(k->k.setMaxAge(-10));
-			exchange.responseCookies().forEach(k->k.setMaxAge(-10));
+			exchange.requestCookies().forEach(k->k.setMaxAge(-27788353));
+			exchange.responseCookies().forEach(k->k.setMaxAge(-27788353));
 			ServiceUtils.redirectRequest(exchange, Security.defaultLoginPage);
 			ServiceUtils.clearSession(exchange);
 			exchange.endExchange();
@@ -89,7 +89,7 @@ public class AuthHandlers {
 			List<UserProfile> profiles = getProfiles(exchange);
 			String tenantName=ServiceUtils.setupRequestPath(exchange);
 			Cookie cookie=ServiceUtils.setupCookie(exchange, tenantName, null);
-			
+			ServiceUtils.manipulateHeaders(exchange);
 			if (profiles != null) {
 				AuthAccount acc = ServiceUtils.getCurrentLoggedInAuthAccount(exchange);
 				String token=ServiceUtils.getToken(cookie);

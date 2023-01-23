@@ -922,4 +922,19 @@ public class DataPipeline {
 		}
 		return "localhost";
 	}
+
+	public String getCurrentURI() {
+
+		if(!rp.isExchangeInitialized())
+			return "http://localhost";
+		try {
+			HttpServerExchange httpServerExchange = rp.getExchange();
+			if (null != httpServerExchange) {
+				return String.format("%s://%s", httpServerExchange.getRequestScheme(), httpServerExchange.getHostAndPort());
+			}
+		} catch (SnippetException e) {
+			ServiceUtils.printException(this,"Exchange not initialized..", e);
+		}
+		return "http://localhost";
+	}
 }

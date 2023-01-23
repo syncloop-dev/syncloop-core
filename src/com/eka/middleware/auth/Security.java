@@ -41,6 +41,7 @@ public class Security {
 	public static final String defaultTenantPage = "/files/gui/middleware/pub/server/ui/tenant/newTenant.html";
 	public static final String defaultWelcomePage = "/files/gui/middleware/pub/server/ui/workspace/web/workspace.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
 	public static final String defaultLoginPage = "/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html";
+	public static final String defaultLoginPage_NonTenant = "/files/gui/middleware/pub/server/ui/welcome/onboarding/signin.html";
 	private static final Set<String> paths = new HashSet<String>();
 	private static final Set<String> publicPaths = new HashSet<String>();
 	private static Map<String, List<String>> publicPrefixPathsMap = new ConcurrentHashMap();
@@ -189,16 +190,29 @@ public static void main(String[] args) {
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/icons/", Tenant.getTenant(tenantName));
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/", Tenant.getTenant(tenantName));
 		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/javascript/middleware.js", Tenant.getTenant(tenantName));
-		
-		addPublicExactPath(defaultLoginPage,Tenant.getTenant(tenantName));
+		addPublicPrefixPath("/execute/packages.middleware.pub.security.OIDCLogin.Google.OIDCProfile.main", Tenant.getTenant(tenantName));
+
+		if (Boolean.parseBoolean(System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT")) ||
+				Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
+			addPublicExactPath(defaultLoginPage_NonTenant,Tenant.getTenant(tenantName));
+		} else {
+			addPublicExactPath(defaultLoginPage,Tenant.getTenant(tenantName));
+		}
+
+
 		addPublicExactPath(defaultWelcomePage,Tenant.getTenant(tenantName));
 		addPublicExactPath(defaultTenantPage,Tenant.getTenant(tenantName));
 		
 		path.addExactPath("/tenant/"+tenantName,AuthHandlers.defaultWelcomePageHandler("/tenant/"+tenantName+defaultWelcomePage));
 		if(tenantName.equals("default"))
 			path.addExactPath("/",AuthHandlers.defaultWelcomePageHandler("/tenant/"+tenantName+defaultWelcomePage));
-		
-		addLoginExactPath(Tenant.getTenant(tenantName), defaultLoginPage);
+
+		if (Boolean.parseBoolean(System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT")) ||
+				Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
+			addLoginExactPath(Tenant.getTenant(tenantName), defaultLoginPage_NonTenant);
+		} else {
+			addLoginExactPath(Tenant.getTenant(tenantName), defaultLoginPage);
+		}
 	}
 
 	public static void addPublicPrefixPath(String resourcePrefixPath, Tenant tenant) {

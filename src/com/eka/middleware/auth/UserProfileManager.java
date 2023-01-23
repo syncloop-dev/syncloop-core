@@ -59,6 +59,7 @@ public class UserProfileManager implements IdentityManager {
 																	// file datetime.
 				}
 			} catch (Exception e) {
+				e.printStackTrace();
 				throw new SystemException("EKA_MWS_1001", e);
 			}
 		}
@@ -135,12 +136,23 @@ public class UserProfileManager implements IdentityManager {
 		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
 	}
 
+	/**
+	 *
+	 * @param user
+	 * @return
+	 */
+	public static boolean isUserExist(String user) throws SystemException {
+		final Map<String, Object> map = new HashMap();
+		final Map<String, Object> umap = getUsers();
+		Object existingUser = umap.get(user);
+		return existingUser != null;
+	}
+
 	public static void addUser(AuthAccount account) throws SystemException {
 		try {
 			final Map<String, Object> map = new HashMap();
 			final Map<String, Object> umap = getUsers();
-			Object existingUser = umap.get(account.getUserId());
-			if (existingUser != null) {
+			if (isUserExist(account.getUserId())) {
 				throw new Exception("User already exists: " + account.getUserId());
 			}
 			Map<String, Object> user = new HashMap();
@@ -170,8 +182,12 @@ public class UserProfileManager implements IdentityManager {
 			throw new SystemException("EKA_MWS_1001", e);
 		}
 	}
-	
+
 	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
+		updateUser(account, pass, "1");
+	}
+
+	public static void updateUser(AuthAccount account,final byte[] pass, String status) throws SystemException {
 		try {
 			final Map<String, Object> map = new HashMap();
 			final Map<String, Object> umap = getUsers();
@@ -180,12 +196,16 @@ public class UserProfileManager implements IdentityManager {
 				throw new Exception("User not found: " + account.getUserId());
 			}
 			String password=(String) ((Map)existingUser).get("password");
-			if(pass!=null)
+			if(pass!=null) {
 				password=new String(pass,StandardCharsets.UTF_8);
+				password = "[#]" + ServiceUtils.generateUUID(password + account.getUserId());
+			}
+
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
-			String passHash = "[#]" + ServiceUtils.generateUUID(password + account.getUserId());
-			user.put("password", passHash);
+
+			user.put("password", password);
+			user.put("status", status);
 			umap.put(account.getUserId(), user);
 			map.put("users", umap);
 			map.put("tenants", getTenants());
@@ -259,6 +279,11 @@ public class UserProfileManager implements IdentityManager {
 			if (user == null) {
 				return false;
 			}
+
+			if (user.get("status") != null && user.get("status").equals("0")) {
+				return false;
+			}
+
 			if (user.get("password") == null)
 				return false;
 			char[] expectedPassword = user.get("password").toString().toCharArray();

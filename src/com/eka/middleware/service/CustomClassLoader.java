@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -25,14 +27,24 @@ import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 
 public class CustomClassLoader extends ClassLoader {
-	final DataPipeline dp;
+	DataPipeline dp;
+
 	public CustomClassLoader(String fqn, String[] paths, ClassLoader parent, DataPipeline dp) {
-		this.dp=dp;
+		this.dp = dp;
 		if (paths != null && paths.length > 0)
 			try {
 				loadCustomJars(fqn, paths);
 			} catch (Exception e) {
-				ServiceUtils.printException(dp,"Loading custom jars failed: ", e);
+				ServiceUtils.printException(dp, "Loading custom jars failed: ", e);
+			}
+	}
+	public void resetClassLoader(String fqn, String[] paths, ClassLoader parent, DataPipeline dp) {
+		this.dp = dp;
+		if (paths != null && paths.length > 0)
+			try {
+				loadCustomJars(fqn, paths);
+			} catch (Exception e) {
+				ServiceUtils.printException(dp, "Loading custom jars failed: ", e);
 			}
 	}
 
@@ -44,7 +56,7 @@ public class CustomClassLoader extends ClassLoader {
 		try {
 			List<String> classNames = new ArrayList<String>();
 			LOGGER.trace("Loading jars for class '" + fqn + "'");
-			
+
 			for (String path : paths) {
 				if (path != null && path.length() > 0) {
 					final JarFile jar = new JarFile(new File(path));
@@ -56,18 +68,17 @@ public class CustomClassLoader extends ClassLoader {
 			if (isFailed) {
 				LOGGER.error("Loading jars for class '" + fqn + "' completed with errors");
 				dp.log("Loading jars for class '" + fqn + "' completed with errors", Level.ERROR);
-			}
-			else
+			} else
 				LOGGER.trace("Loading jars for class '" + fqn + "' completed successfully");
 		} catch (Throwable e) {
 			isFailed = true;
-			ServiceUtils.printException(dp,"Failed to find dependent class '" + className + "'", new Exception(e));
+			ServiceUtils.printException(dp, "Failed to find dependent class '" + className + "'", new Exception(e));
 		}
 	}
 
 	private List<String> loadClassFromJar(final JarFile jar) throws Exception {
 		List<String> classNames = new ArrayList<String>();
-		
+
 		Enumeration<JarEntry> entries = jar.entries();
 		while (entries.hasMoreElements()) {
 			JarEntry nextElement = entries.nextElement();
@@ -87,15 +98,15 @@ public class CustomClassLoader extends ClassLoader {
 					bao = null;
 					is = null;
 					String clsName = nextElement.getName().replace("/", ".").replace(".class", "");
-					if (jarBytes == null) {
-						LOGGER.info("Could not load class from jar '" + clsName);
-						dp.log("Could not load class from jar '" + clsName);
-					}
-					else {
-						jeMap.put(clsName, jarBytes);
-						classNames.add(clsName);
-						// LOGGER.info("Loading class from jar '" + clsName);
-					}
+					
+						if (jarBytes == null) {
+							LOGGER.info("Could not load class from jar '" + clsName);
+							dp.log("Could not load class from jar '" + clsName);
+						} else {
+							jeMap.put(clsName, jarBytes);
+							classNames.add(clsName);
+							// LOGGER.info("Loading class from jar '" + clsName);
+						}
 				}
 			} finally {
 				if (is != null)
@@ -130,12 +141,26 @@ public class CustomClassLoader extends ClassLoader {
 				}
 			} else {
 				LOGGER.trace("Loading class from bytes'" + name + "'");
-
-				return defineClass(name, classBytes, 0, classBytes.length);
+				Class clz=findLoadedClass(name);
+				if(clz!=null) {
+					clz=reloadClass(name,clz,getClassPath(name, dp));
+					if(clz!=null)
+					return clz;
+				}
+				clz=defineClass(name, classBytes, 0, classBytes.length);
+//				try {
+//					if(name.equals("org.bouncycastle.jcajce.provider.asymmetric.rsa.KeyFactorySpi"))
+//						System.out.println("");
+//					clz=defineClass(name, classBytes, 0, classBytes.length);
+//				} catch (Throwable e) {
+//					LOGGER.info("Loading class from bytes'" + name + "'. Error:"+e.getMessage());
+//					clz= findLoadedClass(name);
+//				}
+				return clz;
 
 			}
 		} catch (Exception e) {
-			ServiceUtils.printException(dp,"Class Not found '" + name + "'", e);
+			ServiceUtils.printException(dp, "Class Not found '" + name + "'", e);
 			throw new ClassNotFoundException(name);
 		}
 	}
@@ -145,7 +170,15 @@ public class CustomClassLoader extends ClassLoader {
 		// System.out.println(name);
 		byte[] b;
 		try {
-			b = loadClassFromFile(name,dp);
+			
+			Class clz=findLoadedClass(name);
+			if(clz!=null) {
+				clz=reloadClass(name,clz,getClassPath(name, dp));
+				if(clz!=null)
+					return clz;
+			}
+			
+			b = loadClassFromFile(name, dp);
 			return defineClass(name, b, 0, b.length);
 		} catch (SnippetException e) {
 			// TODO Auto-generated catch block
@@ -154,24 +187,45 @@ public class CustomClassLoader extends ClassLoader {
 		throw new ClassNotFoundException(name);
 
 	}
+	
+	private URL getClassURL(String fileName, DataPipeline dp) {
+		fileName = fileName.replace('.', '/') + ".class";
+		// System.out.println(fileName);
+		String packagePath = PropertyManager.getPackagePath(dp.rp.getTenant());
+		URL path = null;
+		try {
+			path = new File((packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/"))
+					.toURL();// ServiceManager.class.getResource(fileName).toURI();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			ServiceUtils.printException(dp, "Failed to create URI '"
+					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/") + "'", e);
+		}
+		return path;
+	}
+	
+	private String getClassPath(String fileName, DataPipeline dp) {
+		fileName = fileName.replace('.', '/') + ".class";
+		// System.out.println(fileName);
+		String packagePath = PropertyManager.getPackagePath(dp.rp.getTenant());
+		String path = (packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/");
+		return path;
+	}
 
 	private byte[] loadClassFromFile(String fileName, DataPipeline dp) throws SnippetException {
 		// System.out.println(fileName);
 
 		fileName = fileName.replace('.', '/') + ".class";
 		// System.out.println(fileName);
-		String packagePath=PropertyManager.getPackagePath(dp.rp.getTenant());
+		String packagePath = PropertyManager.getPackagePath(dp.rp.getTenant());
 		URI path = null;
 		try {
-			path = new File(
-					(packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/"))
-							.toURI();// ServiceManager.class.getResource(fileName).toURI();
+			path = new File((packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/"))
+					.toURI();// ServiceManager.class.getResource(fileName).toURI();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			ServiceUtils.printException(dp,"Failed to create URI '"
-					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//",
-							"/")
-					+ "'", e);
+			ServiceUtils.printException(dp, "Failed to create URI '"
+					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/") + "'", e);
 		}
 		InputStream inputStream = null;
 		File file = new File(path);
@@ -194,14 +248,12 @@ public class CustomClassLoader extends ClassLoader {
 				inputStream = null;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				ServiceUtils.printException(dp,"Failed to close inputStream", e);
+				ServiceUtils.printException(dp, "Failed to close inputStream", e);
 			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
-			ServiceUtils.printException(dp,"Class file not found '"
-					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//",
-							"/")
-					+ "'", e);
+			ServiceUtils.printException(dp, "Class file not found '"
+					+ (packagePath + fileName.replace("packages/packages", "packages")).replace("//", "/") + "'", e);
 		} finally {
 			// if(file!=null && file.exists())
 			// file.delete();
@@ -209,9 +261,29 @@ public class CustomClassLoader extends ClassLoader {
 				try {
 					inputStream.close();
 				} catch (IOException e) {
-					ServiceUtils.printException(dp,"Failed to close inputStream in finally block", e);
+					ServiceUtils.printException(dp, "Failed to close inputStream in finally block", e);
 				}
 		}
 		return buffer;
 	}
+	
+	public Class findMyLoadedClass(String name) {
+		return findLoadedClass(name);
+	}
+	
+	public Class reloadClass(String fqn,Class<?> clazz,String path) {
+
+        try {
+        	final ClassReloader cl = new ClassReloader(fqn, path, this,dp);
+
+            final Class<?> reloadedClazz = cl.loadClass(clazz.getName());
+            //System.out.println("Class reloaded: " + reloadedClazz.hashCode());
+            //System.out.println("Are the same: " + (clazz != reloadedClazz) );
+            return reloadedClazz;
+		} catch (Exception e) {
+			LOGGER.info("Failed reloading class. "+e.getMessage());
+		}
+        return null;
+        
+    }
 }

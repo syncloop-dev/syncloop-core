@@ -220,7 +220,7 @@ public class ServiceUtils {
 	public static final Map<String, Object> xmlToMap(String json) {
 		try {
 			xmlMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
-			Map<String, Object> map = xmlMapper.readValue(json, Map.class);
+			Map<String, Object> map = xmlMapper.readValue(String.format("<root>%s</root>", json), Map.class);
 			return map;
 		} catch (JsonProcessingException e) {
 			printException("Could not convert xml to map", e);
@@ -459,7 +459,7 @@ public class ServiceUtils {
 				try {
 					formData = formDataParser.parseBlocking();
 				} catch (Exception e) {
-					// e.printStackTrace();
+					e.printStackTrace();
 					throw new SnippetException(dataPipeLine,
 							"Could not fetch formData for multipart request.\n" + e.getMessage(), e);
 				}
@@ -782,6 +782,10 @@ public class ServiceUtils {
 		}
 		return tenantName;
 	}
+
+	public static void manipulateHeaders(HttpServerExchange exchange) {
+
+	}
 	
 	public static Cookie setupCookie(HttpServerExchange exchange,String tenantName, String token) {
 		Cookie cookie = exchange.getRequestCookie("tenant");
@@ -1085,5 +1089,14 @@ public class ServiceUtils {
 	
 	public static void logInfo(String tenantName,String serviceName, String message) {
 		Tenant.getTenant(tenantName).logError(serviceName , message);
+	}
+
+	/**
+	 * @param map
+	 * @param key
+	 * @return
+	 */
+	public static Object getCaseInsensitiveKey(Map<String, Object> map, String key) {
+		return (null == map.get(key)) ? map.get(key.toLowerCase()) : map.get(key);
 	}
 }

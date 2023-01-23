@@ -218,9 +218,9 @@ public class ThreadManager {
 					rp.payload.put("*requestHeaders", ServiceUtils.extractHeaders(exchange));
 					((Map) rp.payload.get("*requestHeaders")).put("Authorization", "********");
 					rp.payload.put("*pathParameters", pathParams.get("pathParameters"));
-					final String acceptHeader = (String) (rp.dataPipeLine.getHeaders().get("Accept") == null ? "*/*"
-							: rp.dataPipeLine.getHeaders().get("Accept"));
-					final String contentType = (String) rp.dataPipeLine.getHeaders().get("Content-Type");
+					final String acceptHeader = (String) (ServiceUtils.getCaseInsensitiveKey(rp.dataPipeLine.getHeaders(), "Accept") == null ? "*/*"
+							: ServiceUtils.getCaseInsensitiveKey(rp.dataPipeLine.getHeaders(), "Accept"));
+					final String contentType = (String) ServiceUtils.getCaseInsensitiveKey(rp.dataPipeLine.getHeaders(), "Content-Type");
 					Map map = null;
 					byte body[] = null;
 					String content = null;
@@ -237,7 +237,7 @@ public class ThreadManager {
 							body = rp.dataPipeLine.getBody();
 							content = new String(body);
 							if (content != null && content.trim().length() > 0)
-								map = ServiceUtils.xmlToMap(content);
+								map = ServiceUtils.xmlToMap(String.format("<root>%s</root>", content));
 							break;
 						case "application/yaml":
 							body = rp.dataPipeLine.getBody();

@@ -86,11 +86,13 @@ public class Repeat {
 		while (repeatOn != null) {
 			dp.put(indexVar, index+"");
 			index++;
+			Exception throwable = null;
 			try {
 				action(dp);
 				if ("error".equals(repeatOn))
 					repeatOn = null;
-			} catch (Throwable e) {
+			} catch (Exception e) {
+				throwable = e;
 				String msg=e.getMessage();
 				if(msg.contains("packages.middleware.pub.service.exitRepeat"))
 					break;
@@ -110,6 +112,10 @@ public class Repeat {
 			repeatTimes--;
 			if (repeatTimes == 0)
 				repeatOn = null;
+
+			if (repeatTimes == 0 && null != throwable) {
+				throw new SnippetException(dp, throwable.getMessage(), throwable);
+			}
 			
 			try {
 				Thread.sleep(interval);

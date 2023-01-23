@@ -1,12 +1,9 @@
 package com.eka.middleware.flow;
 
-import java.util.ArrayList;
-import java.util.Base64;
+import java.util.*;
 //import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -142,8 +139,11 @@ public class FlowUtils {
 				case "EEV": // Evaluate Expression Variable
 					for (String expressionKey : expressions) {
 						String expressionValue = dp.getValueByPointer(expressionKey) + "";
-						if (expressionValue != null)
+						if (expressionValue == null || expressionValue.equals("null")) {
+							map.put(expressionKey, KeywordResolver.find(expressionKey, dp));
+						} else {
 							map.put(expressionKey, expressionValue);
+						}
 					}
 					break;
 				case "EPV": // Evaluate Package Variable
@@ -159,7 +159,7 @@ public class FlowUtils {
 						value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
 					else
 						throw new SnippetException(dp, "Could not resolve expression '#{" + expressionKey + "}'.",
-								new Exception("Property not set properly"));
+								new Exception("	Property not set properly"));
 				}
 			}
 
@@ -469,8 +469,14 @@ public class FlowUtils {
 		JsonObject data = jsonValue.asJsonObject().getJsonObject("data");
 		JsonValue jv = jsonValue.asJsonObject().get("children");
 		List<Object> list = null;
-		if (type.endsWith("List"))
-			list = (List<Object>) dp.get(key);
+		if (type.endsWith("List")) {
+			Object o = dp.get(key);
+			if (o instanceof String[]) {
+				list = Arrays.stream((String[])o).collect(Collectors.toList());
+			} else {
+				list = (List<Object>) o;
+			}
+		}
 		if (list != null && list.size() > 0) {
 			for (int i = 0; i < list.size(); i++) {
 				String k=key+"/"+i;

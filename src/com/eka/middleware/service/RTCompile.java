@@ -34,7 +34,7 @@ import com.eka.middleware.template.SnippetException;
 
 public class RTCompile {
 	public static Logger LOGGER = LogManager.getLogger(RTCompile.class);
-	//public static final Map<String, CustomClassLoader> classLoaderMap=new ConcurrentHashMap<>();
+	public static final Map<String, CustomClassLoader> classLoaderMap=new ConcurrentHashMap<String, CustomClassLoader>();
 
 	public static Class getClassRef(String fqn, String path, boolean compile, DataPipeline dp) throws Throwable {
 		List<String> options = new ArrayList<String>();
@@ -127,7 +127,14 @@ public class RTCompile {
 				//URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
 				//URLClassLoader child = new URLClassLoader (URLs.toArray(new URL[URLs.size()]), ClassLoader.getSystemClassLoader());
 				//cls=Class.forName (fqn, true, child);
-				CustomClassLoader classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);// (CustomClassLoader)
+				CustomClassLoader classLoader=classLoaderMap.get(dp.rp.getTenant().getName());
+				if(classLoader==null) {
+					classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);// (CustomClassLoader)
+					classLoaderMap.put(dp.rp.getTenant().getName(), classLoader);
+				}else {
+					classLoader.resetClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);
+				}
+				//CustomClassLoader classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);// (CustomClassLoader)
 				cls = classLoader.findClass(fqn);
 			} else
 				throw new Exception("Compilation failed '" + fqn + "'\n " + error);
