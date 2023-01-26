@@ -81,20 +81,26 @@ public class FlowUtils {
 	}
 
 	private static void map(JsonArray transformers, DataPipeline dp, String direction) throws SnippetException {
+		JsonOp jsonValueLogger=null;
+		JsonOp jsonOpLogger=null;
 		try {
 			Map<String, List<JsonOp>> map = split(transformers, direction);
 			List<JsonOp> leaders = map.get("leaders");
 			List<JsonOp> followers = map.get("followers");
 			List<JsonOp> follows = new ArrayList<JsonOp>();
 			boolean successful = true;
+			
 			for (JsonOp jsonValue : leaders) {
+				jsonValueLogger=jsonValue;
 				String loop_id = jsonValue.getLoop_id();
 				if (loop_id != null && loop_id.startsWith("loop_id")) {
 					int index = 0;
 					while (successful) {
 						follows.clear();
-						for (JsonOp jsonOp : followers)
+						for (JsonOp jsonOp : followers) {
+							jsonOpLogger=jsonOp;
 							follows.add(jsonOp.clone());
+						}
 						successful = transform(follows, loop_id, index + "", dp);
 						index++;
 					}
@@ -103,7 +109,11 @@ public class FlowUtils {
 				}
 			}
 		} catch (Exception e) {
-			throw new SnippetException(dp, "Something went wrong while applying transformers", e);
+			StringBuffer sb=new StringBuffer();
+			sb.append(jsonValueLogger.toString());
+			sb.append(jsonOpLogger.toString());
+			sb.append(jsonValueLogger.toString());
+			throw new SnippetException(dp, "Error while applying transformers.\n"+sb.toString(), e);
 		}
 	}
 
@@ -158,8 +168,8 @@ public class FlowUtils {
 					if (map.get(expressionKey) != null)
 						value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
 					else
-						throw new SnippetException(dp, "Could not resolve expression '#{" + expressionKey + "}'.",
-								new Exception("	Property not set properly"));
+						throw new SnippetException(dp, "Property not set properly" ,
+								new Exception("Could not resolve expression '#{" + expressionKey + "}'."));
 				}
 			}
 
