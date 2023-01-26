@@ -26,7 +26,7 @@ public class ResourceAuthenticator {
 //	return false;
 //}
 
-public static boolean isConsumerAllowed(String resource, AuthAccount authAccount,String requestPath) {
+public static boolean isConsumerAllowed(String resource, AuthAccount authAccount,String requestPath, String method) {
 	if(authAccount==null)
 		return false;
 	String userID=authAccount.getUserId();
@@ -66,7 +66,7 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
                     if(AuthAccount.STATIC_ADMIN_GROUP.equals(group)){
                       canConsume=true;
                       break;
-                    }else if(AuthAccount.STATIC_DEFAULT_GROUP.equals(group) && serviceAlias.equalsIgnoreCase("files") && requestPath.contains("tenant")) {
+                    }else if(AuthAccount.STATIC_DEFAULT_GROUP.equals(group) && (ServiceUtils.isPublicFolder(serviceAlias) && method.toLowerCase().equals("get")) && requestPath.contains("tenant")) {
                     	canConsume=true;
                         break;
                     }
@@ -74,8 +74,9 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
             }
             else{
             	consumers=consumers+",";
+            	consumers=consumers.toLowerCase();
               for(String group: userGroups){
-                   if(consumers.contains(group+",")){
+                   if(consumers.contains(group.toLowerCase()+",")){
                      canConsume=true;
                      break;
                    }

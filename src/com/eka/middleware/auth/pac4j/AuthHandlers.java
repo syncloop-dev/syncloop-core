@@ -50,9 +50,19 @@ public class AuthHandlers {
 
 	public static HttpHandler defaultWelcomePageHandler(final String path) {
 		return exchange -> {
+			List<UserProfile> profiles = getProfiles(exchange);
+			String p=path;
+			String tenantName=ServiceUtils.setupRequestPath(exchange);
+			Cookie cookie=ServiceUtils.setupCookie(exchange, tenantName, null);
+			ServiceUtils.manipulateHeaders(exchange);
+			String token = ServiceUtils.getToken(cookie);
+			if(token!=null || profiles!=null) {
+				p=Security.defaultWorkspacePage;
+			}
+			
 			exchange.getResponseHeaders().clear();
 			exchange.setStatusCode(StatusCodes.FOUND);
-			exchange.getResponseHeaders().put(Headers.LOCATION, path);
+			exchange.getResponseHeaders().put(Headers.LOCATION, p);
 			//Cookie cookie = new CookieImpl("tenant", "default");
 			//exchange.setResponseCookie(cookie);
 			exchange.endExchange();
@@ -86,6 +96,7 @@ public class AuthHandlers {
 	public static HttpHandler mainHandler = new HttpHandler() {
 		public void handleRequest(final HttpServerExchange exchange) throws Exception {
 			final SecurityContext context = exchange.getSecurityContext();
+			//AuthAccount acc=(AuthAccount) context.getAuthenticatedAccount();
 			List<UserProfile> profiles = getProfiles(exchange);
 			String tenantName=ServiceUtils.setupRequestPath(exchange);
 			Cookie cookie=ServiceUtils.setupCookie(exchange, tenantName, null);

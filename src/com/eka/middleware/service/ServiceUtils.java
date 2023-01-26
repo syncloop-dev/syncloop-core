@@ -256,6 +256,21 @@ public class ServiceUtils {
 			fqn += ".main";
 		ServiceManager.invokeJavaMethod(fqn, dataPipeLine);
 	}
+	
+	public static final boolean isPublicFolder(String path) {
+		//String str="/files/gui/middleware/pub/";
+		String array[]=path.split("/pub/");
+		if(array.length>=2) {
+			String preFixPath=array[0];
+			String pArray[]=preFixPath.split("/files/gui/");
+			if(pArray.length>=2) {
+				String packageName=pArray[1];
+				if(!packageName.contains("/"))
+					return true;
+			}
+		}
+		return false;
+	}
 
 	public static final void compileJavaCode(String fqn, DataPipeline dataPipeLine) throws SnippetException {
 		try {
@@ -764,7 +779,7 @@ public class ServiceUtils {
 			rsrcTokens = ("b" + rqp).split("/");
 		
 		if (rsrcTokens != null) {
-			if (rsrcTokens[1].equalsIgnoreCase("tenant")) {
+			if (rsrcTokens.length>2 && rsrcTokens[1].equalsIgnoreCase("tenant")) {
 				String tName = rsrcTokens[2];
 				if(tenantName==null)
 					tenantName=tName;
@@ -806,7 +821,7 @@ public class ServiceUtils {
 			cookie.setValue(tenantName+" "+token);
 		}
 		cookie.setPath("/");
-		if(!ServiceUtils.isApiCall(exchange))
+		//if(!ServiceUtils.isApiCall(exchange))
 			exchange.setResponseCookie(cookie);
 		//exchange.
 //		((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);

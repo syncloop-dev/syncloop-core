@@ -1,5 +1,6 @@
 package com.eka.middleware.auth;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -39,9 +40,11 @@ import io.undertow.server.handlers.PathHandler;
 public class Security {
 	private static final PathHandler path = new PathHandler();
 	public static final String defaultTenantPage = "/files/gui/middleware/pub/server/ui/tenant/newTenant.html";
-	public static final String defaultWelcomePage = "/files/gui/middleware/pub/server/ui/workspace/web/workspace.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
 	public static final String defaultLoginPage = "/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html";
+	public static final String defaultWelcomePage = defaultLoginPage;//"/files/gui/middleware/pub/server/ui/workspace/web/workspace.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
+	public static final String defaultWorkspacePage = "/files/gui/middleware/pub/server/ui/workspace/web/workspace.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
 	public static final String defaultLoginPage_NonTenant = "/files/gui/middleware/pub/server/ui/welcome/onboarding/signin.html";
+	public static final String defaultLoginAction = "/execute/packages.middleware.pub.security.BasicLoginHandler.main";
 	private static final Set<String> paths = new HashSet<String>();
 	private static final Set<String> publicPaths = new HashSet<String>();
 	private static Map<String, List<String>> publicPrefixPathsMap = new ConcurrentHashMap();
@@ -56,8 +59,9 @@ public class Security {
 	}
 
 	public static PathHandler init() throws Exception {
-		//path.addExactPath("/",
-			//	SecurityHandler.build(AuthHandlers.defaultHandler(), AuthConfigFactory.getAnonymousClientConfig()));
+		//path.addPrefixPath("/public",	SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getAnonymousClientConfig()));
+		//paths.add("/public");
+		//path.addPrefixPath("/public",	SecurityHandler.build(AuthHandlers.mainHandler, AuthConfigFactory.getAnonymousClientConfig()));
 //		addLoginExactPath(Tenant.getTenant("default"), defaultLoginPage);
 //		addLoginExactPath("/login",Tenant.getTenant("default"), 
 //				CallbackHandler.build(AuthConfigFactory.getFormClientAuthConfig(defaultLoginPage,Tenant.getTenant("default")), null));
@@ -186,12 +190,23 @@ public static void main(String[] args) {
 		if (tennatPublicPrefixPaths != null && tennatPublicPrefixPaths.size() > 0)
 			tennatPublicPrefixPaths.forEach(path -> Security.addPublicPrefixPath(path, Tenant.getTenant(tenantName)));
 		
-		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/welcome/", Tenant.getTenant(tenantName));
-		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/icons/", Tenant.getTenant(tenantName));
-		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/", Tenant.getTenant(tenantName));
-		addPublicPrefixPath("/files/gui/middleware/pub/server/ui/javascript/middleware.js", Tenant.getTenant(tenantName));
-		addPublicPrefixPath("/execute/packages.middleware.pub.security.OIDCLogin.Google.OIDCProfile.main", Tenant.getTenant(tenantName));
-
+		String pathname = PropertyManager.getPackagePath(Tenant.getTenant(tenantName)) + "packages" + File.separator;
+        File[] folders = new File(pathname).listFiles();
+        for (File file : folders) {
+			if(file.isDirectory()) {
+				String packageName=file.getName();
+				addPublicPrefixPath("/files/gui/"+packageName+"/pub/", Tenant.getTenant(tenantName));
+			}
+			
+		}
+		
+		//addPublicPrefixPath("/files/gui/middleware/pub", Tenant.getTenant(tenantName));
+		//addPublicPrefixPath("/files/gui/middleware/pub/server/ui/icons/", Tenant.getTenant(tenantName));
+		//addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/", Tenant.getTenant(tenantName));
+		//addPublicPrefixPath("/files/gui/middleware/pub/server/ui/javascript/middleware.js", Tenant.getTenant(tenantName));
+		addPublicPrefixPath("/execute/packages.middleware.pub.security.OIDCLogin.", Tenant.getTenant(tenantName));
+		addPublicPrefixPath("/public", Tenant.getTenant(tenantName));
+		
 		if (Boolean.parseBoolean(System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT")) ||
 				Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
 			addPublicExactPath(defaultLoginPage_NonTenant,Tenant.getTenant(tenantName));
@@ -200,12 +215,12 @@ public static void main(String[] args) {
 		}
 
 
-		addPublicExactPath(defaultWelcomePage,Tenant.getTenant(tenantName));
-		addPublicExactPath(defaultTenantPage,Tenant.getTenant(tenantName));
+		//addPublicExactPath(defaultWelcomePage,Tenant.getTenant(tenantName));
+		//addPublicExactPath(defaultTenantPage,Tenant.getTenant(tenantName));
 		
-		path.addExactPath("/tenant/"+tenantName,AuthHandlers.defaultWelcomePageHandler("/tenant/"+tenantName+defaultWelcomePage));
-		if(tenantName.equals("default"))
-			path.addExactPath("/",AuthHandlers.defaultWelcomePageHandler("/tenant/"+tenantName+defaultWelcomePage));
+		path.addExactPath("/tenant/"+tenantName,AuthHandlers.defaultWelcomePageHandler("/tenant/"+tenantName+defaultLoginAction));
+		//if(tenantName.equals("default"))
+		path.addExactPath("/",AuthHandlers.defaultWelcomePageHandler("/tenant/"+tenantName+defaultLoginAction));
 
 		if (Boolean.parseBoolean(System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT")) ||
 				Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {

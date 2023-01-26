@@ -63,7 +63,7 @@ public class ThreadManager {
 		//if()
 		final String tenantName=ServiceUtils.getTenantName(cookie);
 		String requestAddress = exchange.toString() + "@" + Integer.toHexString(System.identityHashCode(exchange));
-		String method = exchange.getRequestMethod().toString();
+		final String method = exchange.getRequestMethod().toString();
 		String pureRequestPath = exchange.getRequestPath();
 		String requestPath = method + pureRequestPath;
 		AuthAccount account = null;
@@ -164,7 +164,7 @@ public class ThreadManager {
 					rp = RuntimePipeline.create(tenant, uuid, null, exchange, resource, requestPath);
 
 					boolean isAllowed = false;
-					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account, requestPath);
+					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account, requestPath, method);
 
 					if (!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
 						exchange.getResponseHeaders().clear();
