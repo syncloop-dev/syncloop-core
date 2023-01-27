@@ -209,6 +209,8 @@ public class FlowUtils {
 		boolean successful = true;
 		try {
 			List<JsonOp> follows = getFollowersById(followers, loop_id, index);
+			if(follows.size()==0)
+				successful=false;
 			for (JsonOp jsonOp : follows) {
 				String f_loop_id = jsonOp.getLoop_id();
 				if (f_loop_id != null && f_loop_id.startsWith("loop_id")) {
