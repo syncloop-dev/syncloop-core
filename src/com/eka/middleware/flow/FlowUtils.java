@@ -331,7 +331,7 @@ public class FlowUtils {
 			case "string":
 				return ctx.eval("js", js).asString();
 			case "integer":
-				return ctx.eval("js", js).asInt();
+				return (int)ctx.eval("js", js).asLong();
 			case "number":
 				return ctx.eval("js", js).asDouble();
 			case "boolean":

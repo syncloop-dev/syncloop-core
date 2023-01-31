@@ -52,11 +52,14 @@ public class DataPipeline {
 	private final Map<String, Boolean> hasDroppedPrevious = new HashMap<String, Boolean>();
 	private final List<String> resourceStack = new ArrayList<String>();
 	private String currentResource = null;
+	private String callingResource = null;
 	private final String urlPath;
-
+	private int recursiveDepth;
+	private final int allowedRecursionDepth=100;
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
+		recursiveDepth=0;
 		rp = runtimePipeline;
-		this.resource = resource;
+		this.resource = resource+"@"+recursiveDepth;
 		this.urlPath = urlPath;
 		payloadStack.put(resource, rp.payload);
 		currentResource = resource;
@@ -117,28 +120,6 @@ public class DataPipeline {
 			}
 		}
 
-		/*
-		 * String currentResource = getCurrentResource(); Map<String, Object> map =
-		 * payloadStack.get(currentResource); if (map != null) { Object value =
-		 * map.get(key); if (value != null) { try { ArrayDeque<String>
-		 * dVal=(ArrayDeque<String>)value; if(dVal.size()>0) return dVal.getFirst();
-		 * }catch(Exception e) { return value.toString(); } } }
-		 *
-		 * if (hasDroppedPrevious.get(currentResource) != null &&
-		 * hasDroppedPrevious.get(currentResource) ||
-		 * (hasDroppedPrevious.get(currentResource + "-" + key) != null &&
-		 * hasDroppedPrevious.get(currentResource + "-" + key))) { return null; }
-		 *
-		 * int length = resourceStack.size(); if (length > 1) { boolean bit = false; for
-		 * (int i = length - 1; i >= 0; i--) { String resource = resourceStack.get(i);
-		 * if (resource.equals(currentResource) || bit) { bit = true; Map<String,
-		 * Object> map2 = payloadStack.get(resource); if (map2 != null) { Object value =
-		 * map2.get(key); if (value != null) { try { ArrayDeque<String>
-		 * dVal=(ArrayDeque<String>)value; if(dVal.size()>0) return dVal.getFirst();
-		 * }catch(Exception e) { return value.toString(); } } } } if
-		 * (hasDroppedPrevious.get(resource + "-" + key) != null &&
-		 * hasDroppedPrevious.get(resource + "-" + key)) break; } }
-		 */
 		return null;
 	}
 
@@ -153,7 +134,12 @@ public class DataPipeline {
 				try {
 					return (Integer) value;
 				} catch (Exception ee) {
-					throw new SnippetException(this, ee.getMessage(), ee);
+					try {
+						return Integer.parseInt(""+value);
+					} catch (Exception e2) {
+						throw new SnippetException(this, ee.getMessage(), ee);
+					}
+					
 				}
 			}
 		}
@@ -253,7 +239,9 @@ public class DataPipeline {
 		return rp.getCorrelationId();
 	}
 
-	public String getResource() {
+	private String getResource() {
+		//if(resource!=null)
+			//return resource.split("@")[0];
 		return resource;
 	}
 
@@ -533,16 +521,24 @@ public class DataPipeline {
 	}
 
 	public String getUniqueThreadName() {
-		return "cb_" + (getCurrentResource().hashCode() & 0xfffffff);
+		return "cb_" + (getCurrentResourceName().hashCode() & 0xfffffff);
 	}
 
-	public String getCurrentResource() {
+	private String getCurrentResource() {
 		// StackTraceElement[] ste = Thread.currentThread().getStackTrace();
 		// Since its a private method it will be called
 		// inside it's own class function so we get the
 		// stack that called the last public function that
 		// called this method
 		// log("Current stack resource: " + currentResource);
+		//if(resource!=null)
+			//return currentResource.split("@")[0];
+		return currentResource;// ste[3].getClassName() + "." + ste[3].getMethodName();
+	}
+	
+	public String getCurrentResourceName() {
+		if(resource!=null)
+			return currentResource.split("@")[0];
 		return currentResource;// ste[3].getClassName() + "." + ste[3].getMethodName();
 	}
 
@@ -555,23 +551,36 @@ public class DataPipeline {
 		if (map != null)
 			map.clear();
 	}
-	private String callingResource = null;
+	
 	public void apply(String fqnOfMethod) throws SnippetException {
 		if(fqnOfMethod==null)
 			return;
+		boolean recursionDetected=false;
 		try {
 
 			fqnOfMethod = fqnOfMethod.replace("/", ".");
 			if (!fqnOfMethod.endsWith(".main"))
 				fqnOfMethod += ".main";
-			if (payloadStack.get(fqnOfMethod) != null) {
-				Exception e = new Exception("Can not apply method.");
-				e.setStackTrace(Thread.currentThread().getStackTrace());
-				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
+			
+			if(payloadStack.get(fqnOfMethod+"@"+recursiveDepth) != null) {
+				recursionDetected=true;
+				recursiveDepth+=1;
 			}
+			
+			if (recursiveDepth>=allowedRecursionDepth) {
+				Exception e = new Exception("Can not apply method. Stack overflow detected. Maximum allowed recursive depth is "+allowedRecursionDepth);
+				e.setStackTrace(Thread.currentThread().getStackTrace());
+				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "' anymore", e);
+			}
+			
+//			if (payloadStack.get(fqnOfMethod+"@"+recursiveDepth) != null) {
+//				Exception e = new Exception("Can not apply method.");
+//				e.setStackTrace(Thread.currentThread().getStackTrace());
+//				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
+//			}
 			String callingResource = currentResource;
 			this.callingResource=callingResource;
-			currentResource = fqnOfMethod;
+			currentResource = fqnOfMethod+"@"+recursiveDepth;
 			resourceStack.add(currentResource);
 			put("*currentResource", currentResource);
 			try {
@@ -585,6 +594,10 @@ public class DataPipeline {
 			} finally {
 				currentResource = callingResource;
 				this.callingResource=null;
+				if(recursionDetected) {
+					recursionDetected=false;
+					recursiveDepth-=1;
+				}
 				refresh();
 			}
 		} catch (Exception e) {
@@ -593,6 +606,9 @@ public class DataPipeline {
 				throw new SnippetException(this,"Something went wrong with fqnOfMethod: "+fqnOfMethod , e);
 			else
 				throw new SnippetException(this,e.getMessage() , e);
+		}finally{
+			if(recursionDetected)
+				recursiveDepth-=1;
 		}
 	}
 
@@ -736,7 +752,7 @@ public class DataPipeline {
 	}
 
 	public String getMyConfig(String key) throws SnippetException {
-		Properties props = PropertyManager.getProperties(this, getCurrentResource() + ".properties");
+		Properties props = PropertyManager.getProperties(this, getCurrentResourceName() + ".properties");
 		String value = props.getProperty(key);
 		String expressionValue=null;
 		if (value != null && value.trim().toUpperCase().startsWith("#GLOBAL/")) {
@@ -813,7 +829,7 @@ public class DataPipeline {
 	
 	public String getMyPackageConfigPath() {
 		String packagePath=PropertyManager.getPackagePath(rp.getTenant())+"packages/";
-		String packageName = getCurrentResource();
+		String packageName = getCurrentResourceName();
 		String pkg[] = packageName.split(Pattern.quote("."));
         if (pkg.length == 1)
             packageName = pkg[0];
@@ -824,7 +840,7 @@ public class DataPipeline {
 	}
 
 	public Properties getMyProperties() throws SnippetException {
-		Properties props = PropertyManager.getProperties(this, getCurrentResource() + ".properties");
+		Properties props = PropertyManager.getProperties(this, getCurrentResourceName() + ".properties");
 		return props;
 	}
 
@@ -836,7 +852,7 @@ public class DataPipeline {
 	}
 
 	public void logException(Throwable exception) {
-		new SnippetException(this, "Eexception reported by " + getCurrentResource(), new Exception(exception));
+		new SnippetException(this, "Eexception reported by " + getCurrentResourceName(), new Exception(exception));
 	}
 
 	public void logDataPipeline() {

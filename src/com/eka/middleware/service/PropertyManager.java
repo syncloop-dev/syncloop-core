@@ -57,7 +57,7 @@ public class PropertyManager {
 	}
 
 	public static final Properties getProperties(DataPipeline dataPipeLine, String fileName) throws SnippetException {
-		String packageName = dataPipeLine.getCurrentResource();
+		String packageName = dataPipeLine.getCurrentResourceName();
 		String packagePath = PropertyManager.getPackagePath(dataPipeLine.rp.getTenant()) + "packages/";
 		if (fileName.startsWith("global"))
 			packageName = "global";
