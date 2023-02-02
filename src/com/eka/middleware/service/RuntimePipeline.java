@@ -4,31 +4,30 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
-import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
-import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
-import com.eka.middleware.template.SystemException;
 import com.eka.middleware.template.Tenant;
+import com.mongodb.diagnostics.logging.Logger;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.session.Session;
-import io.undertow.util.Headers;
 import io.undertow.util.Sessions;
-import io.undertow.util.StatusCodes;
 
 public class RuntimePipeline {
 	private static final Map<String, RuntimePipeline> pipelines = new ConcurrentHashMap<String, RuntimePipeline>();
@@ -39,7 +38,10 @@ public class RuntimePipeline {
 	private Thread currentThread;
 	private BufferedWriter bw = null;
 	private Tenant tenant=null;
-
+	private String user=null;
+	private Date createDate=null;
+	public final Map<String, Object> payload = new ConcurrentHashMap<String, Object>();
+	
 	public boolean isExchangeInitialized() {
 		if(exchange==null)
 			return false;
@@ -106,6 +108,12 @@ public class RuntimePipeline {
 		if (correlationId == null)
 			correlationId = requestId;
 		this.correlationId = correlationId;
+		setCreateDate(new Date());
+		try {
+			setUser(getCurrentLoggedInUserProfile().getAttribute("email")+" | "+getCurrentLoggedInUserProfile().getUsername()+" | "+getCurrentLoggedInUserProfile().getId());
+		} catch (Exception e) {
+			setUser("System");
+		}
 		dataPipeLine = new DataPipeline(this, resource, urlPath);
 	}
 
@@ -156,8 +164,10 @@ public class RuntimePipeline {
 		if (rp == null) {
 			rp = new RuntimePipeline(tenant,requestId, correlationId, exchange, resource, urlPath);
 			pipelines.put(requestId, rp);
-		} else
-			rp = create(tenant,requestId, correlationId, exchange, resource, urlPath);
+		}else {
+			ServiceUtils.printException(tenant, "Unable to create unique runtime pipeline", null);
+			return null;
+		}
 		return rp;
 	}
 
@@ -166,8 +176,12 @@ public class RuntimePipeline {
 		return rp;
 	}
 
-	public List<RuntimePipeline> listActivePipelines() {
-		List<RuntimePipeline> list = Arrays.asList((RuntimePipeline[]) pipelines.entrySet().toArray());
+	public static List<RuntimePipeline> listActivePipelines() {
+		List<RuntimePipeline> list = new ArrayList<>();
+		Set<Entry<String, RuntimePipeline>>  rtSet=pipelines.entrySet();
+		for (Entry<String, RuntimePipeline> entry : rtSet) {
+			list.add(entry.getValue());
+		}
 		return list;
 	}
 
@@ -202,5 +216,21 @@ public class RuntimePipeline {
 		return tenant;
 	}
 
-	public final Map<String, Object> payload = new ConcurrentHashMap<String, Object>();
+	public Date getCreateDate() {
+		return createDate;
+	}
+
+	public void setCreateDate(Date createDate) {
+		this.createDate = createDate;
+	}
+
+	public String getUser() {
+		return user;
+	}
+
+	public void setUser(String user) {
+		this.user = user;
+	}
+
+	
 }

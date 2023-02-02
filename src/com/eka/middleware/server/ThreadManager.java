@@ -7,6 +7,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -159,7 +160,7 @@ public class ThreadManager {
 					exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
 					logTransaction = exchange.getQueryParameters().containsKey("logTransaction");
 
-					String uuid = ServiceUtils.generateUUID(requestAddress + "" + System.nanoTime());
+					String uuid = UUID.randomUUID().toString();
 
 					rp = RuntimePipeline.create(tenant, uuid, null, exchange, resource, requestPath);
 

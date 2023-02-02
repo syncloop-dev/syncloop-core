@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -630,7 +631,7 @@ public class DataPipeline {
 		final Map<String, Object> asyncOutputDoc = new HashMap<String, Object>();
 		final Map<String, String> metaData = new HashMap<String, String>();
 		asyncOutputDoc.put("*metaData", metaData);
-		final String uuidAsync = ServiceUtils.generateUUID("Async operation: " + fqnOfFunction + System.nanoTime());
+		final String uuidAsync = UUID.randomUUID().toString();
 		metaData.put("batchId", uuidAsync);
 		metaData.put("status", "Active");
 		ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -669,13 +670,16 @@ public class DataPipeline {
 				}
 			}
 		} catch (Exception e) {
+			ServiceUtils.printException(this, "Failed during transformer operations.", e);
 			throw new SnippetException(this, uuidAsync, e);
 		}
 		final String currResrc=currentResource;
 		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
+			RuntimePipeline rpRef=null;
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,
 						"");
+				rpRef=rpAsync;
 				final DataPipeline dpAsync = rpAsync.dataPipeLine;
 				String json = null;
 				if (asyncInputDoc != null && asyncInputDoc.size() > 0) {
@@ -731,6 +735,7 @@ public class DataPipeline {
 						asyncOutputDoc.put(k, v);
 				});
 				metaData.put("status", "Completed");
+				
 				return asyncOutputDoc;
 			} catch (Exception e) {
 				ServiceUtils.printException(this,"Exception caused on async operation correlationID: " + correlationID
@@ -740,6 +745,7 @@ public class DataPipeline {
 				throw e;
 			} finally {
 				asyncOutputDoc.put("*metaData", metaData);
+				rpRef.destroy();
 			}
 		});
 		// currentResource = curResourceBkp;

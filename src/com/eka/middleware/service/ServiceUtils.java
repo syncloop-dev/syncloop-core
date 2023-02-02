@@ -304,7 +304,10 @@ public class ServiceUtils {
 		StackTraceElement[] stackTrace = e.getStackTrace();
 		sb.append(msg);
 		sb.append("\n");
-		sb.append(e.getMessage());
+		if(e!=null)
+			sb.append(e.getMessage());
+		else
+			sb.append("Custom error");
 		sb.append("\n");
 		if (stackTrace == null)
 			stackTrace = Thread.currentThread().getStackTrace();
@@ -908,8 +911,8 @@ public class ServiceUtils {
 	public static void startTenantServices(String tenant) throws SnippetException {
 		Security.setupTenantSecurity(tenant);
 		String uuid = UUID.randomUUID().toString();
-		RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant), uuid, uuid, null,
-				"GET/execute/packages.middleware.pub.server.core.service.main",
+		final RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant), uuid, uuid, null,
+				"packages.middleware.pub.server.core.service.main",
 				"/execute/packages.middleware.pub.server.core.service.main");
 		LOGGER.trace("RP created for " + tenant);
 		LOGGER.trace("Executing startup servies for " + tenant);

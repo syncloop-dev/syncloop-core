@@ -83,7 +83,11 @@ public class Repeat {
 			dp.snap(comment);
 		}
 		long index=0;
-		while (repeatOn != null) {
+		boolean canExecute = true;
+		if(repeatTimes<0 && getCondition()!=null)
+			canExecute=FlowUtils.evaluateCondition(getCondition(), dp);
+		while (repeatOn != null && canExecute) {
+			
 			dp.put(indexVar, index+"");
 			index++;
 			Exception throwable = null;
@@ -122,6 +126,10 @@ public class Repeat {
 			} catch (Exception e) {
 				dp.put("lastErrorDump", ServiceUtils.getExceptionMap(e));
 			}
+			
+			if(repeatTimes<0 && repeatOn!=null)
+				canExecute=FlowUtils.evaluateCondition(getCondition(), dp);
+			
 			if(dp.isDestroyed())
 				throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		}

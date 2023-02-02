@@ -1,6 +1,10 @@
 package com.eka.middleware.flow;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 //import java.util.HashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -12,7 +16,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.graalvm.polyglot.Context;
@@ -331,7 +334,7 @@ public class FlowUtils {
 			case "string":
 				return ctx.eval("js", js).asString();
 			case "integer":
-				return (int)ctx.eval("js", js).asLong();
+				return (int)ctx.eval("js", js).asLong();//(int)Bodmas.eval(js);//
 			case "number":
 				return ctx.eval("js", js).asDouble();
 			case "boolean":
