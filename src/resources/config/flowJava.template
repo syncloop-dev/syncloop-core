@@ -14,6 +14,7 @@ import com.eka.middleware.service.PropertyManager;
 import java.util.*;
 import java.net.*;
 import java.util.concurrent.ConcurrentHashMap;
+import io.undertow.util.HttpString;
 
 public final class #className {
 
@@ -101,6 +102,7 @@ public final class #className {
 				dataPipeline.applyAsync("packages.middleware.pub.service.auditLogging");
 				dataPipeline.drop("asyncInputDoc");
 				dataPipeline.drop("asyncOutputDoc");
+				dataPipeline.rp.getExchange().getResponseHeaders().put(new HttpString("CORRELATION-ID"), dataPipeline.getCorrelationId());
 			}
 		}
 	}

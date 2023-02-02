@@ -13,6 +13,7 @@ import javax.json.JsonValue;
 import java.util.Properties;
 import com.eka.middleware.service.PropertyManager;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 public final class #className {
 
@@ -26,7 +27,7 @@ public final class #className {
 			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
 			  if(mainSqlJsonObject==null){
-				  mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+				  mainSqlJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
 				  mainSqlJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainSqlJsonObject);
 			  }
 			  if(mainSqlJsonObject==null)
