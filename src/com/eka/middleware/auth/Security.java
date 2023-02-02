@@ -207,11 +207,10 @@ public static void main(String[] args) {
 		addPublicPrefixPath("/execute/packages.middleware.pub.security.OIDCLogin.", Tenant.getTenant(tenantName));
 		addPublicPrefixPath("/public", Tenant.getTenant(tenantName));
 		
-		if (Boolean.parseBoolean(System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT")) ||
-				Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-			addPublicExactPath(defaultLoginPage_NonTenant,Tenant.getTenant(tenantName));
-		} else {
+		if (Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
 			addPublicExactPath(defaultLoginPage,Tenant.getTenant(tenantName));
+		} else {
+			addPublicExactPath(defaultLoginPage_NonTenant,Tenant.getTenant(tenantName));
 		}
 
 
@@ -222,11 +221,10 @@ public static void main(String[] args) {
 		//if(tenantName.equals("default"))
 		path.addExactPath("/",AuthHandlers.defaultWelcomePageHandler("/tenant/"+tenantName+defaultLoginAction));
 
-		if (Boolean.parseBoolean(System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT")) ||
-				Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-			addLoginExactPath(Tenant.getTenant(tenantName), defaultLoginPage_NonTenant);
-		} else {
+		if (Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
 			addLoginExactPath(Tenant.getTenant(tenantName), defaultLoginPage);
+		} else {
+			addLoginExactPath(Tenant.getTenant(tenantName), defaultLoginPage_NonTenant);
 		}
 	}
 
