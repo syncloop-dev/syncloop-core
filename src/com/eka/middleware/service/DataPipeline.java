@@ -1,12 +1,7 @@
 package com.eka.middleware.service;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +20,9 @@ import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
+import com.eka.middleware.pooling.DBCPDataSource;
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -808,7 +806,17 @@ public class DataPipeline {
 		
 		return expressionValue;
 	}
-	
+
+	public void saveJdbc(DataPipeline dataPipeline, Path path) throws SnippetException, IOException {
+
+		String JDBC = dataPipeline.getUrlPath().replaceAll("POST/files/", "");
+
+		String pPath=PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
+		String connectionPropFile=pPath + JDBC;
+		DBCPDataSource.removeConnection(connectionPropFile);
+		java.nio.file.Files.write(path, dataPipeline.getBody());
+	}
+
 	public void saveProperties(String path,byte[] data) {
 		Properties props=new Properties();
 		File file=new File(path);

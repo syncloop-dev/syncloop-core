@@ -224,6 +224,7 @@ public class ServiceUtils {
 			return map;
 		} catch (JsonProcessingException e) {
 			printException("Could not convert xml to map", e);
+
 		}
 		return null;
 	}

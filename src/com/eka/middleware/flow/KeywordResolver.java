@@ -17,6 +17,8 @@ public class KeywordResolver {
             return UUID.randomUUID().toString();
         } else if (expressionKey.equals("tenant")) {
             return dataPipeline.rp.getTenant().getName();
+        } else if (expressionKey.equals("CorrelationId")) {
+            return dataPipeline.getCorrelationId();
         } else if (expressionKey.equals("ContextLocalPath")) {
             if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))) {
                 return "/eka";

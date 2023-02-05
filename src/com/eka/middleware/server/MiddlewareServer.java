@@ -60,6 +60,7 @@ public class MiddlewareServer {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			Build.download("latest");
 		} else {
 			LOGGER.info("No Container Deployment");
 		}

@@ -267,8 +267,12 @@ public class CustomClassLoader extends ClassLoader {
 		return buffer;
 	}
 	
-	public Class findMyLoadedClass(String name) {
-		return findLoadedClass(name);
+	public Class findMyLoadedClass(String name) throws ClassNotFoundException {
+		Class aClass = findLoadedClass(name);
+		if (null == aClass) {
+			aClass = loadClass(name);
+		}
+		return aClass;
 	}
 	
 	public Class reloadClass(String fqn,Class<?> clazz,String path) {

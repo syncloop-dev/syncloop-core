@@ -134,6 +134,7 @@ public class FlowUtils {
 			if (evaluate != null && evaluate.trim().length() > 0) {
 				Map<String, String> map = new HashMap<String, String>();
 				String expressions[] = extractExpressions(value);
+				if(expressions!=null)
 				switch (evaluate) {
 				case "ELV": // Evaluate Local Variable
 					for (String expressionKey : expressions) {
