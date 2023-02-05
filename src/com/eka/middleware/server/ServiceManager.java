@@ -70,7 +70,7 @@ public class ServiceManager {
 		} else
 			classMap.remove(classID);
 	}
-
+	private static Object obj=new Object();
 	public static void invokeJavaMethod(final String fqn, final DataPipeline dataPipeLine) throws SnippetException {
 //		Long lastChangedTimeSaved = lastModified.get(fqn);
 //		long lastChangedTime = file.lastModified();
@@ -79,7 +79,7 @@ public class ServiceManager {
 
 		Class cls = classMap.get(classID);
 		if (cls == null)
-			synchronized (classMap) {
+			synchronized (obj) {
 				try {
 					ScriptEngineContextManager.clear();
 					cls = compileJava(fqn, dataPipeLine);

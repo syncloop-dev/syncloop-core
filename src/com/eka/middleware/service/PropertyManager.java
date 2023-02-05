@@ -236,7 +236,7 @@ public class PropertyManager {
 		File file = new File(absoluteFilePath);
 		return readConfigurationAbsFile(file);
 	}
-
+	private static Object obj=new Object();
 	public static final byte[] readConfigurationAbsFile(File file) throws SystemException {
 		try {
 			String absoluteFilePath = file.getAbsolutePath();
@@ -247,7 +247,7 @@ public class PropertyManager {
 			// File file = new File(uri);
 			if (lastModified == null || lastModified < file.lastModified()) {
 				byte[] bytes = null;
-				synchronized (lastModifiedMap) {
+				synchronized (obj) {
 					lastModified = lastModifiedMap.get(absoluteFilePath);
 					if (lastModified == null || lastModified < file.lastModified()) {
 						bytes = ServiceUtils.readAllBytes(file);

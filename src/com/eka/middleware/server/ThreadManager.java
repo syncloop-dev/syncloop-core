@@ -38,18 +38,8 @@ import io.undertow.util.PathTemplate;
 import io.undertow.util.StatusCodes;
 
 public class ThreadManager {
-	// int
-	// threadPool=ServiceUtils.getServerProperty("middleware.server.thread.resources");
 
 	public static Logger LOGGER = LogManager.getLogger(MiddlewareServer.class);
-
-	private static ExecutorService executorService = Executors.newFixedThreadPool(10);
-
-	public static final void startNewThread(final HttpServerExchange exchange) {
-		executorService.submit(() -> {
-
-		});
-	}
 	
 	public static final void processRequest(final HttpServerExchange exchange) {
 		String tenantName=ServiceUtils.setupRequestPath(exchange);
