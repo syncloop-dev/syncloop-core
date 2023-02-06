@@ -820,7 +820,7 @@ public class ServiceUtils {
 			tenantName=getTenantName(cookie);
 		else if(getToken(cookie)==null)
 			cookie.setValue(tenantName);
-		cookie.setSecure(true);
+		//cookie.setSecure(true);
 		if(token!=null){
 			cookie.setValue(tenantName+" "+token);
 		}
