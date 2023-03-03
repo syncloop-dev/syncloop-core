@@ -95,6 +95,7 @@ public class ServiceManager {
 			Method method = cls.getMethod(funcName, DataPipeline.class);// cls.getMethods();// ;
 			if (method != null) {
 				try {
+					System.out.println(method);
 					method.invoke(null, dataPipeLine);
 				} catch (InvocationTargetException e) {
 					Exception ex = null;

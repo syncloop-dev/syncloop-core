@@ -109,15 +109,27 @@ public class Client {
 	        rd.close();
 	        body= response.toString();
         }
+
+		Map<String, List<String>> responseHeaderFields = conn.getHeaderFields();
+
+		Map<String, String> responseHeaders = Maps.newHashMap();
+
+		for (Map.Entry<String, List<String>> responseHeaderField : responseHeaderFields.entrySet()) {
+			if (null != responseHeaderField.getKey()) {
+				responseHeaders.put(responseHeaderField.getKey(), StringUtils.join(responseHeaderField.getValue(), ","));
+			}
+
+		}
 		
 		if ("bytes".equals(contentType)) {
 			respMap.put("bytes", body.getBytes());
 		} else
-			respMap.put("respPayload", body);
+			respMap.put("respPayload", body + "");
 		
 		respMap.put("statusCode",conn.getResponseCode()+"");
 		respMap.put("message",conn.getResponseMessage());
-		
+		respMap.put("responseHeaders", responseHeaders);
+
 		conn.disconnect();
 		
 		return respMap;
@@ -134,6 +146,20 @@ public class Client {
 	 */
 	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
 											 Map<String, String> reqHeaders, boolean sslValidation) throws Exception {
+		return invoke(url, method, formData, reqHeaders, null, null, sslValidation);
+	}
+
+	/**
+	 * @param url
+	 * @param method
+	 * @param formData
+	 * @param reqHeaders
+	 * @param sslValidation
+	 * @return
+	 * @throws Exception
+	 */
+	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
+											 Map<String, String> reqHeaders, String payload, InputStream inputStream, boolean sslValidation) throws Exception {
 		HttpRequest.Builder builder = HttpRequest.newBuilder();
 
 		builder.uri(URI.create(url));
@@ -165,8 +191,11 @@ public class Client {
 				bodyPublisher = HttpRequest.BodyPublishers.ofString(form);
 			} else {
 				bodyPublisher = Client.addFormData(formData, reqHeaders);
-				builder.method(method, bodyPublisher);
 			}
+		} else if (StringUtils.isNotBlank(payload)) {
+			bodyPublisher = HttpRequest.BodyPublishers.ofString(payload);
+		} else if (null != inputStream) {
+			bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(() -> inputStream);
 		}
 
 		builder.method(method, bodyPublisher);

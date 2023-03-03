@@ -38,6 +38,7 @@ import java.util.zip.ZipOutputStream;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -50,7 +51,6 @@ import org.pac4j.undertow.account.Pac4jAccount;
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
-import com.eka.middleware.auth.pac4j.AuthHandlers;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.ServiceManager;
@@ -206,6 +206,20 @@ public class ServiceUtils {
 			printException("Could not convert xml to map", e);
 		}
 		return null;
+	}
+
+	public static final String xmlToString(Object o, String rootName) throws Exception {
+		Map<String, Object> root = Maps.newHashMap();
+		XmlMapper xmlMapper = new XmlMapper();
+		if (StringUtils.isBlank(rootName)) {
+			rootName = "";
+		}
+
+		root.put(rootName, o);
+		String xml = xmlMapper.writeValueAsString(root);
+		xml = xml.replaceAll("<HashMap>", "").replaceAll("</HashMap>", "");
+		xml = xml.replaceAll("<>", "").replaceAll("</>", "");
+		return xml;
 	}
 
 	public static final String toXml(Map<String, Object> map, String rootName) throws Exception {
@@ -891,16 +905,26 @@ public class ServiceUtils {
 			UserProfileManager.addUser(account);
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
-			copyDirectory(src, dest);
-			Security.generateKeyPair(name);
-			Security.setupTenantSecurity(name);
-			Tenant.getTenant(name).logInfo(null, "New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
-			LOGGER.info("Starting newly created tenant(" + name + ")......................");
-			Tenant.getTenant(name).logInfo(null, "Starting newly created tenant(" + name + ")......................");
-			startTenantServices(name);
-			UserProfileManager.newTenant(name);
-			LOGGER.info("New tenant with name " + name + " created successfully.");
-			Tenant.getTenant(name).logInfo(null, "New tenant with name " + name + " created and started successfully.");
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						copyDirectory(src, dest);
+						Security.generateKeyPair(name);
+						Security.setupTenantSecurity(name);
+						Tenant.getTenant(name).logInfo(null, "New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
+						LOGGER.info("Starting newly created tenant(" + name + ")......................");
+						Tenant.getTenant(name).logInfo(null, "Starting newly created tenant(" + name + ")......................");
+						startTenantServices(name);
+						UserProfileManager.newTenant(name);
+						LOGGER.info("New tenant with name " + name + " created successfully.");
+						Tenant.getTenant(name).logInfo(null, "New tenant with name " + name + " created and started successfully.");
+
+					} catch (Exception e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}).start();
 
 		} catch (Exception e) {
 			printException("Failed to create tenant with name " + name, e);
@@ -1117,5 +1141,38 @@ public class ServiceUtils {
 	 */
 	public static Object getCaseInsensitiveKey(Map<String, Object> map, String key) {
 		return (null == map.get(key)) ? map.get(key.toLowerCase()) : map.get(key);
+	}
+
+	public static String normalizeUri(String s) {
+		String r = StringUtils.stripAccents(s);
+		r = r.replace(" ", "_");
+		r = r.replaceAll("[^\\.A-Za-z0-9_]", "");
+		return r;
+	}
+
+	public static String normalizeApiPath(String s) {
+		s = StringUtils.stripEnd(s, "/");
+		String path = s;//s.replaceAll("\\{", "").replaceAll("\\}", "");
+
+		String[] paths = StringUtils.split(s, "/");
+		StringBuilder pathBuilder = new StringBuilder();
+		for ( int i = 0 ; i < paths.length ; i++ ) {
+			if (paths.length != 1 && (i == (paths.length - 1) && !(paths[i].indexOf("}") > 0))) {
+				break;
+			}
+			pathBuilder.append("/").append(paths[i].replaceAll("\\{", "").replaceAll("\\}", ""));
+		}
+
+		return pathBuilder.toString();
+	}
+
+	public static String normalizeApiPathName(String method, String s) {
+		s = StringUtils.stripEnd(s, "/");
+		String path = s.replaceAll("\\{", "").replaceAll("\\}", "");
+
+		String[] paths = StringUtils.split(path, "/");
+
+		path = paths[paths.length - 1];
+		return method + (path.substring(0,1).toUpperCase() + path.substring(1).toLowerCase());
 	}
 }

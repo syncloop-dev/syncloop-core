@@ -340,7 +340,7 @@ public class DataPipeline {
 	public String toJson() {
 		try {
 
-			return ServiceUtils.toJson(payloadStack.get(currentResource));
+			return ServiceUtils.toJson(getStatusBasedOutput());
 		} catch (Exception e) {
 			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Json", e);
 		}
@@ -353,7 +353,7 @@ public class DataPipeline {
 			String wrapperRootName = (String) get("@wrapperRootName");
 			if (wrapperRootName == null)
 				wrapperRootName = "root";
-			return ServiceUtils.toXml(payloadStack.get(currentResource), wrapperRootName);
+			return ServiceUtils.toXml(getStatusBasedOutput(), wrapperRootName);
 		} catch (Exception e) {
 			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Xml", e);
 		}
@@ -367,12 +367,23 @@ public class DataPipeline {
 	public String toYaml() {
 		try {
 
-			return ServiceUtils.toYaml(payloadStack.get(currentResource));
+			return ServiceUtils.toYaml(getStatusBasedOutput());
 		} catch (Exception e) {
 			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Yaml", e);
 		}
 		;
 		return null;
+	}
+
+	private Map<String,Object> getStatusBasedOutput() throws Exception{
+		Map<String,Object> map=payloadStack.get(currentResource);
+		if(this.rp.isExchangeInitialized()) {
+			HttpServerExchange exch=this.rp.getExchange();
+			int status=exch.getStatusCode();
+			if(map.get("*"+status)!=null)
+				return (Map<String, Object>) map.get("*"+status);
+		}
+		return map;
 	}
 
 	public void save(String name) {
@@ -600,11 +611,15 @@ public class DataPipeline {
 				refresh();
 			}
 		} catch (Exception e) {
-//			this.logDataPipeline();
-			if(!e.getMessage().contains("packages.middleware.pub.service.exitRepeat"))
-				throw new SnippetException(this,"Something went wrong with fqnOfMethod: "+fqnOfMethod , e);
-			else
-				throw new SnippetException(this,e.getMessage() , e);
+
+			if (!e.getMessage().contains("packages.middleware.pub.service.exitRepeat")) {
+				if (e instanceof SnippetException)
+					throw e;
+				else
+					throw new SnippetException(this, "Something went wrong with fqnOfMethod: " + fqnOfMethod, e);
+			} else
+				throw new SnippetException(this, e.getMessage(), e);
+
 		}finally{
 			if(recursionDetected)
 				recursiveDepth-=1;

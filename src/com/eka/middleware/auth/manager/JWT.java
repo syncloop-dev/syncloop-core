@@ -16,6 +16,8 @@ import com.eka.middleware.template.Tenant;
 
 import io.undertow.server.HttpServerExchange;
 
+import java.util.Date;
+
 public class JWT {
 	public static String generate(HttpServerExchange exchange) {
 		String tenantName=ServiceUtils.setupRequestPath(exchange);
@@ -32,7 +34,13 @@ public class JWT {
             profile.addAttribute(Pac4jConstants.USERNAME, up.getId());
             profile.addAttribute("tenant", authacc.getAuthProfile().get("tenant"));
             profile.addAttribute("groups", authacc.getAuthProfile().get("groups"));
-            token = Tenant.getTenant(tenantName).jwtGenerator.generate(profile);
+            Tenant tenant = Tenant.getTenant(tenantName);
+
+            Date expiryDate = new Date();
+            expiryDate = ServiceUtils.addHoursToDate(expiryDate, 8);
+
+            tenant.jwtGenerator.setExpirationTime(expiryDate);
+            token = tenant.jwtGenerator.generate(profile);
 //            try {
 //            	String publicKey=PropertyManager.getGlobalProperties(tenantName).getProperty(Security.PUBLIC_PROPERTY_KEY_NAME);
 //            	token=Security.getSecureString(token,publicKey);

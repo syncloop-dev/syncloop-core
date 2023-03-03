@@ -41,8 +41,8 @@ public class Security {
 	private static final PathHandler path = new PathHandler();
 	public static final String defaultTenantPage = "/files/gui/middleware/pub/server/ui/tenant/newTenant.html";
 	public static final String defaultLoginPage = "/files/gui/middleware/pub/server/ui/welcome/onboarding/login.html";
-	public static final String defaultWelcomePage = defaultLoginPage;//"/files/gui/middleware/pub/server/ui/workspace/web/workspace.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
-	public static final String defaultWorkspacePage = "/files/gui/middleware/pub/server/ui/workspace/web/workspace.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
+	public static final String defaultWelcomePage = defaultLoginPage;//"/files/gui/middleware/pub/server/ui/workspace/web/dashboard.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
+	public static final String defaultWorkspacePage = "/files/gui/middleware/pub/server/ui/workspace/web/dashboard.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
 	public static final String defaultLoginPage_NonTenant = "/files/gui/middleware/pub/server/ui/welcome/onboarding/signin.html";
 	public static final String defaultLoginAction = "/execute/packages.middleware.pub.security.BasicLoginHandler.main";
 	private static final Set<String> paths = new HashSet<String>();

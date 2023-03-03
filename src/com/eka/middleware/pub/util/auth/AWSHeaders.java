@@ -40,13 +40,14 @@ public class AWSHeaders {
             }
             awsHeaders.put("x-amz-content-sha256", contentHashString);
             awsHeaders.put(contentLengthHeader, "" + payload.length);
-
-            if (headers != null)
-                headers.forEach((k, v) -> {
-                    if (k != null && v != null) awsHeaders.put(k, v);
-                });
-
         }
+
+        if (headers != null) {
+            headers.forEach((k, v) -> {
+                if (k != null && v != null) awsHeaders.put(k, v);
+            });
+        }
+
         AWS4SignerForChunkedUpload signer = new AWS4SignerForChunkedUpload(
                 endpointUrl, method.toUpperCase(), service, regionName);
         String authorization = signer.computeSignature(awsHeaders,
