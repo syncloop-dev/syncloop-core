@@ -76,7 +76,7 @@ public class CustomClassLoader extends ClassLoader {
 		}
 	}
 
-	private List<String> loadClassFromJar(final JarFile jar) throws Exception {
+	public List<String> loadClassFromJar(final JarFile jar) throws Exception {
 		List<String> classNames = new ArrayList<String>();
 
 		Enumeration<JarEntry> entries = jar.entries();
