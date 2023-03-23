@@ -1,6 +1,7 @@
 package com.eka.middleware.pooling;
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,12 +26,19 @@ public class DBCPDataSource {
         ds.setDefaultQueryTimeout(timeOut);
     }
 
-    public static Connection getConnection(String name, String url, String user, String password, int pool, int timeOut) throws SQLException {
+    public static Connection getConnection(String name, String url, String user, String password, int pool, int timeOut, ClassLoader cl, Driver driver, String driverClassName) throws SQLException {
         DBCPDataSource dbcp = dsMap.get(name);
         if (dbcp == null || dbcp.ds.getDefaultQueryTimeout() != timeOut || dbcp.ds.getMaxIdle() != (pool + 1)) {
             dbcp = new DBCPDataSource(url, user, password, pool, timeOut);
             dsMap.put(name, dbcp);
         }
+        if(cl!=null)
+            dbcp.ds.setDriverClassLoader(cl);
+
+        if(driver!=null)
+            dbcp.ds.setDriver(driver);
+        if(driverClassName!=null)
+            dbcp.ds.setDriverClassName(driverClassName);
         return dbcp.ds.getConnection();
     }
 
