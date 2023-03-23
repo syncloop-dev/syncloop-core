@@ -1,7 +1,9 @@
 package com.eka.middleware.pub.util;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
@@ -9,6 +11,8 @@ import java.util.regex.Pattern;
 
 import com.beust.jcommander.internal.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.nimbusds.jose.shaded.gson.Gson;
 import io.swagger.v3.oas.models.media.Content;
 import org.apache.commons.io.IOUtils;
 
@@ -33,12 +37,12 @@ public class ImportSwagger {
 	final static String supportedTypes = "string,integer,number,date,boolean,object,byte,document,stringList,integerList,numberList,dateList,booleanList,documentList,objectList,byteList,";
 
 	public static void main(String[] args) throws Exception {
-		String path = "D:\\petstore.json";// petstore
+		String path = "D:\\domains.json";// petstore
 
 		File openAPIFile = new File(path);
 		byte openAPI[] = ServiceUtils.readAllBytes(openAPIFile);
-		Map responseLib = asClientLib("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\uspto2\\clientLib", openAPI);
-		Map responseStub = asServerStub("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\uspto2\\serverStub", openAPI);
+		Map responseLib = asClientLib("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\godaddy\\clientLib", openAPI);
+		Map responseStub = asServerStub("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\godaddy\\serverStub", openAPI);
 		String json = Json.pretty().writeValueAsString(responseLib);
 		System.out.println(json);
 		json = Json.pretty().writeValueAsString(responseStub);
@@ -61,46 +65,47 @@ public class ImportSwagger {
 			String alias = entry.getKey();
 			PathItem pi = entry.getValue();
 			Operation op = pi.getGet();
-			flow = generateServerStub(op, swagger);
+			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
+			String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				saveFlow(servicePath, json);
 				response.put("GET" + alias, opId);
 			}
 			op = pi.getPost();
-			flow = generateServerStub(op, swagger);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) + alias : op.getOperationId());
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) + alias : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				saveFlow(servicePath, json);
 				response.put("POST" + alias, opId);
 			}
 
 			op = pi.getDelete();
-			flow = generateServerStub(op, swagger);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				saveFlow(servicePath, json);
 				response.put("DELETE" + alias, opId);
 			}
 
 			op = pi.getPatch();
-			flow = generateServerStub(op, swagger);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) + alias : op.getOperationId());
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) + alias : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				saveFlow(servicePath, json);
 				response.put("PATCH" + alias, opId);
 			}
 
 			op = pi.getPut();
-			flow = generateServerStub(op, swagger);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow", json);
+				saveFlow(servicePath, json);
 				response.put("PUT" + alias, opId);
 			}
 		}
@@ -181,7 +186,7 @@ public class ImportSwagger {
 		}
 	}
 
-	private static Map<String, Object> createDocument(String name, List<Object> list, String description) {
+	public static Map<String, Object> createDocument(String name, List<Object> list, String description) {
 		Map<String, Object> map = createParam(name, "document");
 		map.put("children", list);
 
@@ -194,7 +199,7 @@ public class ImportSwagger {
 		return map;
 	}
 
-	private static Map<String, Object> createDocumentList(String name, List<Object> list, String description) {
+	public static Map<String, Object> createDocumentList(String name, List<Object> list, String description) {
 		Map<String, Object> map = createParam(name, "documentList");
 		map.put("children", list);
 
@@ -285,18 +290,36 @@ public class ImportSwagger {
 
 		if (rb != null && rb.getContent() != null && rb.getContent().entrySet() != null
 				&& rb.getContent().entrySet().size() > 0) {
-			int bodySize = rb.getContent().entrySet().size();
+			//int bodySize = rb.getContent().entrySet().size();
 
-			MediaType[] mts = new MediaType[bodySize];
+			//MediaType[] mts = new MediaType[bodySize];
 			MediaType mt = ((Entry<String, MediaType>) rb.getContent().entrySet().toArray()[0]).getValue();
 
 			Schema bodySchema = mt.getSchema();
 			if (bodySchema != null) {
 				List<Object> body = getBody(bodySchema, swagger);
-				if ("array".equals(bodySchema.getType()))
+				if (!body.isEmpty()) {
+					Map<String, Object> objectMap = (Map<String, Object>) body.get(0);
+					objectMap.put("text", payloadParam);
+					if ("array".equals(bodySchema.getType())) {
+						objectMap.put("type", "documentList");
+					} else {
+						objectMap.put("type", "document");
+					}
+
+					if (StringUtils.isNotBlank(rb.getDescription())) {
+						Map<String, String> data = Maps.newHashMap();
+						data.put("fieldDescription", Base64.getEncoder().encodeToString(rb.getDescription().getBytes()));
+						objectMap.put("data", data);
+					}
+
+					inputs.add(objectMap);
+				}
+
+				/*if ("array".equals(bodySchema.getType()))
 					inputs.add(createDocumentList(payloadParam, body, rb.getDescription()));
 				else
-					inputs.add(createDocument(payloadParam, body, rb.getDescription()));
+					inputs.add(createDocument(payloadParam, body, rb.getDescription()));*/
 			}
 		}
 	}
@@ -323,7 +346,7 @@ public class ImportSwagger {
 	private static Map<String, Object> generateClientLib(String alias, Operation op, OpenAPI swagger, String method) {
 		if (op == null)
 			return null;
-		FlowService flowService = new FlowService(op.getDescription(), op.getSummary());
+		FlowService flowService = new FlowService(op.getDescription(), op.getSummary(), com.google.common.collect.Sets.newHashSet("consumers"), Sets.newHashSet("developers"));
 
 		//Map<String, Object> latest = flowService.getVersion();
 		List<Object> inputs = flowService.getInput();
@@ -342,6 +365,16 @@ public class ImportSwagger {
 		ApiResponses apiResponses = op.getResponses();
 		addResponses(outputs, apiResponses, swagger);
 
+		Map<String, String> commonOutputRawResponse = Maps.newHashMap();
+		commonOutputRawResponse.put("text", "rawResponse");
+		commonOutputRawResponse.put("type", "string");
+		outputs.add(commonOutputRawResponse);
+
+		Map<String, String> commonOutputStatusCode = Maps.newHashMap();
+		commonOutputStatusCode.put("text", "statusCode");
+		commonOutputStatusCode.put("type", "string");
+		outputs.add(commonOutputStatusCode);
+
 		if (headers.size() > 0)
 			inputs.add(createDocument("requestHeaders", headers, ""));
 		if (parameters.size() > 0)
@@ -359,8 +392,8 @@ public class ImportSwagger {
 		dropVariables(intiMapStep, "pathParameters", "document");
 
 		if (!"GET".equalsIgnoreCase(method)) {
-			Map<String, Object> invokeStepToJson= createInvokeStep(flowSteps,"service","packages/middleware/pub/json/toJson", "Initialize");
-			createPreInvokeMapping(invokeStepToJson, "copy", "document", "/payload", "document", "/root");
+			Map<String, Object> invokeStepToJson= createInvokeStep(flowSteps,"service","packages/middleware/pub/json/toStringN", "Initialize");
+			createPreInvokeMapping(invokeStepToJson, "copy", "document", "/payload", "javaObject", "/root");
 			createPostInvokeMapping(invokeStepToJson, "copy", "string", "/jsonString", "string", "/body");
 		}
 		
@@ -406,6 +439,10 @@ public class ImportSwagger {
 
 		addChildren(switchMapping, cases);
 
+		Map<String, Object> commonResponse = createMapStep(flowSteps, "Mapping Common Response & HTTP Status Code");
+
+		createMapping(commonResponse, "copy", "string", "/respPayload", "string", "/rawResponse");
+
 		return flowService.getFlow();
 	}
 
@@ -423,8 +460,19 @@ public class ImportSwagger {
 
 				Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases,"CASE", "Handling " + mediaTypeEntry.getKey() + " response");
 				addData(sequenceContentTypeMapping, "case", mediaTypeEntry.getKey());
-				if (mediaTypeEntry.getKey().equalsIgnoreCase("application/json")) {
 
+				if (mediaTypeEntry.getKey().equalsIgnoreCase("application/xml")) {
+
+					List<Object> jsonConversionCase = Lists.newArrayList();
+					Map<String, Object> invokeStepToJson = createInvokeStep(jsonConversionCase,"service","packages/middleware/pub/xml/fromXML", "Initialize");
+
+					createPreInvokeMapping(invokeStepToJson, "copy", "string", "/respPayload", "string", "/xml");
+					createPostInvokeMapping(invokeStepToJson, "copy", "document/document", "/output/root", "document/document", "/*" + code + "/root");
+
+
+					addChildren(sequenceContentTypeMapping, jsonConversionCase);
+
+				} else {
 					List<Object> jsonConversionCase = Lists.newArrayList();
 
 					List<Object> body = getBody(mediaTypeEntry.getValue().getSchema(), swagger);
@@ -444,19 +492,6 @@ public class ImportSwagger {
 					createPostInvokeMapping(invokeStepToJson, "copy", "document", "/output", "document", "/*" + code);
 
 					addChildren(sequenceContentTypeMapping, jsonConversionCase);
-
-
-				} else if (mediaTypeEntry.getKey().equalsIgnoreCase("application/xml")) {
-
-					List<Object> jsonConversionCase = Lists.newArrayList();
-					Map<String, Object> invokeStepToJson = createInvokeStep(jsonConversionCase,"service","packages/middleware/pub/xml/fromXML", "Initialize");
-
-					createPreInvokeMapping(invokeStepToJson, "copy", "string", "/respPayload", "string", "/xml");
-					createPostInvokeMapping(invokeStepToJson, "copy", "document/document", "/output/root", "document/document", "/*" + code + "/root");
-
-
-					addChildren(sequenceContentTypeMapping, jsonConversionCase);
-
 				}
 
 			}
@@ -491,14 +526,22 @@ public class ImportSwagger {
 		return switchContentTypeMapping;
 	}
 
-	private static Map<String, Object> generateServerStub(Operation op, OpenAPI swagger) {
+	private static Map<String, Object> generateServerStub(Operation op, OpenAPI swagger, String servicePath) throws FileNotFoundException {
 		if (op == null)
 			return null;
 
-		FlowService flowService = new FlowService(op.getDescription(), op.getSummary());
+		File file = new File(servicePath);
+		FlowService flowService;
+		if (file.exists()) {
+			flowService = new Gson().fromJson(new FileReader(file), FlowService.class);
+		} else {
+			flowService = new FlowService(op.getDescription(), op.getSummary(), Sets.newHashSet("consumers"), Sets.newHashSet("developers"));
+		}
 
 		List<Object> inputs = flowService.getInput();
+		inputs.clear();
 		List<Object> outputs = flowService.getOutput();
+		outputs.clear();
 
 		List<Object> query = getParameters(op, "query");
 
@@ -521,7 +564,7 @@ public class ImportSwagger {
 		return flowService.getFlow();
 	}
 
-	private static Map<String, Object> createMapStep(List<Object> parent,String comment) {
+	public static Map<String, Object> createMapStep(List<Object> parent,String comment) {
 		Map<String, Object> map = createEntity("MAP", "map");
 		parent.add(map);
 		Map<String, Object> data = new HashMap();
@@ -535,7 +578,7 @@ public class ImportSwagger {
 		return data;
 	}
 
-	private static Map<String, Object> createInvokeStep(List<Object> parent, String serviceType, String serviceFqn, String comment) {
+	public static Map<String, Object> createInvokeStep(List<Object> parent, String serviceType, String serviceFqn, String comment) {
 		Map<String, Object> map = createEntity(serviceFqn, "invoke");
 		parent.add(map);
 		Map<String, Object> data = new HashMap();
@@ -557,7 +600,7 @@ public class ImportSwagger {
 	 * @param comment
 	 * @return
 	 */
-	private static Map<String, Object> createSwitch(List<Object> parent, String serviceType, String serviceFqn, String comment) {
+	public static Map<String, Object> createSwitch(List<Object> parent, String serviceType, String serviceFqn, String comment) {
 		Map<String, Object> map = createEntity(serviceFqn, "switch");
 		parent.add(map);
 		Map<String, Object> data = new HashMap();
@@ -574,7 +617,7 @@ public class ImportSwagger {
 	 * @param comment
 	 * @return
 	 */
-	private static Map<String, Object> createCase(List<Object> parent, String serviceFqn, String comment) {
+	public static Map<String, Object> createCase(List<Object> parent, String serviceFqn, String comment) {
 		Map<String, Object> map = createEntity(serviceFqn, "sequence");
 		parent.add(map);
 		Map<String, Object> data = new HashMap();
@@ -591,7 +634,7 @@ public class ImportSwagger {
 	 * @param evaluate
 	 * @param typePath
 	 */
-	private static void createVariables(Map<String, Object> mapStep, String path, String value, Evaluate evaluate, String typePath) {
+	public static void createVariables(Map<String, Object> mapStep, String path, String value, Evaluate evaluate, String typePath) {
 		List<Object> createList = (List<Object>) mapStep.get("createList");
 
 		if (createList == null) {
@@ -613,7 +656,7 @@ public class ImportSwagger {
 	 * @param path
 	 * @param typePath
 	 */
-	private static void dropVariables(Map<String, Object> mapStep, String path, String typePath) {
+	public static void dropVariables(Map<String, Object> mapStep, String path, String typePath) {
 		List<Object> dropList = (List<Object>) mapStep.get("dropList");
 
 		if (dropList == null) {
@@ -628,7 +671,7 @@ public class ImportSwagger {
 		dropList.add(dropVariable);
 	}
 
-	private static enum Evaluate {
+	public static enum Evaluate {
 		ELV, // Evaluate Local Variable
 		EGV, // Evaluate Global Variable
 		EEV, // Evaluate Expression Variable
@@ -673,7 +716,7 @@ public class ImportSwagger {
 		lines.add(line);
 	}
 
-	private static void createPreInvokeMapping(Map<String, Object> mapStep, String op, String inTypePath, String from, String outTypePath,
+	public static void createPreInvokeMapping(Map<String, Object> mapStep, String op, String inTypePath, String from, String outTypePath,
 			String to) {
 		List<Object> transformers = (List<Object>) mapStep.get("transformers");
 		List<Object> lines = (List<Object>) mapStep.get("lines");
@@ -714,7 +757,7 @@ public class ImportSwagger {
 		lines.add(line);
 	}
 
-	private static void createPostInvokeMapping(Map<String, Object> mapStep, String op, String inTypePath, String from, String outTypePath,
+	public static void createPostInvokeMapping(Map<String, Object> mapStep, String op, String inTypePath, String from, String outTypePath,
 			String to) {
 		List<Object> transformers = (List<Object>) mapStep.get("transformers");
 		List<Object> lines = (List<Object>) mapStep.get("lines");
@@ -755,7 +798,7 @@ public class ImportSwagger {
 		lines.add(line);
 	}
 
-	private static void addChildren(Map<String, Object> parent, List<Object> children) {
+	public static void addChildren(Map<String, Object> parent, List<Object> children) {
 		parent.put("children", children);
 	}
 
@@ -764,7 +807,7 @@ public class ImportSwagger {
 	 * @param key
 	 * @param value
 	 */
-	private static void addData(Map<String, Object> map, String key, String value) {
+	public static void addData(Map<String, Object> map, String key, String value) {
 		Map<String, Object> data = (Map<String, Object>)map.get("data");
 		data.put(key, value);
 	}

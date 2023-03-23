@@ -3,45 +3,43 @@ package com.eka.middleware.pub.util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.eka.middleware.heap.HashMap;
+import org.apache.commons.lang3.StringUtils;
 
 public class FlowService {
 
     final Map<String, Object> flow = new HashMap();
-    final Map<String, Object> latest = new HashMap();
-    final List<Object> input = new ArrayList();
-    final List<Object> output = new ArrayList();
-    final List<Object> flowSteps = new ArrayList();
+    final FlowIOS latest = new FlowIOS();
 
-    public FlowService(String description, String title) {
+
+    public FlowService(String description, String title, Set<String> consumers, Set<String> developers) {
         flow.put("latest", latest);
         flow.put("description", description);
         flow.put("title", title);
-        latest.put("input", input);
-        latest.put("output", output);
-        latest.put("flow", flowSteps);
-        latest.put("lockedByUser", "admin");
+        flow.put("consumers", StringUtils.join(consumers, ","));
+        flow.put("developers", StringUtils.join(developers, ","));
     }
 
     public Map<String, Object> getFlow() {
         return flow;
     }
 
-    public Map<String, Object> getVersion() {
+    public FlowIOS getVersion() {
         return latest;
     }
 
     public List<Object> getInput() {
-        return input;
+        return latest.getInput();
     }
 
     public List<Object> getOutput() {
-        return output;
+        return latest.getOutput();
     }
 
     public List<Object> getFlowSteps() {
-        return flowSteps;
+        return latest.getFlow();
     }
 
 }
