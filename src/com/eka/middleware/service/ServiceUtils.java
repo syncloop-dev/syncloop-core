@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -156,6 +157,12 @@ public class ServiceUtils {
 	public static final String toPrettyJson(Map<String, Object> map) throws Exception {
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
+		return json;
+	}
+
+	public static final String objectToJson(Object object) throws Exception {
+		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+		String json = om.writeValueAsString(object);
 		return json;
 	}
 
@@ -905,7 +912,8 @@ public class ServiceUtils {
 			UserProfileManager.addUser(account);
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
-			new Thread(new Runnable() {
+
+			Runnable runnable = new Runnable() {
 				@Override
 				public void run() {
 					try {
@@ -924,7 +932,10 @@ public class ServiceUtils {
 						throw new RuntimeException(e);
 					}
 				}
-			}).start();
+			};
+
+			//new Thread(runnable).start();
+			runnable.run();
 
 		} catch (Exception e) {
 			printException("Failed to create tenant with name " + name, e);
@@ -1174,5 +1185,26 @@ public class ServiceUtils {
 
 		path = paths[paths.length - 1];
 		return method + (path.substring(0,1).toUpperCase() + path.substring(1).toLowerCase());
+	}
+
+	public static String toServiceSlug(String str) {
+		if (StringUtils.isBlank(str)) {
+			return "";
+		}
+		return str.toLowerCase().replaceAll("[^a-z0-9\\-]+", "_").replaceAll("^-|-$", "");
+	}
+
+	public static void loadCustomJar(DataPipeline dp, String packageName, String jarFileName) throws Exception {
+		String packagePath = PropertyManager.getPackagePath(dp.rp.getTenant());
+		String path = packagePath + "/packages/" + packageName + "/dependency/jars/" + jarFileName;
+		CustomClassLoader ccl = RTCompile.classLoaderMap.get(dp.rp.getTenant().getName());
+		final JarFile jar = new JarFile(new File(path));
+		List<String> classNames = ccl.loadClassFromJar(jar);
+	}
+
+	public static void loadCustomJar(DataPipeline dp, String path) throws Exception {
+		CustomClassLoader ccl = RTCompile.classLoaderMap.get(dp.rp.getTenant().getName());
+		final JarFile jar = new JarFile(new File(path));
+		List<String> classNames = ccl.loadClassFromJar(jar);
 	}
 }
