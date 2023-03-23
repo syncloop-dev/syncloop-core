@@ -9,15 +9,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.eka.middleware.service.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.eka.middleware.pooling.DBCPDataSource;
-import com.eka.middleware.service.DataPipeline;
-import com.eka.middleware.service.PropertyManager;
-import com.eka.middleware.service.ServiceUtils;
 
 public class SQL {
     //public static Logger LOGGER = LogManager.getLogger(SQL.class);
@@ -209,16 +207,23 @@ public class SQL {
             timeOt = Integer.parseInt(timeOut.trim());
         }
 
-        Class.forName(driver);
+        Driver driverObj=null;
+        CustomClassLoader ccl=null;
+        try {
+            Class.forName(driver);
+        } catch (Exception e) {
+            ccl = RTCompile.classLoaderMap.get(dp.rp.getTenant().getName());
+            driverObj = (Driver) Class.forName(driver, true, ccl).getConstructor().newInstance();
+        }
 
         Connection myCon = null;
 
         if (username != null) {
             //myCon=DriverManager.getConnection(connectionUrl,username,password);
-            myCon = DBCPDataSource.getConnection(connectionPropFile, connectionUrl, username, password, pooling, timeOt);
+            myCon = DBCPDataSource.getConnection(connectionPropFile, connectionUrl, username, password, pooling, timeOt, ccl, driverObj, driver);
         } else {
             //myCon=DriverManager.getConnection(connectionUrl);
-            myCon = DBCPDataSource.getConnection(connectionPropFile, connectionUrl, null, null, pooling, timeOt);
+            myCon = DBCPDataSource.getConnection(connectionPropFile, connectionUrl, null, null, pooling, timeOt, ccl, driverObj, driver);
         }
         return myCon;
     }
