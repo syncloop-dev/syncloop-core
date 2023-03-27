@@ -30,9 +30,9 @@ public class ImportPostman {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
-        PostmanCollection postmanCollection = new Gson().fromJson(new FileReader("E:/formatx.json"), PostmanCollection.class);
-        createFlowServices("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\server\\", postmanCollection.getItem());
-        createFlowServicesClient("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\client",postmanCollection.getItem());
+        PostmanCollection postmanCollection = new Gson().fromJson(new FileReader("D:/AWS EC2.postman_collection.json"), PostmanCollection.class);
+        createFlowServices("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\server\\", postmanCollection.getItem());
+        createFlowServicesClient("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\client",postmanCollection.getItem());
 
     }
     static void createFlowServices(String folder, List<PostmanItems> item) throws Exception {

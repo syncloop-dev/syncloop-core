@@ -146,7 +146,11 @@ public class Client {
 	 */
 	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
 											 Map<String, String> reqHeaders, boolean sslValidation) throws Exception {
-		return invoke(url, method, formData, reqHeaders, null, null, sslValidation);
+		return invoke(url, method, formData, reqHeaders, null, null, new HashMap<>(), sslValidation);
+	}
+
+	public static Map<String, Object> invoke(String format, String method, Map<String, Object> formData, Map<String, String> reqHeaders, String reqPayload, boolean b) throws Exception {
+		return invoke(format, method, formData, reqHeaders, null, null, new HashMap<>(), b);
 	}
 
 	/**
@@ -159,10 +163,17 @@ public class Client {
 	 * @throws Exception
 	 */
 	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
-											 Map<String, String> reqHeaders, String payload, InputStream inputStream, boolean sslValidation) throws Exception {
+											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, boolean sslValidation) throws Exception {
 		HttpRequest.Builder builder = HttpRequest.newBuilder();
 
-		builder.uri(URI.create(url));
+		String queries = StringUtils.join(queryParameters.entrySet().parallelStream().map(m -> String.format("%s=%s", m.getKey(), m.getValue())).collect(Collectors.toSet()), "&");
+
+		if (StringUtils.isNotBlank(queries)) {
+			builder.uri(URI.create(url + "?" + queries));
+		} else {
+			builder.uri(URI.create(url));
+		}
+
 
 		HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
 
@@ -323,5 +334,6 @@ public class Client {
 		baos.close();
 		return bytes;
 	}
-	
+
+
 }

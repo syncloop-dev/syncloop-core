@@ -392,8 +392,8 @@ public class ImportSwagger {
 		dropVariables(intiMapStep, "pathParameters", "document");
 
 		if (!"GET".equalsIgnoreCase(method)) {
-			Map<String, Object> invokeStepToJson= createInvokeStep(flowSteps,"service","packages/middleware/pub/json/toStringN", "Initialize");
-			createPreInvokeMapping(invokeStepToJson, "copy", "document", "/payload", "javaObject", "/root");
+			Map<String, Object> invokeStepToJson= createInvokeStep(flowSteps,"service","packages/middleware/pub/json/toString", "Initialize");
+			createPreInvokeMapping(invokeStepToJson, "copy", "document", "/payload", "documentList", "/root");
 			createPostInvokeMapping(invokeStepToJson, "copy", "string", "/jsonString", "string", "/body");
 		}
 		
