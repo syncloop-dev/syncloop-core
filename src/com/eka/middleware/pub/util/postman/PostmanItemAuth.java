@@ -13,7 +13,7 @@ public class PostmanItemAuth {
 	private NoAuth noAuth;
 	private List<ApiKey> apikey;
 	private List<JwtBearer> jwt;
-	private Basic basic;
+	private List<Basic> basic;
 	private List<AwsSignature> awsv4;
 	private Bearer[] bearer;
 	//private List[] bearer;
