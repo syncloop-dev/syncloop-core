@@ -15,6 +15,5 @@ public class PostmanItemAuth {
 	private List<JwtBearer> jwt;
 	private List<Basic> basic;
 	private List<AwsSignature> awsv4;
-	private Bearer[] bearer;
-	//private List[] bearer;
+	private List<Bearer> bearer;
 }

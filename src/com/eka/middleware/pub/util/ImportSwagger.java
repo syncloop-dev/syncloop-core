@@ -678,7 +678,7 @@ public class ImportSwagger {
 		EPV, // Evaluate Package Variable
 	}
 
-	private static void createMapping(Map<String, Object> mapStep, String op, String inTypePath, String from, String outTypePath,
+	public static void createMapping(Map<String, Object> mapStep, String op, String inTypePath, String from, String outTypePath,
 			String to) {
 		List<Object> transformers = (List<Object>) mapStep.get("transformers");
 		List<Object> lines = (List<Object>) mapStep.get("lines");
