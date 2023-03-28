@@ -12,6 +12,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.nimbusds.jose.shaded.gson.Gson;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.netty.channel.epoll.EpollEventArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.io.IOUtils;
@@ -31,9 +34,10 @@ public class ImportPostman {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
-        PostmanCollection postmanCollection = new Gson().fromJson(new FileReader("E:/aws.json"), PostmanCollection.class);
+        PostmanCollection postmanCollection = new Gson().fromJson(new FileReader("E:/jwt3.json"), PostmanCollection.class);
         createFlowServices("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\server\\", postmanCollection.getItem());
         createFlowServicesClient("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\client",postmanCollection.getItem());
+
 
     }
     public static void createFlowServices(String folder, List<PostmanItems> item) throws Exception {
@@ -442,6 +446,69 @@ public class ImportPostman {
             createPostInvokeMapping(invokeStepToJson, "copy", "document", "/headers", "document", "/requestHeaders");
         }
 
+        //JWT
+        String payload=null;
+        String isSecretBase64Encoded = null;
+        String secret=null;
+        String algorithm=null;
+        String addTokenTo=null;
+        String headerPrefix=null;
+        String queryParamKey=null;
+        Map<String, Object> header=new HashMap<>();
+        if ("jwt".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            List<JwtBearer> jwtList = postmanItems.getRequest().getAuth().getJwt();
+            for (JwtBearer jwt : jwtList) {
+                if ("payload".equalsIgnoreCase(jwt.getKey())) {
+                    payload = jwt.getValue();
+                } else if ("isSecretBase64Encoded".equalsIgnoreCase(jwt.getKey())) {
+                    isSecretBase64Encoded = jwt.getValue();
+                } else if ("secret".equalsIgnoreCase(jwt.getKey())) {
+                    secret = jwt.getValue();
+                } else if ("algorithm".equalsIgnoreCase(jwt.getKey())) {
+                    algorithm = jwt.getValue();
+                }
+                else if ("addTokenTo".equalsIgnoreCase(jwt.getKey())) {
+                    addTokenTo = jwt.getValue();
+                }
+                else if ("headerPrefix".equalsIgnoreCase(jwt.getKey())) {
+                    headerPrefix = jwt.getValue();
+                }
+                else if ("queryParamKey".equalsIgnoreCase(jwt.getKey())) {
+                    queryParamKey = jwt.getValue();
+                }
+                else if ("header".equalsIgnoreCase(jwt.getKey())) {
+
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    try {
+                        header = objectMapper.readValue(jwt.getValue(), new TypeReference<Map<String,Object>>(){});
+
+                      /*  for (Map.Entry<String, Object> entry : header.entrySet()) {
+                            String key1 = entry.getKey();
+                            Object value1 = entry.getValue();
+                            header.put(key1, value1);
+                        }*/
+                    } catch (JsonProcessingException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+
+            createVariables(intiMapStep, "payload", payload, null, "string");
+            createVariables(intiMapStep, "secret", secret, null, "string");
+            createVariables(intiMapStep, "algorithm", algorithm, null, "string");
+            createVariables(intiMapStep, "headerPrefix", headerPrefix, null, "string");
+            createVariables(intiMapStep, "header/key", header.toString(), null, "document/string");
+
+            Map<String, Object> invokeStepToJson = createInvokeStep(flowSteps, "service", "packages/Wrapper/Authorization/JwtToken", "Initialize");
+
+            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/payload", "string", "/payload");
+            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/secret", "string", "/secret");
+            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/algorithm", "string", "/algorithm");
+            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/headerPrefix", "string", "/headerPrefix");
+            createPreInvokeMapping(invokeStepToJson, "copy", "document", "/header", "document", "/header");
+
+        }
         if (!"GET".equalsIgnoreCase(method)) {
 
             Map<String, Object> invokeStepToJson = createInvokeStep(flowSteps, "service", "packages/middleware/pub/json/toJson", "Initialize");
@@ -566,72 +633,34 @@ public class ImportPostman {
         System.out.println("finished content");
         return switchContentTypeMapping;
     }
+   /* public static void createVariables1(Map<String, Object> mapStep, String path, Map<String, Object> value, Evaluate evaluate, String typePath) {
+        List<Object> createList = (List<Object>) mapStep.get("createList");
 
-  /*  public static Map<String, String> asClientLib(String folderPath, byte[] postmanIntem) throws Exception {
-
-        File folder = new File(folderPath);
-        folder.mkdirs();
-
-        PostmanItems items = null;
-        Map<String, String> response = new HashMap();
-
-        items = Json.mapper().readValue(postmanIntem, PostmanItems.class);
-        Map<String, Object> flow = null;
-        List<PostmanItems> item = items.getItem();
-
-        for (PostmanItems entry : item) {
-
-            String alias ="";
-            String pi = entry.getName();
-            String method = entry.getRequest().getMethod();
-            // PathItem pi = entry.getValue();
-            String op = items.getRequest().getMethod();
-            flow = generateClientLib(alias, op, items, "GET");
-            if (flow != null) {
-                String opId = ServiceUtils.normalizeUri(pi == null ? ServiceUtils.normalizeApiPathName("get", alias) : pi);
-                String json = Json.pretty().writeValueAsString(flow);
-                saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
-                response.put("GET" + alias, opId);
-            }
-           // op = pi.getPost();
-            flow = generateClientLib(alias, op, items, "POST");
-            if (flow != null) {
-                String opId = ServiceUtils.normalizeUri(pi== null ? ServiceUtils.normalizeApiPathName("post", alias) : pi);
-                String json = Json.pretty().writeValueAsString(flow);
-                saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
-                response.put("POST" + alias, opId);
-            }
-
-            //op = pi.getDelete();
-            flow = generateClientLib(alias, op, items, "DELETE");
-            if (flow != null) {
-                String opId = ServiceUtils.normalizeUri(pi == null ? ServiceUtils.normalizeApiPathName("delete", alias) : pi);
-                String json = Json.pretty().writeValueAsString(flow);
-                saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
-                response.put("DELETE" + alias, opId);
-            }
-
-            //op = pi.getPatch();
-            flow = generateClientLib(alias, op, items, "PATCH");
-            if (flow != null) {
-                String opId = ServiceUtils.normalizeUri(pi == null ? ServiceUtils.normalizeApiPathName("patch", alias) : pi);
-                String json = Json.pretty().writeValueAsString(flow);
-                saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
-                response.put("PATCH" + alias, opId);
-            }
-
-           // op = pi.getPut();
-            flow = generateClientLib(alias, op, items, "PUT");
-            if (flow != null) {
-                String opId = ServiceUtils.normalizeUri(pi == null ? ServiceUtils.normalizeApiPathName("put", alias) : pi);
-                String json = Json.pretty().writeValueAsString(flow);
-                saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
-                response.put("PUT" + alias, opId);
-            }
+        if (createList == null) {
+            createList = new ArrayList();
+            mapStep.put("createList", createList);
         }
-        return response;
-    }*/
+
+        Map<String, Object> createVariable = new HashMap();
+        createVariable.put("path", path);
+        createVariable.put("evaluate", null != evaluate ? evaluate.name() : null);
+        createVariable.put("typePath", typePath);
+
+        for (Map.Entry<String, Object> entry : value.entrySet()) {
+            String key = entry.getKey();
+            Object value1 = entry.getValue();
+            createVariable.put(key, value1);
+        }
+
+        createList.add(createVariable);
+
+        // Add the new Map to the existing Map if it is not null
+        if (value != null) {
+            mapStep.putAll(value);
+        }
+    }
 
 
+*/
 
 }
