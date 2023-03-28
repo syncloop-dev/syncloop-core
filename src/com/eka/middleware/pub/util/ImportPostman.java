@@ -36,7 +36,7 @@ public class ImportPostman {
         createFlowServicesClient("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\client",postmanCollection.getItem());
 
     }
-    static void createFlowServices(String folder, List<PostmanItems> item) throws Exception {
+    public static void createFlowServices(String folder, List<PostmanItems> item) throws Exception {
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
@@ -46,14 +46,14 @@ public class ImportPostman {
             }
         }
     }
-    static void createFlowServicesClient(String folder, List<PostmanItems> item) throws Exception {
+    public static void createFlowServicesClient(String folder, List<PostmanItems> item) throws Exception {
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
                 createFlowServices(folder + File.separator + slug, postmanItems.getItem());}
             else{
                 String method = postmanItems.getRequest().getMethod();
-                generateClientLib(folder, "", postmanItems, method);
+                generateClientLib(folder, postmanItems, method);
             }
         }
     }
@@ -314,7 +314,7 @@ public class ImportPostman {
             output.addAll(GetBody.getJstreeFromSchema(map));
         }
     }
-    private static void generateClientLib(String folder, String alias, PostmanItems postmanItems, String method) throws IOException {
+    private static void generateClientLib(String folder, PostmanItems postmanItems, String method) throws IOException {
 
         String servicePath = folder + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
 
@@ -350,9 +350,12 @@ public class ImportPostman {
 
         intiMapStep = createMapStep(flowSteps, "Initializing Parameters");
 
-        alias=StringUtils.join(postmanItems.getRequest().getUrl().getPath(),"/");
+        String alias = StringUtils.join(postmanItems.getRequest().getUrl().getPath(),"/");
 
-        String updatedAlias = alias.replaceAll(Pattern.quote("{{"), "#\\{").replaceAll(Pattern.quote("}}"), "\\}");
+        String updatedAlias = "";
+        if (StringUtils.isNotBlank(alias)) {
+            alias = alias.replaceAll(Pattern.quote("{{"), "#\\{").replaceAll(Pattern.quote("}}"), "\\}");
+        }
 
         createVariables(intiMapStep, "method", method, null, "string");
         createVariables(intiMapStep, "url", "#{basePath}" + updatedAlias.replaceAll(Pattern.quote("{"), "#{pathParameters/"), Evaluate.EEV, "string");
@@ -378,28 +381,16 @@ public class ImportPostman {
             createPreInvokeMapping(invokeStepToJson1, "copy", "string", "/username", "string", "/username");
             createPreInvokeMapping(invokeStepToJson1, "copy", "string", "/password", "string", "/password");
 
-            createPostInvokeMapping(invokeStepToJson1, "copy", "string", "/Authorization", "document", "/requestHeaders/Authorization");
+            createPostInvokeMapping(invokeStepToJson1, "copy", "string", "/Authorization", "document/string", "/requestHeaders/Authorization");
 
-        }
+        } else if ("bearer".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            createVariables(intiMapStep, "requestHeaders/Authorization", "Bearer #{token}", Evaluate.EEV, "document/string");
+        } else if ("apikey".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            String key = null;
+            String value = null;
+            String where = null;
+            List<ApiKey> apiKeyList = postmanItems.getRequest().getAuth().getApikey();
 
-         //Bearer
-        //  String key=null;
-        //String value=null;
-        if ("bearer".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
-           /* Bearer[] bearerList = postmanItems.getRequest().getAuth().getBearer();
-            for (Bearer bearer : bearerList) {
-                key = bearer.getKey();
-                value = bearer.getValue();
-            }*/
-            createVariables(intiMapStep, "requestHeaders/Authorization", "Bearer #{token}", Evaluate.EEV, "document");
-        }
-
-        // API KEY
-        String key = null;
-        String value = null;
-        String where = null;
-        List<ApiKey> apiKeyList = postmanItems.getRequest().getAuth().getApikey();
-        if ("apikey".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
             for (ApiKey apiKey : apiKeyList) {
                 if ("key".equalsIgnoreCase(apiKey.getKey())) {
                     key = apiKey.getValue();
@@ -415,14 +406,12 @@ public class ImportPostman {
             } else if ("query".equalsIgnoreCase(where)) {
                 createVariables(intiMapStep, "queryParameters/"+key, value, null, "string");
             }
-        }
+        } else if ("awsv4".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            String service=null;
+            String region=null;
+            String secretKey=null;
+            String accessKey =null;
 
-        //AWS
-        String service=null;
-        String region=null;
-        String secretKey=null;
-        String accessKey =null;
-        if ("awsv4".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
             List<AwsSignature> signatureList = postmanItems.getRequest().getAuth().getAwsv4();
             for (AwsSignature aws : signatureList) {
                 if ("service".equalsIgnoreCase(aws.getKey())) {
@@ -448,12 +437,9 @@ public class ImportPostman {
             createPreInvokeMapping(invokeStepToJson, "copy", "string", "/accessKey", "string", "/accessKey");
             createPreInvokeMapping(invokeStepToJson, "copy", "string", "/url", "string", "/url");
             createPreInvokeMapping(invokeStepToJson, "copy", "string", "/method", "string", "/method");
-            //createPreInvokeMapping(invokeStepToJson, "copy", "document", "/requestHeaders", "document", "/requestHeaders");
             createPreInvokeMapping(invokeStepToJson, "copy", "document", "/queryParameters", "document", "/queryParameters");
-
             createPostInvokeMapping(invokeStepToJson, "copy", "document", "/headers", "document", "/requestHeaders");
-
-             createPostInvokeMapping(invokeStepToJson, "copy", "document", "/headers", "document", "/requestHeaders");
+            createPostInvokeMapping(invokeStepToJson, "copy", "document", "/headers", "document", "/requestHeaders");
         }
 
         if (!"GET".equalsIgnoreCase(method)) {
@@ -538,9 +524,6 @@ public class ImportPostman {
         JSONObject jsonObject = new JSONObject(map);
         String updatedJson = jsonObject.toString();
         saveFlow(servicePath, updatedJson);
-
-
-        System.out.println("end");
     }
     public static Map<String, Object> addContentTypeHandler(List<Object> contentTypeSwitch, Map<String, Object> intiMapStep, PostmanItemResponse postmanItemResponse) {
 
