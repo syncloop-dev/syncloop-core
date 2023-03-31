@@ -34,34 +34,43 @@ public class ImportPostman {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
+
         PostmanCollection postmanCollection = new Gson().fromJson(new FileReader("E:/jwt3.json"), PostmanCollection.class);
         createFlowServices("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\server\\", postmanCollection.getItem());
         createFlowServicesClient("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\ec2\\client",postmanCollection.getItem());
 
 
     }
-    public static void createFlowServices(String folder, List<PostmanItems> item) throws Exception {
+    public static List<String> createFlowServices(String folder, List<PostmanItems> item) throws Exception {
+
+        ArrayList<String> list = new ArrayList<>();
+
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
                 createFlowServices(folder + File.separator + slug, postmanItems.getItem());
             } else {
-                generateServerStub(folder, postmanItems);
+               list.add(generateServerStub(folder, postmanItems));
             }
         }
+        return list;
     }
-    public static void createFlowServicesClient(String folder, List<PostmanItems> item) throws Exception {
+    public static List<String> createFlowServicesClient(String folder, List<PostmanItems> item) throws Exception {
+
+        ArrayList<String> list = new ArrayList<String>();
+
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
                 createFlowServices(folder + File.separator + slug, postmanItems.getItem());}
             else{
                 String method = postmanItems.getRequest().getMethod();
-                generateClientLib(folder, postmanItems, method, Evaluate.EEV);
+                list.add(generateClientLib(folder, postmanItems, method, Evaluate.EEV));
             }
         }
+        return list;
     }
-    public static void generateServerStub(String folderPath, PostmanItems postmanItems) throws Exception {
+    public static String generateServerStub(String folderPath, PostmanItems postmanItems) throws Exception {
 
         String servicePath = folderPath + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
 
@@ -96,6 +105,7 @@ public class ImportPostman {
         String json = new Gson().toJson(flowService.getFlow());
 
         saveFlow(servicePath, json);
+        return servicePath;
     }
     public static String getRequestBody(PostmanItems item) throws IOException {
 
@@ -286,6 +296,7 @@ public class ImportPostman {
         if (null == path) {
             return Lists.newArrayList();
         }
+
         List<Object> document = new ArrayList();
         for (String header : path) {
             if (header.indexOf("}}") < 0) {
@@ -329,7 +340,8 @@ public class ImportPostman {
             output.addAll(GetBody.getJstreeFromSchema(map));
         }
     }
-    private static void generateClientLib(String folder, PostmanItems postmanItems, String method, Evaluate evaluateFrom) throws IOException {
+    private static String generateClientLib(String folder, PostmanItems postmanItems, String method, Evaluate evaluateFrom) throws IOException {
+
 
         String servicePath = folder + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
 
@@ -615,6 +627,7 @@ public class ImportPostman {
         JSONObject jsonObject = new JSONObject(map);
         String updatedJson = jsonObject.toString();
         saveFlow(servicePath, updatedJson);
+        return servicePath;
     }
     public static Map<String, Object> addContentTypeHandler(List<Object> contentTypeSwitch, Map<String, Object> intiMapStep, PostmanItemResponse postmanItemResponse) {
 
