@@ -114,6 +114,8 @@ public class ImportSwagger {
 
 	public static Map<String, String> asClientLib(String folderPath, byte[] openAPI) throws Exception {
 
+
+
 		File folder = new File(folderPath);
 		folder.mkdirs();
 
