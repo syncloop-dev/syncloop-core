@@ -30,11 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
-import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.util.zip.*;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
@@ -903,6 +899,7 @@ public class ServiceUtils {
 			}
 			account.getAuthProfile().put("tenant", name);
 			String src = PropertyManager.getPackagePath(null) + "released" + File.separator + "core";
+			String srcZip = PropertyManager.getPackagePath(null) + "released" + File.separator + "core/syncloop-distribution-latest.zip";
 			String dest = PropertyManager.getPackagePathByTenantName(name);
 
 			groups.add(AuthAccount.STATIC_ADMIN_GROUP);
@@ -917,7 +914,8 @@ public class ServiceUtils {
 				@Override
 				public void run() {
 					try {
-						copyDirectory(src, dest);
+//						copyDirectory(src, dest);
+						ServiceUtils.unzipBuildFile(srcZip, dest);
 						Security.generateKeyPair(name);
 						Security.setupTenantSecurity(name);
 						Tenant.getTenant(name).logInfo(null, "New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
@@ -1206,5 +1204,57 @@ public class ServiceUtils {
 		CustomClassLoader ccl = RTCompile.classLoaderMap.get(dp.rp.getTenant().getName());
 		final JarFile jar = new JarFile(new File(path));
 		List<String> classNames = ccl.loadClassFromJar(jar);
+	}
+
+	public static void unzipBuildFile(String srcZip, String destinationBasePath) throws IOException {
+		byte[] buffer = new byte[1024];
+		ZipInputStream zis = new ZipInputStream(new FileInputStream(srcZip));
+		ZipEntry zipEntry = zis.getNextEntry();
+		while (zipEntry != null) {
+			File newFile = newFile(new File(destinationBasePath), zipEntry);
+			if (zipEntry.isDirectory()) {
+				if (!newFile.isDirectory() && !newFile.mkdirs()) {
+					throw new IOException("Failed to create directory " + newFile);
+				}
+			} else {
+				// fix for Windows-created archives
+				File parent = newFile.getParentFile();
+				if (!parent.isDirectory() && !parent.mkdirs()) {
+					throw new IOException("Failed to create directory " + parent);
+				}
+
+				// write file content
+				FileOutputStream fos = new FileOutputStream(newFile);
+				int len;
+				while ((len = zis.read(buffer)) > 0) {
+					fos.write(buffer, 0, len);
+				}
+				fos.close();
+			}
+			zipEntry = zis.getNextEntry();
+		}
+		zis.closeEntry();
+		zis.close();
+	}
+
+	/**
+	 * @param destinationDir
+	 * @param zipEntry
+	 * @return
+	 * @throws IOException
+	 */
+	private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
+		File destFile = new File(destinationDir, zipEntry.getName());
+
+		String destDirPath = destinationDir.getCanonicalPath();
+		String destFilePath = destFile.getCanonicalPath();
+
+		// if (!destFilePath.startsWith("/" + destDirPath + File.separator)) {
+		// System.out.println(destFilePath);
+		// throw new IOException("Entry is outside of the target dir: " +
+		// zipEntry.getName());
+		// }
+
+		return destFile;
 	}
 }
