@@ -7,7 +7,7 @@
         </Console>
 		<File name="ServerFile" fileName="logs/server.log">
 		  <PatternLayout>
-			<Pattern>%d %p %c{1.} [%t] %m%n</Pattern>
+			<Pattern>%d %p %c{1.} [%t] ${ctx:name} %m%n</Pattern>
 		  </PatternLayout>
         </File>
         <Routing name="myAppender">
