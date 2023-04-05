@@ -72,7 +72,9 @@ public class ImportSwagger {
 			PathItem pi = entry.getValue();
 			Operation op = pi.getGet();
 			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
-			String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			//String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			String servicePath = folderPath + File.separator + "api" + File.separator + opId + ".flow";
+
 			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
