@@ -162,7 +162,7 @@ public class UserProfileManager implements IdentityManager {
 				Scanner in = new Scanner(System.in);
 				String pass=null;
 				while(pass==null) {
-					LOGGER.info("Creating Admin account for default teant.\nPlease endter strong password:");
+					LOGGER.info("Creating Admin account for default tenant.\nPlease enter strong password:");
 					pass=in.nextLine();
 					LOGGER.info("\nRe-enter your password:");
 					String again=in.nextLine();

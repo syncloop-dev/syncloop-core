@@ -15,10 +15,13 @@ import java.util.*;
 import java.net.*;
 import java.util.concurrent.ConcurrentHashMap;
 import io.undertow.util.HttpString;
+import com.eka.middleware.heap.CacheManager;//-----reset fix
 
 public final class #className {
 
 	private static final Map<String,JsonObject> mainflowJsonObjectMap=new ConcurrentHashMap<String,JsonObject>();
+	private static long timeout=0;//-----reset fix
+	private static int resetServiceInMS=5000;//-----reset fix
 	static final String syncBlock=new String("sync");
 	public static final void main(DataPipeline dataPipeline) throws SnippetException{
 		String fqn="#package.#className";
@@ -42,14 +45,18 @@ public final class #className {
 	    	startTime=System.currentTimeMillis();
 	    }
 	    
-	    
+	    Map<String, Object> chache=CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());//-----reset fix
+		Boolean resetEnabled=(Boolean)chache.get("ekamw.promote.runtime.service.reload");//-----reset fix
+		if(timeout<System.currentTimeMillis() && (resetEnabled==null || resetEnabled==true))//-----reset fix
+			timeout=0;//-----reset fix
 		try{
 		  JsonObject mainflowJsonObject=mainflowJsonObjectMap.get(dataPipeline.rp.getTenant().id);
-		  if(mainflowJsonObject==null)
+		  if(mainflowJsonObject==null || timeout==0)//-----reset fix
 			synchronized(syncBlock){
 			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
-			  if(mainflowJsonObject==null){
+			  if(mainflowJsonObject==null || timeout==0){ //-----reset fix
+			  	  timeout=System.currentTimeMillis()+resetServiceInMS;  //-----reset fix
 				  mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
 				  mainflowJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainflowJsonObject);
 			  }

@@ -54,6 +54,27 @@ public class FlowUtils {
         }
     }
 
+    public static String placeXPathInternalVariables(String xPaths, DataPipeline dp) throws SnippetException {
+        try {
+            String xPathValues = xPaths;
+            String params[] = extractExpressions(xPaths);// xPaths.split(Pattern.quote("}"));
+            if (params != null)
+                for (String param : params) {
+                    // if (param.contains("#{")) {
+                    // param = param.split(Pattern.quote("#{"))[1];// replace("#{", "");
+                    String val = KeywordResolver.find(param, dp);
+                    String value = val.replace("\"", "");
+                    // System.out.println(value);
+                    xPathValues = xPathValues.replace("#{" + param + "}", value);// cond=evaluatedParam+"="+value;
+                    // }
+                }
+            return xPathValues;
+        } catch (Exception e) {
+            ServiceUtils.printException(dp, "Something went wrong while parsing xpath(" + xPaths + ")", e);
+            throw new SnippetException(dp, "Something went wrong while parsing xpath(" + xPaths + ")", e);
+        }
+    }
+
     public static boolean evaluateCondition(String condition, DataPipeline dp) throws SnippetException {
         if (StringUtils.isBlank(condition) || Boolean.parseBoolean(condition)) {
             return true;
@@ -180,7 +201,7 @@ public class FlowUtils {
 
             String tokens[] = typePath.split(Pattern.quote("/"));
             String typeOfVariable = tokens[tokens.length - 1];
-            if (!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string")) {
+            if (!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string") && evaluate != null && evaluate.trim().length() > 0) {
                 try {
                     String threadSafeName = dp.getUniqueThreadName();
                     Object typeVal = eval(value, threadSafeName, typeOfVariable);
