@@ -74,7 +74,7 @@ public class ImportPostman {
     public static String generateServerStub(String folderPath, String servicePath, String packageName, PostmanItems postmanItems, boolean isClientRequested, Evaluate evaluateFrom) throws Exception {
 
         String filePath = folderPath + File.separator + "packages" + File.separator + packageName
-                + File.separator + "server" + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
+                + File.separator + "server" + File.separator + servicePath + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
 
         File file = new File(filePath);
         FlowService flowService;
@@ -90,7 +90,10 @@ public class ImportPostman {
         List<Object> outputs = flowService.getOutput();
         inputs.clear();
 
-        Map<String, Object> intiMapStep = createMapStep(flowService.getFlowSteps(), "Resolving Parameters");
+        Map<String, Object> intiMapStep = null;
+        if (isClientRequested) {
+            intiMapStep = createMapStep(flowService.getFlowSteps(), "Resolving Parameters");
+        }
 
         List<String> listOfHeaderKeys = Lists.newArrayList();
         if (postmanItems.getRequest() != null) {
