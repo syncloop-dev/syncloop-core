@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.service.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
@@ -189,7 +190,8 @@ public class SQL {
         jdbcProperties.load(new FileInputStream(new File(connectionPropFile)));
 
         String connectionUrl = jdbcProperties.getProperty("url");
-        connectionUrl = connectionUrl.replace("#{PackageConfig}", dp.getMyPackageConfigPath());
+        connectionUrl = FlowUtils.placeXPathInternalVariables(connectionUrl, dp);
+        //connectionUrl = connectionUrl.replace("#{PackageConfig}", dp.getMyPackageConfigPath());
         //LOGGER.debug("connectionUrl:\n"+connectionUrl);
         dp.log("connectionPropFile:\n" + connectionPropFile, Level.DEBUG);
         String driver = jdbcProperties.getProperty("driver");
