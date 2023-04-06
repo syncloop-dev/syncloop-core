@@ -51,7 +51,7 @@ public class ImportPostman {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
                 createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested);
             } else {
-               list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested));
+               list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested, Evaluate.EEV));
             }
         }
         return list;
@@ -71,10 +71,10 @@ public class ImportPostman {
         }
         return list;
     }
-    public static String generateServerStub(String folderPath, String servicePath, String packageName, PostmanItems postmanItems, boolean isClientRequested) throws Exception {
+    public static String generateServerStub(String folderPath, String servicePath, String packageName, PostmanItems postmanItems, boolean isClientRequested, Evaluate evaluateFrom) throws Exception {
 
         String filePath = folderPath + File.separator + "packages" + File.separator + packageName
-                + File.separator + "server" + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
+                + File.separator + "server" + File.separator + servicePath + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
 
         File file = new File(filePath);
         FlowService flowService;
@@ -90,10 +90,15 @@ public class ImportPostman {
         List<Object> outputs = flowService.getOutput();
         inputs.clear();
 
+        Map<String, Object> intiMapStep = null;
+        if (isClientRequested) {
+            intiMapStep = createMapStep(flowService.getFlowSteps(), "Resolving Parameters");
+        }
+
         List<String> listOfHeaderKeys = Lists.newArrayList();
         if (postmanItems.getRequest() != null) {
-            List<Object> headers = getRequestHeaders(postmanItems.getRequest().getHeader(), Maps.newHashMap(), false, null);
-            List<Object> query = getRequestQuery(postmanItems.getRequest().getUrl().getQuery(), Maps.newHashMap(), false, null);
+            List<Object> headers = getRequestHeaders(postmanItems.getRequest().getHeader(), intiMapStep, true, null);
+            List<Object> query = getRequestQuery(postmanItems.getRequest().getUrl().getQuery(), intiMapStep, true, null);
             List<Object> path = getRequestPathParameters(postmanItems.getRequest().getUrl().getPath());
             listOfHeaderKeys = listOfHeaderKeys(postmanItems.getRequest().getHeader());
 
@@ -104,22 +109,135 @@ public class ImportPostman {
                 inputs.add(ImportSwagger.createDocument("*pathParameters", path, ""));
             if (query.size() > 0)
                 inputs.add(ImportSwagger.createDocument("*queryParameters", query, ""));
+
+            if (null != postmanItems.getRequest().getUrl().getQuery() && !postmanItems.getRequest().getUrl().getQuery().isEmpty()) {
+                for (UrlQuery urlQuery : postmanItems.getRequest().getUrl().getQuery()) {
+                    Map<String, Object> inputVar = Maps.newHashMap();
+                    inputVar.put("text", urlQuery.getKey());
+                    inputVar.put("type", "string");
+                    inputs.add(inputVar);
+                }
+            }
         }
         addResponseBody(outputs, postmanItems, false);
 
         if (isClientRequested) {
+
             Map<String, Object> invokeClient = createInvokeStep(flowService.getFlowSteps(), "flow",
                     ("packages/" + packageName + "/client/" + servicePath.replaceAll(Pattern.quote(File.separator), "/") + "/" + ServiceUtils.toServiceSlug(postmanItems.getName())).replaceAll("//", "/"), "Invoking Client");
 
+            if (null != postmanItems.getRequest().getUrl().getQuery() && !postmanItems.getRequest().getUrl().getQuery().isEmpty()) {
+                for (UrlQuery urlQuery : postmanItems.getRequest().getUrl().getQuery()) {
+                    createPreInvokeMapping(invokeClient, "copy", "string", "/" + urlQuery.getKey(), "document", "/queryParameters/" + urlQuery.getKey());
+                }
+            }
+
             createPreInvokeMapping(invokeClient, "copy", "document", "/*payload", "document", "/payload");
+
+            createPostInvokeMapping(invokeClient, "copy", "string", "/rawResponse", "string", "/rawResponse");
+            createPostInvokeMapping(invokeClient, "copy", "string", "/statusCode", "string", "/statusCode");
+
+            if (null != postmanItems.getRequest().getAuth()) {
+                if ("basic".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                    String username = null;
+                    String password = null;
+                    List<Basic> basicList = postmanItems.getRequest().getAuth().getBasic();
+                    for (Basic basic : basicList) {
+                        if ("username".equalsIgnoreCase(basic.getKey())) {
+                            username = basic.getValue();
+                        } else {
+                            password = basic.getValue();
+                        }
+                    }
+
+                    createVariables(intiMapStep, "username", postmanToSyncloopProps(username), evaluateFrom(username, evaluateFrom), "string");
+                    createVariables(intiMapStep, "password", postmanToSyncloopProps(password), evaluateFrom(password, evaluateFrom), "string");
+
+                    createPreInvokeMapping(invokeClient, "copy", "string", "/username", "document/string", "/basicAuth/username");
+                    createPreInvokeMapping(invokeClient, "copy", "string", "/password", "document/string", "/basicAuth/password");
+                } else if ("bearer".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                    String token = postmanItems.getRequest().getAuth().getBearer().get(0).getValue();
+                    createVariables(intiMapStep, "*requestHeaders/Authorization", "Bearer " + postmanToSyncloopProps(token), evaluateFrom(token, evaluateFrom), "document/string");
+
+                    listOfHeaderKeys.add("Authorization");
+                } else if ("apikey".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                    String key = null;
+                    String value = null;
+                    String where = null;
+                    List<ApiKey> apiKeyList = postmanItems.getRequest().getAuth().getApikey();
+
+                    for (ApiKey apiKey : apiKeyList) {
+                        if ("key".equalsIgnoreCase(apiKey.getKey())) {
+                            key = apiKey.getValue();
+                        } else if ("value".equalsIgnoreCase(apiKey.getKey())) {
+                            value = apiKey.getValue();
+                        } else if ("in".equalsIgnoreCase(apiKey.getKey())) {
+                            where = apiKey.getValue();
+                        }
+                    }
+                    if ("header".equalsIgnoreCase(where)) {
+                        createVariables(intiMapStep, "*requestHeaders/" + key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "document/string");
+
+                        Map<String, String> requestHeadersKey = Maps.newHashMap();
+                        requestHeadersKey.put("text", key);
+                        requestHeadersKey.put("type", "string");
+
+                        Map<String, Object> inputVar = Maps.newHashMap();
+                        inputVar.put("text", "*requestHeaders");
+                        inputVar.put("type", "document");
+                        inputVar.put("children", Lists.newArrayList(requestHeadersKey));
+
+                        inputs.add(inputVar);
+
+                        createPreInvokeMapping(invokeClient, "copy", "document/string", "/*requestHeaders/" + key, "document/string", "/requestHeaders/" + key);
+
+                    } else if ("query".equalsIgnoreCase(where)) {
+                        createVariables(intiMapStep, key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "string");
+
+                        Map<String, Object> inputVar = Maps.newHashMap();
+                        inputVar.put("text", key);
+                        inputVar.put("type", "string");
+                        inputs.add(inputVar);
+
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/" + key, "document/string", "/queryParameters/" + key);
+
+                    }
+                } else if ("awsv4".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                    String service=null;
+                    String region=null;
+                    String secretKey=null;
+                    String accessKey =null;
+
+                    List<AwsSignature> signatureList = postmanItems.getRequest().getAuth().getAwsv4();
+                    for (AwsSignature aws : signatureList) {
+                        if ("service".equalsIgnoreCase(aws.getKey())) {
+                            service = aws.getValue();
+                        } else if ("region".equalsIgnoreCase(aws.getKey())) {
+                            region = aws.getValue();
+                        } else if ("secretKey".equalsIgnoreCase(aws.getKey())) {
+                            secretKey = aws.getValue();
+                        } else if ("accessKey".equalsIgnoreCase(aws.getKey())) {
+                            accessKey = aws.getValue();
+                        }
+                    }
+                    createVariables(intiMapStep, "service", postmanToSyncloopProps(service), evaluateFrom(service, evaluateFrom), "string");
+                    createVariables(intiMapStep, "region", postmanToSyncloopProps(region), evaluateFrom(region, evaluateFrom), "string");
+                    createVariables(intiMapStep, "secretKey", postmanToSyncloopProps(secretKey), evaluateFrom(secretKey, evaluateFrom), "string");
+                    createVariables(intiMapStep, "accessKey", postmanToSyncloopProps(accessKey), evaluateFrom(accessKey, evaluateFrom), "string");
+
+                    createPreInvokeMapping(invokeClient, "copy", "string", "/service", "document/string", "/awsAuth/service");
+                    createPreInvokeMapping(invokeClient, "copy", "string", "/region", "document/string", "/awsAuth/region");
+                    createPreInvokeMapping(invokeClient, "copy", "string", "/secretKey", "document/string", "/awsAuth/secretKey");
+                    createPreInvokeMapping(invokeClient, "copy", "string", "/accessKey", "document/string", "/awsAuth/accessKey");
+
+
+                }
+            }
 
             for ( String headerKey: listOfHeaderKeys) {
                 createPreInvokeMapping(invokeClient, "copy", "document/string", "/*requestHeaders/" + headerKey,
                         "document/string", "/requestHeaders/" + headerKey);
             }
-
-            createPostInvokeMapping(invokeClient, "copy", "string", "/rawResponse", "string", "/rawResponse");
-            createPostInvokeMapping(invokeClient, "copy", "string", "/statusCode", "string", "/statusCode");
 
             Map<String, Object> invokeStepToJson = createInvokeStep(flowService.getFlowSteps(),"service","packages/middleware/pub/json/fromJson",
                     "Converting raw Json to JSON Object");
@@ -148,7 +266,7 @@ public class ImportPostman {
             if (requestBody != null && StringUtils.isNotBlank(requestBody.getRaw())) {
                 String raw = requestBody.getRaw();
                 Gson gson = new Gson();
-                Map map = gson.fromJson(raw, Map.class);
+                Object map = gson.fromJson(raw, Object.class);
                 jsonSchema = getJsonSchema(map);
             }
         }
@@ -231,7 +349,7 @@ public class ImportPostman {
         }
         return property;
     }
-    public static String getJsonSchema(Map<String, Object> jsonDocument) throws IllegalArgumentException, IOException {
+    public static String getJsonSchema(Object jsonDocument) throws IllegalArgumentException, IOException {
         final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
         JsonNode properties = createProperty(OBJECT_MAPPER.convertValue(jsonDocument, JsonNode.class));
         return getJsonSchema(properties);
@@ -282,16 +400,16 @@ public class ImportPostman {
             inputs.addAll(Lists.newArrayList(objectMap));
         }
     }
-    private static List<Object> getRequestHeaders(List<PostmanRequestHeaders> headers, Map<String, Object> firstMap, boolean isClient, Evaluate evaluateFrom) {
+    private static List<Object> getRequestHeaders(List<PostmanRequestHeaders> headers, Map<String, Object> firstMap, boolean isServer, Evaluate evaluateFrom) {
         if (null == headers) {
             return Lists.newArrayList();
         }
         List<Object> document = new ArrayList<>();
         for (PostmanRequestHeaders header : headers) {
-            if (StringUtils.isNotBlank(header.getValue()) && isClient) {
-                createVariables(firstMap, "requestHeaders/" + header.getKey(), postmanToSyncloopProps(header.getValue()),
+            if (StringUtils.isNotBlank(header.getValue()) && isServer) {
+                createVariables(firstMap, "*requestHeaders/" + header.getKey(), postmanToSyncloopProps(header.getValue()),
                         evaluateFrom(header.getValue(), evaluateFrom), "document/string");
-                continue;
+                //continue;
             }
             Map<String, Object> documentParam = new HashMap<>();
             Map<String, Object> data = new HashMap<>();
@@ -316,16 +434,16 @@ public class ImportPostman {
         return document;
     }
 
-    private static List<Object> getRequestQuery(List<UrlQuery> queries, Map<String, Object> firstMap, boolean isClient, Evaluate evaluateFrom) {
-        if (null == queries) {
+    private static List<Object> getRequestQuery(List<UrlQuery> queries, Map<String, Object> firstMap, boolean isServer, Evaluate evaluateFrom) {
+        if (null == queries || isServer) {
             return Lists.newArrayList();
         }
         List<Object> document = new ArrayList<>();
         for (UrlQuery query : queries) {
-            if (StringUtils.isNotBlank(query.getValue()) && isClient) {
-                createVariables(firstMap, "queryParameters/" + query.getKey(), postmanToSyncloopProps(query.getValue()),
+            if (StringUtils.isNotBlank(query.getValue()) && isServer) {
+                createVariables(firstMap, "*queryParameters/" + query.getKey(), postmanToSyncloopProps(query.getValue()),
                         evaluateFrom(query.getValue(), evaluateFrom), "document/string");
-                continue;
+                //continue;
             }
             Map<String, Object> documentParam = new HashMap<>();
             Map<String, Object> data = new HashMap<>();
@@ -406,8 +524,8 @@ public class ImportPostman {
         Map<String, Object> intiMapStep = createMapStep(flowSteps, "Resolving Parameters");
 
         if (postmanItems.getRequest() != null) {
-            List<Object> headers = getRequestHeaders(postmanItems.getRequest().getHeader(), intiMapStep, true, evaluateFrom);
-            List<Object> query = getRequestQuery(postmanItems.getRequest().getUrl().getQuery(), intiMapStep, true, evaluateFrom);
+            List<Object> headers = getRequestHeaders(postmanItems.getRequest().getHeader(), intiMapStep, false, evaluateFrom);
+            List<Object> query = getRequestQuery(postmanItems.getRequest().getUrl().getQuery(), intiMapStep, false, evaluateFrom);
             List<Object> path = getRequestPathParameters(postmanItems.getRequest().getUrl().getPath());
 
             addRequestBody(inputs, postmanItems, true);
@@ -419,8 +537,6 @@ public class ImportPostman {
             if (query.size() > 0)
                 inputs.add(createDocument("queryParameters", query, ""));
         }
-
-
 
         createVariables(intiMapStep, "basePath", "#{basePath}", evaluateFrom, "string");
 
@@ -444,145 +560,230 @@ public class ImportPostman {
             createPostInvokeMapping(invokeStepToJson, "copy", "string", "/jsonString", "string", "/body");
         }
 
-        if ("basic".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
-            String username = null;
-            String password = null;
-            List<Basic> basicList = postmanItems.getRequest().getAuth().getBasic();
-            for (Basic basic : basicList) {
-                if ("username".equalsIgnoreCase(basic.getKey())) {
-                    username = basic.getValue();
-                } else {
-                    password = basic.getValue();
-                }
-            }
-            createVariables(intiMapStep, "username", postmanToSyncloopProps(username), evaluateFrom(username, evaluateFrom), "string");
-            createVariables(intiMapStep, "password", postmanToSyncloopProps(password), evaluateFrom(password, evaluateFrom), "string");
-            Map<String, Object> invokeStepToJson1 = createInvokeStep(flowSteps, "service", "packages/wrapper/Authorization/Basic", "Initialize");
-
-            createPreInvokeMapping(invokeStepToJson1, "copy", "string", "/username", "string", "/username");
-            createPreInvokeMapping(invokeStepToJson1, "copy", "string", "/password", "string", "/password");
-
-            createPostInvokeMapping(invokeStepToJson1, "copy", "string", "/Authorization", "document/string", "/requestHeaders/Authorization");
-
-        } else if ("bearer".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
-            String token = postmanItems.getRequest().getAuth().getBearer().get(0).getValue();
-            createVariables(intiMapStep, "requestHeaders/Authorization", "Bearer " + postmanToSyncloopProps(token), evaluateFrom(token, evaluateFrom), "document/string");
-        } else if ("apikey".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
-            String key = null;
-            String value = null;
-            String where = null;
-            List<ApiKey> apiKeyList = postmanItems.getRequest().getAuth().getApikey();
-
-            for (ApiKey apiKey : apiKeyList) {
-                if ("key".equalsIgnoreCase(apiKey.getKey())) {
-                    key = apiKey.getValue();
-                } else if ("value".equalsIgnoreCase(apiKey.getKey())) {
-                    value = apiKey.getValue();
-                } else if ("in".equalsIgnoreCase(apiKey.getKey())) {
-                    where = apiKey.getValue();
-                }
-            }
-            if ("header".equalsIgnoreCase(where)) {
-                createVariables(intiMapStep, "requestHeaders/"+key , postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "document/string");
-
-            } else if ("query".equalsIgnoreCase(where)) {
-                createVariables(intiMapStep, "queryParameters/"+key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "document/string");
-            }
-        } else if ("awsv4".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
-            String service=null;
-            String region=null;
-            String secretKey=null;
-            String accessKey =null;
-
-            List<AwsSignature> signatureList = postmanItems.getRequest().getAuth().getAwsv4();
-            for (AwsSignature aws : signatureList) {
-                if ("service".equalsIgnoreCase(aws.getKey())) {
-                    service = aws.getValue();
-                } else if ("region".equalsIgnoreCase(aws.getKey())) {
-                    region = aws.getValue();
-                } else if ("secretKey".equalsIgnoreCase(aws.getKey())) {
-                    secretKey = aws.getValue();
-                } else if ("accessKey".equalsIgnoreCase(aws.getKey())) {
-                    accessKey = aws.getValue();
-                }
-            }
-            createVariables(intiMapStep, "service", postmanToSyncloopProps(service), evaluateFrom(service, evaluateFrom), "string");
-            createVariables(intiMapStep, "region", postmanToSyncloopProps(region), evaluateFrom(region, evaluateFrom), "string");
-            createVariables(intiMapStep, "secretKey", postmanToSyncloopProps(secretKey), evaluateFrom(secretKey, evaluateFrom), "string");
-            createVariables(intiMapStep, "accessKey", postmanToSyncloopProps(accessKey), evaluateFrom(accessKey, evaluateFrom), "string");
-
-            Map<String, Object> invokeStepToJson = createInvokeStep(flowSteps, "service", "packages/wrapper/AWS/credential/CreateSigner", "Initialize");
-
-            if (!"GET".equalsIgnoreCase(method)) {
-                createPreInvokeMapping(invokeStepToJson, "copy", "string", "/body", "string", "/payload");
-            }
-
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/service", "string", "/service");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/region", "string", "/region");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/secretKey", "string", "/secret");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/accessKey", "string", "/accessKey");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/url", "string", "/url");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/method", "string", "/method");
-            createPreInvokeMapping(invokeStepToJson, "copy", "document", "/queryParameters", "document", "/queryParameters");
-            createPreInvokeMapping(invokeStepToJson, "copy", "document", "/requestHeaders", "document", "/headers");
-            createPostInvokeMapping(invokeStepToJson, "copy", "document", "/headers", "document", "/requestHeaders");
-        } else if ("jwt".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
-            String payload=null;
-            String isSecretBase64Encoded = null;
-            String secret=null;
-            String algorithm=null;
-            String addTokenTo=null;
-            String headerPrefix=null;
-            String queryParamKey=null;
-            Map<String, Object> header=new HashMap<>();
-            List<JwtBearer> jwtList = postmanItems.getRequest().getAuth().getJwt();
-            for (JwtBearer jwt : jwtList) {
-                if ("payload".equalsIgnoreCase(jwt.getKey())) {
-                    payload = jwt.getValue();
-                } else if ("isSecretBase64Encoded".equalsIgnoreCase(jwt.getKey())) {
-                    isSecretBase64Encoded = jwt.getValue();
-                } else if ("secret".equalsIgnoreCase(jwt.getKey())) {
-                    secret = jwt.getValue();
-                } else if ("algorithm".equalsIgnoreCase(jwt.getKey())) {
-                    algorithm = jwt.getValue();
-                }
-                else if ("addTokenTo".equalsIgnoreCase(jwt.getKey())) {
-                    addTokenTo = jwt.getValue();
-                }
-                else if ("headerPrefix".equalsIgnoreCase(jwt.getKey())) {
-                    headerPrefix = jwt.getValue();
-                }
-                else if ("queryParamKey".equalsIgnoreCase(jwt.getKey())) {
-                    queryParamKey = jwt.getValue();
-                }
-                else if ("header".equalsIgnoreCase(jwt.getKey())) {
-
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    try {
-                        header = objectMapper.readValue(jwt.getValue(), new TypeReference<Map<String,Object>>(){});
-
-                    } catch (JsonProcessingException e) {
-                        e.printStackTrace();
+        if (null != postmanItems.getRequest().getAuth()) {
+            if ("basic".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                String username = null;
+                String password = null;
+                List<Basic> basicList = postmanItems.getRequest().getAuth().getBasic();
+                for (Basic basic : basicList) {
+                    if ("username".equalsIgnoreCase(basic.getKey())) {
+                        username = basic.getValue();
+                    } else {
+                        password = basic.getValue();
                     }
                 }
 
+                List<Object> basicAuth = Lists.newArrayList();
+
+                Map<String, String> inputVar = Maps.newHashMap();
+                inputVar.put("text", "username");
+                inputVar.put("type", "string");
+                basicAuth.add(inputVar);
+
+                inputVar = Maps.newHashMap();
+                inputVar.put("text", "password");
+                inputVar.put("type", "string");
+                basicAuth.add(inputVar);
+
+                Map<String, Object> inputAuthVar = Maps.newHashMap();
+                inputAuthVar.put("text", "basicAuth");
+                inputAuthVar.put("type", "document");
+                inputAuthVar.put("children", basicAuth);
+                inputs.add(inputAuthVar);
+
+                //createVariables(intiMapStep, "username", postmanToSyncloopProps(username), evaluateFrom(username, evaluateFrom), "string");
+                //createVariables(intiMapStep, "password", postmanToSyncloopProps(password), evaluateFrom(password, evaluateFrom), "string");
+                Map<String, Object> invokeStepToJson1 = createInvokeStep(flowSteps, "service", "packages/wrapper/Authorization/Basic", "Initialize");
+
+                createPreInvokeMapping(invokeStepToJson1, "copy", "document/string", "/basicAuth/username", "string", "/username");
+                createPreInvokeMapping(invokeStepToJson1, "copy", "document/string", "/basicAuth/password", "string", "/password");
+
+                createPostInvokeMapping(invokeStepToJson1, "copy", "string", "/Authorization", "document/string", "/requestHeaders/Authorization");
+
+            } else if ("bearer".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                //String token = postmanItems.getRequest().getAuth().getBearer().get(0).getValue();
+                //createVariables(intiMapStep, "requestHeaders/Authorization", "Bearer " + postmanToSyncloopProps(token), evaluateFrom(token, evaluateFrom), "document/string");
+
+                Map<String, Object> inputVar = Maps.newHashMap();
+                inputVar.put("text", "requestHeaders");
+                inputVar.put("type", "document");
+
+                Map<String, String> inputVarAuth = Maps.newHashMap();
+                inputVarAuth.put("text", "Authorization");
+                inputVarAuth.put("type", "string");
+                inputVar.put("children", Lists.newArrayList(inputVarAuth));
+
+                inputs.add(inputVar);
+
+            } else if ("apikey".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                String key = null;
+                String value = null;
+                String where = null;
+                List<ApiKey> apiKeyList = postmanItems.getRequest().getAuth().getApikey();
+
+                for (ApiKey apiKey : apiKeyList) {
+                    if ("key".equalsIgnoreCase(apiKey.getKey())) {
+                        key = apiKey.getValue();
+                    } else if ("value".equalsIgnoreCase(apiKey.getKey())) {
+                        value = apiKey.getValue();
+                    } else if ("in".equalsIgnoreCase(apiKey.getKey())) {
+                        where = apiKey.getValue();
+                    }
+                }
+                if ("header".equalsIgnoreCase(where)) {
+                    //createVariables(intiMapStep, "requestHeaders/"+key , postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "document/string");
+
+                    Map<String, String> requestHeadersKey = Maps.newHashMap();
+                    requestHeadersKey.put("text", key);
+                    requestHeadersKey.put("type", "string");
+
+                    Map<String, Object> inputVar = Maps.newHashMap();
+                    inputVar.put("text", "requestHeaders");
+                    inputVar.put("type", "document");
+                    inputVar.put("children", Lists.newArrayList(requestHeadersKey));
+
+                    inputs.add(inputVar);
+
+                } else if ("query".equalsIgnoreCase(where)) {
+                    //createVariables(intiMapStep, "queryParameters/"+key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "document/string");
+
+                    Map<String, String> requestHeadersKey = Maps.newHashMap();
+                    requestHeadersKey.put("text", key);
+                    requestHeadersKey.put("type", "string");
+
+                    Map<String, Object> inputVar = Maps.newHashMap();
+                    inputVar.put("text", "queryParameters");
+                    inputVar.put("type", "document");
+                    inputVar.put("children", Lists.newArrayList(requestHeadersKey));
+
+                    inputs.add(inputVar);
+                }
+            } else if ("awsv4".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                String service=null;
+                String region=null;
+                String secretKey=null;
+                String accessKey =null;
+
+                List<AwsSignature> signatureList = postmanItems.getRequest().getAuth().getAwsv4();
+                for (AwsSignature aws : signatureList) {
+                    if ("service".equalsIgnoreCase(aws.getKey())) {
+                        service = aws.getValue();
+                    } else if ("region".equalsIgnoreCase(aws.getKey())) {
+                        region = aws.getValue();
+                    } else if ("secretKey".equalsIgnoreCase(aws.getKey())) {
+                        secretKey = aws.getValue();
+                    } else if ("accessKey".equalsIgnoreCase(aws.getKey())) {
+                        accessKey = aws.getValue();
+                    }
+                }
+//                createVariables(intiMapStep, "service", postmanToSyncloopProps(service), evaluateFrom(service, evaluateFrom), "string");
+//                createVariables(intiMapStep, "region", postmanToSyncloopProps(region), evaluateFrom(region, evaluateFrom), "string");
+//                createVariables(intiMapStep, "secretKey", postmanToSyncloopProps(secretKey), evaluateFrom(secretKey, evaluateFrom), "string");
+//                createVariables(intiMapStep, "accessKey", postmanToSyncloopProps(accessKey), evaluateFrom(accessKey, evaluateFrom), "string");
+
+                List<Object> awsAuth = Lists.newArrayList();
+                Map<String, String> serviceMap = Maps.newHashMap();
+                serviceMap.put("text", "service");
+                serviceMap.put("type", "string");
+                awsAuth.add(serviceMap);
+
+                Map<String, String> regionMap = Maps.newHashMap();
+                regionMap.put("text", "region");
+                regionMap.put("type", "string");
+                awsAuth.add(regionMap);
+
+                Map<String, String> accessKeyMap = Maps.newHashMap();
+                accessKeyMap.put("text", "accessKey");
+                accessKeyMap.put("type", "string");
+                awsAuth.add(accessKeyMap);
+
+                Map<String, String> secretMap = Maps.newHashMap();
+                secretMap.put("text", "secretKey");
+                secretMap.put("type", "string");
+                awsAuth.add(secretMap);
+
+                Map<String, Object> inputVar = Maps.newHashMap();
+                inputVar.put("text", "awsAuth");
+                inputVar.put("type", "document");
+                inputVar.put("children", awsAuth);
+
+                inputs.add(inputVar);
+
+                Map<String, Object> invokeStepToJson = createInvokeStep(flowSteps, "service", "packages/wrapper/AWS/credential/CreateSigner", "Initialize");
+
+                if (!"GET".equalsIgnoreCase(method)) {
+                    createPreInvokeMapping(invokeStepToJson, "copy", "string", "/body", "string", "/payload");
+                }
+
+                createPreInvokeMapping(invokeStepToJson, "copy", "document/string", "/awsAuth/service", "string", "/service");
+                createPreInvokeMapping(invokeStepToJson, "copy", "document/string", "/awsAuth/region", "string", "/region");
+                createPreInvokeMapping(invokeStepToJson, "copy", "document/string", "/awsAuth/secretKey", "string", "/secret");
+                createPreInvokeMapping(invokeStepToJson, "copy", "document/string", "/awsAuth/accessKey", "string", "/accessKey");
+
+                createPreInvokeMapping(invokeStepToJson, "copy", "string", "/url", "string", "/url");
+                createPreInvokeMapping(invokeStepToJson, "copy", "string", "/method", "string", "/method");
+                createPreInvokeMapping(invokeStepToJson, "copy", "document", "/queryParameters", "document", "/queryParameters");
+                createPreInvokeMapping(invokeStepToJson, "copy", "document", "/requestHeaders", "document", "/headers");
+                createPostInvokeMapping(invokeStepToJson, "copy", "document", "/headers", "document", "/requestHeaders");
+            } else if ("jwt".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                String payload=null;
+                String isSecretBase64Encoded = null;
+                String secret=null;
+                String algorithm=null;
+                String addTokenTo=null;
+                String headerPrefix=null;
+                String queryParamKey=null;
+                Map<String, Object> header=new HashMap<>();
+                List<JwtBearer> jwtList = postmanItems.getRequest().getAuth().getJwt();
+                for (JwtBearer jwt : jwtList) {
+                    if ("payload".equalsIgnoreCase(jwt.getKey())) {
+                        payload = jwt.getValue();
+                    } else if ("isSecretBase64Encoded".equalsIgnoreCase(jwt.getKey())) {
+                        isSecretBase64Encoded = jwt.getValue();
+                    } else if ("secret".equalsIgnoreCase(jwt.getKey())) {
+                        secret = jwt.getValue();
+                    } else if ("algorithm".equalsIgnoreCase(jwt.getKey())) {
+                        algorithm = jwt.getValue();
+                    }
+                    else if ("addTokenTo".equalsIgnoreCase(jwt.getKey())) {
+                        addTokenTo = jwt.getValue();
+                    }
+                    else if ("headerPrefix".equalsIgnoreCase(jwt.getKey())) {
+                        headerPrefix = jwt.getValue();
+                    }
+                    else if ("queryParamKey".equalsIgnoreCase(jwt.getKey())) {
+                        queryParamKey = jwt.getValue();
+                    }
+                    else if ("header".equalsIgnoreCase(jwt.getKey())) {
+
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        try {
+                            header = objectMapper.readValue(jwt.getValue(), new TypeReference<Map<String,Object>>(){});
+
+                        } catch (JsonProcessingException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                }
+
+                createVariables(intiMapStep, "payload", payload, null, "string");
+                createVariables(intiMapStep, "secret", secret, null, "string");
+                createVariables(intiMapStep, "algorithm", algorithm, null, "string");
+                createVariables(intiMapStep, "headerPrefix", headerPrefix, null, "string");
+                createVariables(intiMapStep, "header/key", header.toString(), null, "document/string");
+
+                Map<String, Object> invokeStepToJson = createInvokeStep(flowSteps, "service", "packages/Wrapper/Authorization/JwtToken", "Initialize");
+
+                createPreInvokeMapping(invokeStepToJson, "copy", "string", "/payload", "string", "/payload");
+                createPreInvokeMapping(invokeStepToJson, "copy", "string", "/secret", "string", "/secret");
+                createPreInvokeMapping(invokeStepToJson, "copy", "string", "/algorithm", "string", "/algorithm");
+                createPreInvokeMapping(invokeStepToJson, "copy", "string", "/headerPrefix", "string", "/headerPrefix");
+                createPreInvokeMapping(invokeStepToJson, "copy", "document", "/header", "document", "/header");
+
             }
-
-            createVariables(intiMapStep, "payload", payload, null, "string");
-            createVariables(intiMapStep, "secret", secret, null, "string");
-            createVariables(intiMapStep, "algorithm", algorithm, null, "string");
-            createVariables(intiMapStep, "headerPrefix", headerPrefix, null, "string");
-            createVariables(intiMapStep, "header/key", header.toString(), null, "document/string");
-
-            Map<String, Object> invokeStepToJson = createInvokeStep(flowSteps, "service", "packages/Wrapper/Authorization/JwtToken", "Initialize");
-
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/payload", "string", "/payload");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/secret", "string", "/secret");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/algorithm", "string", "/algorithm");
-            createPreInvokeMapping(invokeStepToJson, "copy", "string", "/headerPrefix", "string", "/headerPrefix");
-            createPreInvokeMapping(invokeStepToJson, "copy", "document", "/header", "document", "/header");
-
         }
+
 
         Map<String, Object> invokeStepRequest = createInvokeStep(flowSteps, "service", "packages/middleware/pub/client/http/request", "Initialize");
 

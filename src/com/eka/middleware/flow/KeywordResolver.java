@@ -13,18 +13,21 @@ public class KeywordResolver {
      */
     public static String find(String expressionKey, DataPipeline dataPipeline) {
 
-        if (expressionKey.equals("UUID")) {
+        //TODO change to switch case.
+        if (expressionKey.equals("UUID") || expressionKey.equals("*UUID")) {
             return UUID.randomUUID().toString();
-        } else if (expressionKey.equals("tenant")) {
+        } else if (expressionKey.equals("tenant") || expressionKey.equals("*tenant")) {
             return dataPipeline.rp.getTenant().getName();
-        } else if (expressionKey.equals("CorrelationId")) {
+        } else if (expressionKey.equals("CorrelationId") || expressionKey.equals("*CorrelationId")) {
             return dataPipeline.getCorrelationId();
-        } else if (expressionKey.equals("ContextLocalPath")) {
+        } else if (expressionKey.equals("ContextLocalPath") || expressionKey.equals("*ContextLocalPath")) {
             if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))) {
                 return "/eka";
             } else {
                 return "./";
             }
+        } else if (expressionKey.equals("PackageConfig")) {
+            return dataPipeline.getMyPackageConfigPath();
         } else {
             return "null";
         }
