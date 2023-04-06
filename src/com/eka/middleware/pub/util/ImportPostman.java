@@ -39,45 +39,43 @@ public class ImportPostman {
 
     public static void main(String[] args) throws Exception {
 
-        PostmanCollection postmanCollection = new Gson().fromJson(new FileReader("E:/jwt3.json"), PostmanCollection.class);
-        createFlowServices("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\", "", "", postmanCollection.getItem(), true);
-        createFlowServicesClient("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\", "", "", postmanCollection.getItem());
+        PostmanCollection postmanCollection = new Gson().fromJson(new FileReader("E:/jwt4.json"), PostmanCollection.class);
+        //createFlowServices("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\", "", "", postmanCollection.getItem(), true);
+        //createFlowServicesClient("E:\\Nature9_Work\\ekamw-distributions\\integration\\middleware\\tenants\\default\\","", "", postmanCollection.getItem());
 
 
     }
-
-    public static List<String> createFlowServices(String tenantPath, String servicePath, String packageName, List<PostmanItems> item, boolean isClientRequested) throws Exception {
+    public static List<String> createFlowServices(String tenantPath, String servicePath, String packageName, List<PostmanItems> item, boolean isClientRequested ,DataPipeline dataPipeline) throws Exception {
 
         ArrayList<String> list = new ArrayList<>();
+
 
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested);
+                createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested,dataPipeline);
             } else {
-                list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested, Evaluate.EEV));
+               list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested, Evaluate.EEV,dataPipeline));
             }
         }
         return list;
     }
-
-    public static List<String> createFlowServicesClient(String folder, String servicePath, String packageName, List<PostmanItems> item) throws Exception {
+    public static List<String> createFlowServicesClient(String folder, String servicePath, String packageName, List<PostmanItems> item,DataPipeline dataPipeline) throws Exception {
 
         ArrayList<String> list = new ArrayList<String>();
 
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem());
+                createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(),dataPipeline);
             } else {
                 String method = postmanItems.getRequest().getMethod();
-                list.add(generateClientLib(folder, servicePath, packageName, postmanItems, method, Evaluate.EEV));
+                list.add(generateClientLib(folder, servicePath, packageName, postmanItems, method, Evaluate.EEV,dataPipeline));
             }
         }
         return list;
     }
-
-    public static String generateServerStub(String folderPath, String servicePath, String packageName, PostmanItems postmanItems, boolean isClientRequested, Evaluate evaluateFrom) throws Exception {
+    public static String generateServerStub(String folderPath, String servicePath, String packageName, PostmanItems postmanItems, boolean isClientRequested, Evaluate evaluateFrom,DataPipeline dataPipeline) throws Exception {
 
         String filePath = folderPath + File.separator + "packages" + File.separator + packageName
                 + File.separator + "server" + File.separator + servicePath + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
@@ -261,6 +259,8 @@ public class ImportPostman {
 
         String json = new Gson().toJson(flowService.getFlow());
         saveFlow(filePath, json);
+        generateJavaClass(file,servicePath,dataPipeline);
+
         return filePath;
     }
 
@@ -525,7 +525,7 @@ public class ImportPostman {
         }
     }
 
-    private static String generateClientLib(String folder, String servicePath, String packageName, PostmanItems postmanItems, String method, Evaluate evaluateFrom) throws IOException {
+    private static String generateClientLib(String folder, String servicePath, String packageName, PostmanItems postmanItems, String method, Evaluate evaluateFrom,DataPipeline dataPipeline) throws Exception {
 
         String filePath = folder + File.separator + "packages" + File.separator + packageName
                 + File.separator + "client" + File.separator + servicePath + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
@@ -884,6 +884,7 @@ public class ImportPostman {
         JSONObject jsonObject = new JSONObject(map);
         String updatedJson = jsonObject.toString();
         saveFlow(filePath, updatedJson);
+        generateJavaClass(file,servicePath,dataPipeline);
         return filePath;
     }
 
@@ -969,5 +970,47 @@ public class ImportPostman {
             markEvaluation = null;
         }
         return markEvaluation;
+    }
+
+
+    public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
+        String flowJavaTemplatePath=MiddlewareServer.getConfigFolderPath()+"flowJava.template";
+        //String flowJavaTemplatePath = file+"";
+
+        //System.out.println("flowJavaTemplatePath: "+flowJavaTemplatePath);
+        String className=file.getName().replace(".flow", "");
+        //URL url = new URL(flowJavaTemplatePath);
+        String fullCode="";
+        String pkg=flowRef.replace("/"+file.getName(),"").replace("/",".");
+        List<String> lines = FileUtils.readLines(new File(flowJavaTemplatePath), "UTF-8");
+        for (String line: lines) {
+            String codeLine=(line.replace("#flowRef",flowRef).replace("#package",pkg).replace("#className",className));
+            fullCode+=codeLine+"\n";
+            //dataPipeline.log("\n");
+            //dataPipeline.log(codeLine);
+        }
+        //dataPipeline.log("\n");
+        //return fullCode;
+
+        //System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+        //String fullCode="";//pkg+"\n"+imports+"\n"+classDef+"\n"+mainDef+"\n"+mainFunc+"\n"+mainDefClose+"\n"+classDefClose;
+        //System.out.println(fullCode);
+        //System.out.println(className+".service");
+        String javaFilePath=file.getAbsolutePath().replace(className+".flow", className+".java");
+        System.err.println("javaFilePath " + javaFilePath);
+        File javaFile=new File(javaFilePath);
+        if (!javaFile.exists()) {
+            javaFile.createNewFile();
+        }
+        System.out.println(javaFilePath);
+        FileOutputStream fos = new FileOutputStream(javaFile);
+        fos.write(fullCode.getBytes());
+        fos.flush();
+        fos.close();
+        String fqn=pkg.replace("package ", "").replace(";","")+"."+className+".main";
+
+        System.err.println("fqn>>>> : " + fqn);
+        dataPipeline.log("fqn: "+fqn);
+       // ServiceUtils.compileJavaCode(fqn,dataPipeline);
     }
 }
