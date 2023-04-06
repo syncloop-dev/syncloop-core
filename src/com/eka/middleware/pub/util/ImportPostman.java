@@ -257,9 +257,8 @@ public class ImportPostman {
         }
 
         String json = new Gson().toJson(flowService.getFlow());
-        generateJavaClass(file,servicePath,dataPipeline);
         saveFlow(filePath, json);
-      //  generateJavaClass(file,servicePath,dataPipeline);
+        generateJavaClass(file,servicePath,dataPipeline);
 
         return filePath;
     }
@@ -966,7 +965,7 @@ public class ImportPostman {
     public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
         String flowJavaTemplatePath=MiddlewareServer.getConfigFolderPath()+"flowJava.template";
         //String flowJavaTemplatePath = file+"";
-        System.out.println("flowJavaTemp " + flowJavaTemplatePath);
+
         //System.out.println("flowJavaTemplatePath: "+flowJavaTemplatePath);
         String className=file.getName().replace(".flow", "");
         //URL url = new URL(flowJavaTemplatePath);
@@ -1002,9 +1001,5 @@ public class ImportPostman {
         System.err.println("fqn>>>> : " + fqn);
         dataPipeline.log("fqn: "+fqn);
        // ServiceUtils.compileJavaCode(fqn,dataPipeline);
-        System.err.println("end>>>>>>>>>>>>>>>>>>>>");
     }
-
-
-
 }
