@@ -431,34 +431,6 @@ public class ImportSwagger {
 			dropVariables(invokeStepRequest, "payload", "string");
 		}
 
-		Map<String, SecurityScheme> securitySchemes = swagger.getComponents().getSecuritySchemes();
-		for (String securitySchemesList: securitySchemes.keySet()){
-
-			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
-			SecurityScheme.Type type = securityScheme.getType();
-
-			 if (SecurityScheme.Type.APIKEY.equals(type)) {
-				 Map<String, String> commonApiKey = Maps.newHashMap();
-				 commonApiKey.put("text", "apiKey");
-				 commonApiKey.put("type", "string");
-				 inputs.add(commonApiKey);
-
-				 if (SecurityScheme.In.HEADER.equals(securityScheme.getIn())) {
-					 createVariables(intiMapStep, "requestHeaders/"+securityScheme.getName(),  "${apiKey}" , Evaluate.EEV, "document/string");
-				 } else if (SecurityScheme.In.QUERY.equals(securityScheme.getIn())) {
-					 createVariables(intiMapStep, "queryParameters/"+securityScheme.getName(),  "${apiKey}" , Evaluate.EEV, "document/string");
-				 }
-			 }
-			 else if (SecurityScheme.Type.HTTP.equals(type)) {
-				 Map<String, String> commonAccessToken = Maps.newHashMap();
-				 commonAccessToken.put("text", "access_token");
-				 commonAccessToken.put("type", "string");
-				 inputs.add(commonAccessToken);
-				 createVariables(intiMapStep, "requestHeaders/Authorization",  "Bearer ${access_token}" , Evaluate.EEV, "document/string");
-			 }
-
-		}
-
 		Map<String, Object> switchMapping = createSwitch(flowSteps,"switch","SWITCH", "Checking status for response");
 		addData(switchMapping, "switch", "statusCode");
 
