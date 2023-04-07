@@ -14,6 +14,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.nimbusds.jose.shaded.gson.Gson;
 import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.security.OAuthFlow;
+import io.swagger.v3.oas.models.security.OAuthFlows;
+import io.swagger.v3.oas.models.security.Scopes;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.apache.commons.io.IOUtils;
 
 import com.eka.middleware.heap.HashMap;
@@ -37,7 +41,9 @@ public class ImportSwagger {
 	final static String supportedTypes = "string,integer,number,date,boolean,object,byte,document,stringList,integerList,numberList,dateList,booleanList,documentList,objectList,byteList,";
 
 	public static void main(String[] args) throws Exception {
-		String path = "D:\\domains.json";// petstore
+	//	String path = "D:\\domains.json";// petstore
+
+		String path ="E:/oauth2.json";
 
 		File openAPIFile = new File(path);
 		byte openAPI[] = ServiceUtils.readAllBytes(openAPIFile);
@@ -66,7 +72,9 @@ public class ImportSwagger {
 			PathItem pi = entry.getValue();
 			Operation op = pi.getGet();
 			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
-			String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			//String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			String servicePath = folderPath + File.separator + "api" + File.separator + opId + ".flow";
+
 			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
