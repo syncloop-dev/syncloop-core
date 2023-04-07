@@ -10,10 +10,13 @@ import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import com.beust.jcommander.internal.Lists;
+import com.eka.middleware.server.MiddlewareServer;
+import com.eka.middleware.service.DataPipeline;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.nimbusds.jose.shaded.gson.Gson;
 import io.swagger.v3.oas.models.media.Content;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import com.eka.middleware.heap.HashMap;
@@ -41,19 +44,18 @@ public class ImportSwagger {
 
 		File openAPIFile = new File(path);
 		byte openAPI[] = ServiceUtils.readAllBytes(openAPIFile);
-		Map responseLib = asClientLib("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\godaddy\\clientLib", openAPI);
-		Map responseStub = asServerStub("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\godaddy\\serverStub", openAPI);
-		String json = Json.pretty().writeValueAsString(responseLib);
-		System.out.println(json);
-		json = Json.pretty().writeValueAsString(responseStub);
-		System.out.println(json);
+		//Map responseLib = asClientLib("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\godaddy\\clientLib", openAPI);
+		//Map responseStub = asServerStub("D:\\d\\JWORK\\nature9\\ekamw-distributions\\integration\\middleware\\tenants\\default\\packages\\godaddy\\serverStub", openAPI);
+		//String json = Json.pretty().writeValueAsString(responseLib);
+		//System.out.println(json);
+		//json = Json.pretty().writeValueAsString(responseStub);
+		//System.out.println(json);
 	}
 
-	public static Map<String, String> asServerStub(String folderPath, byte[] openAPI) throws Exception {
+	public static Map<String, String> asServerStub(String folderPath, byte[] openAPI,DataPipeline dataPipeline) throws Exception {
 
 		File folder = new File(folderPath);
 		folder.mkdirs();
-
 		OpenAPI swagger = null;
 		SwaggerConfiguration sc = new SwaggerConfiguration();
 		Map<String, String> response = new HashMap();
@@ -67,10 +69,12 @@ public class ImportSwagger {
 			Operation op = pi.getGet();
 			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
 			String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			File file = new File(servicePath);
 			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
 				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("GET" + alias, opId);
 			}
 			op = pi.getPost();
@@ -79,6 +83,7 @@ public class ImportSwagger {
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
 				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("POST" + alias, opId);
 			}
 
@@ -88,6 +93,7 @@ public class ImportSwagger {
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
 				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("DELETE" + alias, opId);
 			}
 
@@ -97,6 +103,7 @@ public class ImportSwagger {
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
 				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PATCH" + alias, opId);
 			}
 
@@ -106,15 +113,14 @@ public class ImportSwagger {
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
 				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PUT" + alias, opId);
 			}
 		}
 		return response;
 	}
 
-	public static Map<String, String> asClientLib(String folderPath, byte[] openAPI) throws Exception {
-
-
+	public static Map<String, String> asClientLib(String folderPath, byte[] openAPI,DataPipeline dataPipeline) throws Exception {
 
 		File folder = new File(folderPath);
 		folder.mkdirs();
@@ -130,11 +136,15 @@ public class ImportSwagger {
 			String alias = entry.getKey();
 			PathItem pi = entry.getValue();
 			Operation op = pi.getGet();
+
 			flow = generateClientLib(alias, op, swagger, "GET");
 			if (flow != null) {
 				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
+				saveFlow(servicePath, json);
+				File file = new File(servicePath);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("GET" + alias, opId);
 			}
 			op = pi.getPost();
@@ -142,7 +152,10 @@ public class ImportSwagger {
 			if (flow != null) {
 				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
+				saveFlow(servicePath, json);
+				File file = new File(servicePath);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("POST" + alias, opId);
 			}
 
@@ -151,7 +164,10 @@ public class ImportSwagger {
 			if (flow != null) {
 				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
+				saveFlow(servicePath, json);
+				File file = new File(servicePath);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("DELETE" + alias, opId);
 			}
 
@@ -160,7 +176,10 @@ public class ImportSwagger {
 			if (flow != null) {
 				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
+				saveFlow(servicePath, json);
+				File file = new File(servicePath);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PATCH" + alias, opId);
 			}
 
@@ -169,7 +188,10 @@ public class ImportSwagger {
 			if (flow != null) {
 				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow", json);
+				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
+				saveFlow(servicePath, json);
+				File file = new File(servicePath);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PUT" + alias, opId);
 			}
 		}
@@ -989,5 +1011,26 @@ public class ImportSwagger {
 			}
 		}
 		return document;
+	}
+	public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
+		String flowJavaTemplatePath= MiddlewareServer.getConfigFolderPath()+"flowJava.template";
+		String className=file.getName().replace(".flow", "");
+		String fullCode="";
+		String pkg=flowRef.replace("/"+file.getName(),"").replace("/",".");
+		List<String> lines = FileUtils.readLines(new File(flowJavaTemplatePath), "UTF-8");
+		for (String line: lines) {
+			String codeLine=(line.replace("#flowRef",flowRef).replace("#package",pkg).replace("#className",className));
+			fullCode+=codeLine+"\n";
+		}
+		String javaFilePath=file.getAbsolutePath().replace(className+".flow", className+".java");
+		File javaFile=new File(javaFilePath);
+		if (!javaFile.exists()) {
+			javaFile.createNewFile();
+		}
+		FileOutputStream fos = new FileOutputStream(javaFile);
+		fos.write(fullCode.getBytes());
+		fos.flush();
+		fos.close();
+		String fqn=pkg.replace("package ", "").replace(";","")+"."+className+".main";
 	}
 }
