@@ -1,14 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO">
     <Appenders>
-        <Console name="console" target="SYSTEM_OUT">
+	    <Console name="console" target="SYSTEM_OUT">
             <PatternLayout
                 pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
         </Console>
+		<File name="ServerFile" fileName="logs/server.log">
+		  <PatternLayout>
+			<Pattern>%d %p %c{1.} [%t] ${ctx:name} %m%n</Pattern>
+		  </PatternLayout>
+        </File>
+        <Routing name="myAppender">
+            <Routes pattern="${ctx:name}-${ctx:service}">
+			    <Route ref="console" key="${ctx:name}-${ctx:service}"/>
+                <Route>
+                    <RollingFile 
+                        fileName="integration/middleware/tenants/${ctx:name}/logs/${ctx:service}.log"
+                        name="myAppender-${ctx:name}-${ctx:service}"
+						filePattern="integration/middleware/tenants/${ctx:name}/logs/${ctx:service}.log.%i.log.gz">
+                            <PatternLayout pattern="%d %p %c{1.} [%t] %m%n"/>
+							<CronTriggeringPolicy schedule="0 0 0 1/1 * ?"/>
+                    </RollingFile>
+                </Route>
+            </Routes>
+        </Routing>
+
+        <Async name="Async">
+            <AppenderRef ref="myAppender" level="info" />
+			<AppenderRef ref="console" level="info" />
+			<AppenderRef ref="ServerFile"  level="info"/>
+        </Async>
     </Appenders>
     <Loggers>
-        <Root level="info" additivity="false">
-            <AppenderRef ref="console" />
+        <Root level="trace">
+            <appender-ref ref="Async" />
         </Root>
     </Loggers>
 </Configuration>
+
+<!--<SizeBasedTriggeringPolicy size="10M" /> -->

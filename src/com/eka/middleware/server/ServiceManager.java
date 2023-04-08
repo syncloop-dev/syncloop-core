@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.RTCompile;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
@@ -23,7 +24,8 @@ public class ServiceManager {
 
 //	private static final Map<String, Long> lastModified = new ConcurrentHashMap<String, Long>();
 
-	public static final String packagePath = ServiceUtils.getServerProperty("middleware.server.home.dir");
+	// public static final String packagePath =
+	// ServiceUtils.getServerProperty("middleware.server.home.dir");
 
 	public static Class compileJava(final String fqn, final DataPipeline dataPipeLine) throws Throwable {
 
@@ -32,7 +34,8 @@ public class ServiceManager {
 		String className = expandFQN[expandFQN.length - 2];
 		String classFile = fqn.replace(".", "/").replace(className + "/" + funcName, className + ".java");
 		String fqnClass = classFile.replace(".java", "").replace("/", ".");
-
+		final String packagePath = PropertyManager.getPackagePath(dataPipeLine.rp.getTenant());
+		final String tid = dataPipeLine.rp.getTenant().id;
 		URI path = null;
 		try {
 			// dataPipeLine.log((packagePath + classFile).replace("//", "/"));
@@ -48,20 +51,35 @@ public class ServiceManager {
 			throw new SnippetException(dataPipeLine, "Resource not found\n" + file.getAbsolutePath(),
 					new Exception("Resource not found\n" + file.getAbsolutePath()));
 		}
-		String classID = fqn;// + "." + lastChangedTime;
+		String classID = tid + "-" + fqn;// + "." + lastChangedTime;
 		Class cls = classMap.get(classID);
-		cls = RTCompile.getClassRef(fqnClass, file.getAbsolutePath(), true);
+		cls = RTCompile.getClassRef(fqnClass, file.getAbsolutePath(), true, dataPipeLine);
 		classMap.put(classID, cls);
 		return cls;
 	}
 
+	public static void reload(final String fqn, final DataPipeline dataPipeLine, boolean forceJavaCompile) {
+		final String tid = dataPipeLine.rp.getTenant().id;
+		String classID = tid + "-" + fqn;// + "." + lastChangedTime;
+		if (forceJavaCompile) {
+			try {
+				compileJava(fqn, dataPipeLine);
+			} catch (Throwable e) {
+				ServiceUtils.printException(dataPipeLine, "Re-compilation failed", new Exception(e));
+			}
+		} else
+			classMap.remove(classID);
+	}
+	private static Object obj=new Object();
 	public static void invokeJavaMethod(final String fqn, final DataPipeline dataPipeLine) throws SnippetException {
 //		Long lastChangedTimeSaved = lastModified.get(fqn);
 //		long lastChangedTime = file.lastModified();
-		String classID = fqn;// + "." + lastChangedTime;
+		final String tid = dataPipeLine.rp.getTenant().id;
+		String classID = tid + "-" + fqn;// + "." + lastChangedTime;
+
 		Class cls = classMap.get(classID);
 		if (cls == null)
-			synchronized (classMap) {
+			synchronized (obj) {
 				try {
 					ScriptEngineContextManager.clear();
 					cls = compileJava(fqn, dataPipeLine);
@@ -77,10 +95,11 @@ public class ServiceManager {
 			Method method = cls.getMethod(funcName, DataPipeline.class);// cls.getMethods();// ;
 			if (method != null) {
 				try {
+					System.out.println(method);
 					method.invoke(null, dataPipeLine);
 				} catch (InvocationTargetException e) {
 					Exception ex = null;
-					if(fqn.contains("packages.middleware.pub.service.exitRepeat")) 
+					if (fqn.contains("packages.middleware.pub.service.exitRepeat"))
 						ex = new Exception("packages.middleware.pub.service.exitRepeat");
 					else
 						ex = new Exception(e.getCause());
@@ -89,10 +108,9 @@ public class ServiceManager {
 			} else
 				throw new Exception("Method not found '" + funcName + "'");
 		} catch (Exception e) {
-			if(e.getMessage().contains("packages.middleware.pub.service.exitRepeat")) {
+			if (e.getMessage().contains("packages.middleware.pub.service.exitRepeat")) {
 				throw new SnippetException(dataPipeLine, e.getMessage(), e);
-			}else
-			if (e instanceof SnippetException)
+			} else if (e instanceof SnippetException)
 				throw (SnippetException) e;
 			else if (e.getCause() instanceof SnippetException)
 				throw (SnippetException) e.getCause();

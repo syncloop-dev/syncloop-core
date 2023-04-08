@@ -28,7 +28,7 @@ public class AWSHeaders {
         String contentLengthHeader = "content-length";
         String contentHashString = AWS4SignerBase.EMPTY_BODY_SHA256;
         if (payload == null || payload.length == 0) {
-            //awsHeaders.put("x-amz-content-sha256", AWS4SignerBase.EMPTY_BODY_SHA256);
+            awsHeaders.put("x-amz-content-sha256", AWS4SignerBase.EMPTY_BODY_SHA256);
         } else {
             byte[] contentHash = AWS4SignerBase.hash(payload);
             contentHashString = BinaryUtils.toHex(contentHash);
@@ -40,13 +40,14 @@ public class AWSHeaders {
             }
             awsHeaders.put("x-amz-content-sha256", contentHashString);
             awsHeaders.put(contentLengthHeader, "" + payload.length);
-
-            if (headers != null)
-                headers.forEach((k, v) -> {
-                    if (k != null && v != null) awsHeaders.put(k, v);
-                });
-
         }
+
+        if (headers != null) {
+            headers.forEach((k, v) -> {
+                if (k != null && v != null) awsHeaders.put(k, v);
+            });
+        }
+
         AWS4SignerForChunkedUpload signer = new AWS4SignerForChunkedUpload(
                 endpointUrl, method.toUpperCase(), service, regionName);
         String authorization = signer.computeSignature(awsHeaders,

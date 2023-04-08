@@ -1,54 +1,64 @@
 package com.eka.middleware.service;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
-import io.undertow.server.HttpServerExchange;
-import org.apache.commons.lang3.math.NumberUtils;
+import com.eka.middleware.pooling.DBCPDataSource;
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.pac4j.core.profile.UserProfile;
 
 import com.eka.middleware.auth.AuthAccount;
+import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
+import com.eka.middleware.flow.Switch;
+import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
-import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
+
+import io.undertow.server.HttpServerExchange;
 
 public class DataPipeline {
 	private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
-	private final RuntimePipeline rp;
+	public final RuntimePipeline rp;
 	private final String resource;
 	private MultiPart mp = null;
 	private final Map<String, Map<String, Object>> payloadStack = new HashMap<String, Map<String, Object>>();
 	private final Map<String, Boolean> hasDroppedPrevious = new HashMap<String, Boolean>();
 	private final List<String> resourceStack = new ArrayList<String>();
 	private String currentResource = null;
+	private String callingResource = null;
 	private final String urlPath;
-
+	private int recursiveDepth;
+	private final int allowedRecursionDepth=100;
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
+		recursiveDepth=0;
 		rp = runtimePipeline;
-		this.resource = resource;
+		this.resource = resource+"@"+recursiveDepth;
 		this.urlPath = urlPath;
 		payloadStack.put(resource, rp.payload);
 		currentResource = resource;
@@ -109,28 +119,6 @@ public class DataPipeline {
 			}
 		}
 
-		/*
-		 * String currentResource = getCurrentResource(); Map<String, Object> map =
-		 * payloadStack.get(currentResource); if (map != null) { Object value =
-		 * map.get(key); if (value != null) { try { ArrayDeque<String>
-		 * dVal=(ArrayDeque<String>)value; if(dVal.size()>0) return dVal.getFirst();
-		 * }catch(Exception e) { return value.toString(); } } }
-		 *
-		 * if (hasDroppedPrevious.get(currentResource) != null &&
-		 * hasDroppedPrevious.get(currentResource) ||
-		 * (hasDroppedPrevious.get(currentResource + "-" + key) != null &&
-		 * hasDroppedPrevious.get(currentResource + "-" + key))) { return null; }
-		 *
-		 * int length = resourceStack.size(); if (length > 1) { boolean bit = false; for
-		 * (int i = length - 1; i >= 0; i--) { String resource = resourceStack.get(i);
-		 * if (resource.equals(currentResource) || bit) { bit = true; Map<String,
-		 * Object> map2 = payloadStack.get(resource); if (map2 != null) { Object value =
-		 * map2.get(key); if (value != null) { try { ArrayDeque<String>
-		 * dVal=(ArrayDeque<String>)value; if(dVal.size()>0) return dVal.getFirst();
-		 * }catch(Exception e) { return value.toString(); } } } } if
-		 * (hasDroppedPrevious.get(resource + "-" + key) != null &&
-		 * hasDroppedPrevious.get(resource + "-" + key)) break; } }
-		 */
 		return null;
 	}
 
@@ -145,7 +133,12 @@ public class DataPipeline {
 				try {
 					return (Integer) value;
 				} catch (Exception ee) {
-					throw new SnippetException(this, ee.getMessage(), ee);
+					try {
+						return Integer.parseInt(""+value);
+					} catch (Exception e2) {
+						throw new SnippetException(this, ee.getMessage(), ee);
+					}
+					
 				}
 			}
 		}
@@ -245,7 +238,9 @@ public class DataPipeline {
 		return rp.getCorrelationId();
 	}
 
-	public String getResource() {
+	private String getResource() {
+		//if(resource!=null)
+			//return resource.split("@")[0];
 		return resource;
 	}
 
@@ -262,7 +257,10 @@ public class DataPipeline {
 	}
 
 	public Map getAsMap(String pointer) {
-		Map<String, Object> myMap = (Map<String, Object>) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Map<String, Object> myMap = null;
+		if(obj!=null)
+			myMap=(Map<String, Object>) getValueByPointer(pointer);
 		return myMap;
 	}
 
@@ -281,32 +279,51 @@ public class DataPipeline {
 	}
 
 	public Integer getAsInteger(String pointer) {
-		Integer val = (Integer) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Integer val = null;
+		if(obj!=null)
+			val=(Integer) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Double getAsNumber(String pointer) {
-		Double val = (Double) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Double val = null;
+		if(obj!=null)
+			val=(Double) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Byte getAsByte(String pointer) {
-		Byte val = (Byte) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Byte val = null;
+		if(obj!=null)
+			val=(Byte) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Date getAsDate(String pointer) {
-		Date val = (Date) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Date val = null;
+		if(obj!=null)
+			val=(Date) getValueByPointer(pointer);
 		return val;
 	}
 
 	public Boolean getAsBoolean(String pointer) {
-		Boolean val = (Boolean) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		Boolean val = null;
+		if(obj!=null) {
+			val = Boolean.valueOf(obj.toString());
+		}
 		return val;
 	}
 
 	public String getAsString(String pointer) {
-		String val = (String) getValueByPointer(pointer);
+		Object obj=getValueByPointer(pointer);
+		String val = null;
+		if(obj!=null)
+			val=(String) getValueByPointer(pointer);
 		return val;
 	}
 
@@ -323,9 +340,9 @@ public class DataPipeline {
 	public String toJson() {
 		try {
 
-			return ServiceUtils.toJson(payloadStack.get(currentResource));
+			return ServiceUtils.toJson(getStatusBasedOutput());
 		} catch (Exception e) {
-			ServiceUtils.printException("Could not convert datapipeline '" + rp.getSessionID() + "' to Json", e);
+			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Json", e);
 		}
 		;
 		return null;
@@ -336,9 +353,9 @@ public class DataPipeline {
 			String wrapperRootName = (String) get("@wrapperRootName");
 			if (wrapperRootName == null)
 				wrapperRootName = "root";
-			return ServiceUtils.toXml(payloadStack.get(currentResource), wrapperRootName);
+			return ServiceUtils.toXml(getStatusBasedOutput(), wrapperRootName);
 		} catch (Exception e) {
-			ServiceUtils.printException("Could not convert datapipeline '" + rp.getSessionID() + "' to Xml", e);
+			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Xml", e);
 		}
 		return null;
 	}
@@ -350,19 +367,31 @@ public class DataPipeline {
 	public String toYaml() {
 		try {
 
-			return ServiceUtils.toYaml(payloadStack.get(currentResource));
+			return ServiceUtils.toYaml(getStatusBasedOutput());
 		} catch (Exception e) {
-			ServiceUtils.printException("Could not convert datapipeline '" + rp.getSessionID() + "' to Yaml", e);
+			ServiceUtils.printException(this,"Could not convert datapipeline '" + rp.getSessionID() + "' to Yaml", e);
 		}
 		;
 		return null;
 	}
 
+	private Map<String,Object> getStatusBasedOutput() throws Exception{
+		Map<String,Object> map=payloadStack.get(currentResource);
+		if(this.rp.isExchangeInitialized()) {
+			HttpServerExchange exch=this.rp.getExchange();
+			int status=exch.getStatusCode();
+			if(map.get("*"+status)!=null)
+				return (Map<String, Object>) map.get("*"+status);
+		}
+		return map;
+	}
+
 	public void save(String name) {
-		File file = new File(ServiceManager.packagePath + "/packages/" + (resource.replace(".", "/")) + "_" + name
+		String packagePath=PropertyManager.getPackagePath(rp.getTenant());
+		File file = new File(packagePath + "/packages/" + (resource.replace(".", "/")) + "_" + name
 				+ "_dataPipeline.json");
 
-		LOGGER.info("Saving dataPipeline: " + file.getAbsolutePath());
+		log("Saving dataPipeline: " + file.getAbsolutePath());
 		String dirname = file.getAbsolutePath().replace(file.getName(), "");
 		File dir = new File(dirname);
 		if (!dir.exists())
@@ -387,13 +416,14 @@ public class DataPipeline {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			ServiceUtils.printException("Could not save pipeline", e);
+			ServiceUtils.printException(this,"Could not save pipeline", e);
 		}
 	}
 
 	public void restore(String name) {
+		String packagePath=PropertyManager.getPackagePath(rp.getTenant());
 		try {
-			File file = new File(ServiceManager.packagePath + "/packages/" + (currentResource.replace(".", "/")) + "_"
+			File file = new File(packagePath + "/packages/" + (currentResource.replace(".", "/")) + "_"
 					+ name + "_dataPipeline.json");
 			byte[] data = ServiceUtils.readAllBytes(file);
 			String json = new String(data);
@@ -405,7 +435,7 @@ public class DataPipeline {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			ServiceUtils.printException("Could not save pipeline", e);
+			ServiceUtils.printException(this,"Could not save pipeline", e);
 		}
 	}
 
@@ -419,7 +449,7 @@ public class DataPipeline {
 			String json = ServiceUtils.toPrettyJson(map);
 			rp.writeSnapshot(resource, json);
 		} catch (Exception e) {
-			ServiceUtils.printException("Exception while taking snapshot.", e);
+			ServiceUtils.printException(this,"Exception while taking snapshot.", e);
 		}
 	}
 
@@ -501,16 +531,24 @@ public class DataPipeline {
 	}
 
 	public String getUniqueThreadName() {
-		return "cb_" + (getCurrentResource().hashCode() & 0xfffffff);
+		return "cb_" + (getCurrentResourceName().hashCode() & 0xfffffff);
 	}
 
-	public String getCurrentResource() {
+	private String getCurrentResource() {
 		// StackTraceElement[] ste = Thread.currentThread().getStackTrace();
 		// Since its a private method it will be called
 		// inside it's own class function so we get the
 		// stack that called the last public function that
 		// called this method
-		// LOGGER.info("Current stack resource: " + currentResource);
+		// log("Current stack resource: " + currentResource);
+		//if(resource!=null)
+			//return currentResource.split("@")[0];
+		return currentResource;// ste[3].getClassName() + "." + ste[3].getMethodName();
+	}
+	
+	public String getCurrentResourceName() {
+		if(resource!=null)
+			return currentResource.split("@")[0];
 		return currentResource;// ste[3].getClassName() + "." + ste[3].getMethodName();
 	}
 
@@ -523,23 +561,36 @@ public class DataPipeline {
 		if (map != null)
 			map.clear();
 	}
-	private String callingResource = null;
+	
 	public void apply(String fqnOfMethod) throws SnippetException {
 		if(fqnOfMethod==null)
 			return;
+		boolean recursionDetected=false;
 		try {
 
 			fqnOfMethod = fqnOfMethod.replace("/", ".");
 			if (!fqnOfMethod.endsWith(".main"))
 				fqnOfMethod += ".main";
-			if (payloadStack.get(fqnOfMethod) != null) {
-				Exception e = new Exception("Can not apply method.");
-				e.setStackTrace(Thread.currentThread().getStackTrace());
-				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
+			
+			if(payloadStack.get(fqnOfMethod+"@"+recursiveDepth) != null) {
+				recursionDetected=true;
+				recursiveDepth+=1;
 			}
+			
+			if (recursiveDepth>=allowedRecursionDepth) {
+				Exception e = new Exception("Can not apply method. Stack overflow detected. Maximum allowed recursive depth is "+allowedRecursionDepth);
+				e.setStackTrace(Thread.currentThread().getStackTrace());
+				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "' anymore", e);
+			}
+			
+//			if (payloadStack.get(fqnOfMethod+"@"+recursiveDepth) != null) {
+//				Exception e = new Exception("Can not apply method.");
+//				e.setStackTrace(Thread.currentThread().getStackTrace());
+//				throw new SnippetException(this, "Recursion is not allowed for method '" + fqnOfMethod + "'", e);
+//			}
 			String callingResource = currentResource;
 			this.callingResource=callingResource;
-			currentResource = fqnOfMethod;
+			currentResource = fqnOfMethod+"@"+recursiveDepth;
 			resourceStack.add(currentResource);
 			put("*currentResource", currentResource);
 			try {
@@ -553,14 +604,25 @@ public class DataPipeline {
 			} finally {
 				currentResource = callingResource;
 				this.callingResource=null;
+				if(recursionDetected) {
+					recursionDetected=false;
+					recursiveDepth-=1;
+				}
 				refresh();
 			}
 		} catch (Exception e) {
-//			this.logDataPipeline();
-			if(!e.getMessage().contains("packages.middleware.pub.service.exitRepeat"))
-				throw new SnippetException(this,"Something went wrong with fqnOfMethod: "+fqnOfMethod , e);
-			else
-				throw new SnippetException(this,e.getMessage() , e);
+
+			if (!e.getMessage().contains("packages.middleware.pub.service.exitRepeat")) {
+				if (e instanceof SnippetException)
+					throw e;
+				else
+					throw new SnippetException(this, "Something went wrong with fqnOfMethod: " + fqnOfMethod, e);
+			} else
+				throw new SnippetException(this, e.getMessage(), e);
+
+		}finally{
+			if(recursionDetected)
+				recursiveDepth-=1;
 		}
 	}
 
@@ -576,12 +638,13 @@ public class DataPipeline {
 		// currentResource = fqnOfFunction;
 		// resourceStack.add(currentResource);
 		// put("*currentResource", currentResource);
+		final RuntimePipeline rp=this.rp;
 		final String correlationID = this.getCorrelationId();
 		final Map<String, Object> asyncInputDoc = this.getAsMap("asyncInputDoc");
 		final Map<String, Object> asyncOutputDoc = new HashMap<String, Object>();
 		final Map<String, String> metaData = new HashMap<String, String>();
 		asyncOutputDoc.put("*metaData", metaData);
-		final String uuidAsync = ServiceUtils.generateUUID("Async operation: " + fqnOfFunction + System.nanoTime());
+		final String uuidAsync = UUID.randomUUID().toString();
 		metaData.put("batchId", uuidAsync);
 		metaData.put("status", "Active");
 		ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -620,13 +683,16 @@ public class DataPipeline {
 				}
 			}
 		} catch (Exception e) {
+			ServiceUtils.printException(this, "Failed during transformer operations.", e);
 			throw new SnippetException(this, uuidAsync, e);
 		}
 		final String currResrc=currentResource;
 		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
+			RuntimePipeline rpRef=null;
 			try {
-				final RuntimePipeline rpAsync = RuntimePipeline.create(uuidAsync, correlationID, null, fqnOfFunction,
+				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,
 						"");
+				rpRef=rpAsync;
 				final DataPipeline dpAsync = rpAsync.dataPipeLine;
 				String json = null;
 				if (asyncInputDoc != null && asyncInputDoc.size() > 0) {
@@ -682,15 +748,17 @@ public class DataPipeline {
 						asyncOutputDoc.put(k, v);
 				});
 				metaData.put("status", "Completed");
+				
 				return asyncOutputDoc;
 			} catch (Exception e) {
-				ServiceUtils.printException("Exception caused on async operation correlationID: " + correlationID
+				ServiceUtils.printException(this,"Exception caused on async operation correlationID: " + correlationID
 						+ ". Batch Id: " + metaData.get("batchId"), e);
 				metaData.put("status", "Failed");
 				asyncOutputDoc.put("error", e.getMessage());
 				throw e;
 			} finally {
 				asyncOutputDoc.put("*metaData", metaData);
+				rpRef.destroy();
 			}
 		});
 		// currentResource = curResourceBkp;
@@ -703,33 +771,105 @@ public class DataPipeline {
 	}
 
 	public String getMyConfig(String key) throws SnippetException {
-		Properties props = PropertyManager.getProperties(this, getCurrentResource() + ".properties");
+		Properties props = PropertyManager.getProperties(this, getCurrentResourceName() + ".properties");
 		String value = props.getProperty(key);
+		String expressionValue=null;
 		if (value != null && value.trim().toUpperCase().startsWith("#GLOBAL/")) {
 			String vls[] = value.split("/");
 			if (vls.length == 2 && vls[1] != null && vls[1].trim().length() > 0)
 				key = vls[1];
 			else
 				return null;
-			return getGlobalConfig(key);
+			expressionValue=getGlobalConfig(key);
 		} else if (value != null && value.trim().toUpperCase().startsWith("#PACKAGE/")) {
 			String vls[] = value.split("/");
 			if (vls.length == 2 && vls[1] != null && vls[1].trim().length() > 0)
 				key = vls[1];
 			else
 				return null;
-			return getGlobalConfig(key);
+			expressionValue = getGlobalConfig(key);
 		}
-		return props.getProperty(key);
+		
+		expressionValue=props.getProperty(key);
+		
+		if(key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
+			expressionValue=expressionValue.replace("[#]","");
+			String privKey=getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if(key!=null)
+				try {
+					expressionValue=Security.getNormalString(expressionValue,privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this, "Could not decrypt property '"+key+"' for '"+rp.getTenant()+"'", e);
+				}
+		}
+		return expressionValue;
 	}
 
 	public String getMyPackageConfig(String key) throws SnippetException {
 		Properties props = PropertyManager.getProperties(this, "package.properties");
-		return props.getProperty(key);
+		String expressionValue=props.getProperty(key);
+		if(key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
+			expressionValue=expressionValue.replace("[#]","");
+			String privKey=getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if(key!=null)
+				try {
+					expressionValue=Security.getNormalString(expressionValue,privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this, "Could not decrypt property '"+key+"' for '"+rp.getTenant()+"'", e);
+				}
+		}
+		
+		return expressionValue;
+	}
+
+	public void saveJdbc(DataPipeline dataPipeline, Path path) throws SnippetException, IOException {
+
+		String JDBC = dataPipeline.getUrlPath().replaceAll("POST/files/", "");
+
+		String pPath=PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
+		String connectionPropFile=pPath + JDBC;
+		DBCPDataSource.removeConnection(connectionPropFile);
+		java.nio.file.Files.write(path, dataPipeline.getBody());
+	}
+
+	public void saveProperties(String path,byte[] data) {
+		Properties props=new Properties();
+		File file=new File(path);
+		ByteArrayInputStream bais=new ByteArrayInputStream(data);
+		try {
+			props.load(bais);
+			bais.close();
+			Set keys=props.keySet();
+			for (Object key : keys) {
+				if(key.toString().toLowerCase().startsWith("secure.")) {
+					String value=props.getProperty((String)key);
+					if(!value.startsWith("[#]")) {
+						String publicKey=getGlobalConfig(Security.PUBLIC_PROPERTY_KEY_NAME);
+						value="[#]"+Security.getSecureString(value, publicKey);
+						props.setProperty((String) key, value);
+					}
+				}
+			}
+			PropertyManager.saveProperties(path, props,"Properties saved at "+new Date().toString());
+		} catch (Exception e) {
+			ServiceUtils.printException(this,"Failed to save properties '"+path+"'", e);
+		} 
+	}
+	
+	public String getMyPackageConfigPath() {
+		String packagePath=PropertyManager.getPackagePath(rp.getTenant())+"packages/";
+		String packageName = getCurrentResourceName();
+		String pkg[] = packageName.split(Pattern.quote("."));
+        if (pkg.length == 1)
+            packageName = pkg[0];
+        else
+            packageName = pkg[1];
+        String path = packageName + "/dependency/config";
+		return packagePath + path;
 	}
 
 	public Properties getMyProperties() throws SnippetException {
-		Properties props = PropertyManager.getProperties(this, getCurrentResource() + ".properties");
+		Properties props = PropertyManager.getProperties(this, getCurrentResourceName() + ".properties");
 		return props;
 	}
 
@@ -741,7 +881,7 @@ public class DataPipeline {
 	}
 
 	public void logException(Throwable exception) {
-		new SnippetException(this, "Eexception reported by " + getCurrentResource(), new Exception(exception));
+		new SnippetException(this, "Eexception reported by " + getCurrentResourceName(), new Exception(exception));
 	}
 
 	public void logDataPipeline() {
@@ -756,15 +896,39 @@ public class DataPipeline {
 		if (level == null)
 			level = Level.INFO;
 		String resource=callingResource;
+		
 		if(resource==null)
 			resource=currentResource;
 		String log = ServiceUtils.getFormattedLogLine(getCorrelationId(), resource, msg);
+		
+		if(Level.INFO.intLevel()==level.intLevel()) {
+			rp.getTenant().logInfo(resource, log);
+		}else if(Level.WARN.intLevel()==level.intLevel()) {
+			rp.getTenant().logWarn(resource, log);
+		}else if(Level.DEBUG.intLevel()==level.intLevel()) {
+			rp.getTenant().logDebug(resource, log);
+		}else if(Level.ERROR.intLevel()==level.intLevel()) {
+			rp.getTenant().logError(resource, log);
+		}else if(Level.TRACE.intLevel()==level.intLevel()) {
+			rp.getTenant().logTrace(resource, log);
+		}
 		LOGGER.log(level, log);
 	}
 
 	public String getGlobalConfig(String key) throws SnippetException {
 		Properties props = PropertyManager.getProperties(this, "global.properties");
-		return props.getProperty(key);
+		String expressionValue=props.getProperty(key);
+		if(key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
+			expressionValue=expressionValue.replace("[#]","");
+			String privKey=getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if(key!=null)
+				try {
+					expressionValue=Security.getNormalString(expressionValue,privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this, "Could not decrypt property '"+key+"' for '"+rp.getTenant()+"'", e);
+				}
+		}
+		return expressionValue;
 	}
 
 	public int getStackIndex() {
@@ -790,14 +954,32 @@ public class DataPipeline {
 	}
 
 	public String getRemoteIpAddr() {
+		
+		if(!rp.isExchangeInitialized())
+			return "localhost";
 		try {
 			HttpServerExchange httpServerExchange = rp.getExchange();
 			if (null != httpServerExchange) {
 				return httpServerExchange.getHostAndPort();
 			}
 		} catch (SnippetException e) {
-			e.printStackTrace();
+			ServiceUtils.printException(this,"Exchange not initialized..", e);
 		}
 		return "localhost";
+	}
+
+	public String getCurrentURI() {
+
+		if(!rp.isExchangeInitialized())
+			return "http://localhost";
+		try {
+			HttpServerExchange httpServerExchange = rp.getExchange();
+			if (null != httpServerExchange) {
+				return String.format("%s://%s", httpServerExchange.getRequestScheme(), httpServerExchange.getHostAndPort());
+			}
+		} catch (SnippetException e) {
+			ServiceUtils.printException(this,"Exchange not initialized..", e);
+		}
+		return "http://localhost";
 	}
 }

@@ -8,12 +8,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.net.Authenticator;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.PasswordAuthentication;
-import java.net.URI;
-import java.net.URL;
+import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
@@ -22,14 +17,19 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.io.IOUtils;
 
 import com.eka.middleware.pub.util.auth.aws.AWS4SignerForChunkedUpload;
+import org.apache.commons.lang3.StringUtils;
 
 public class Client {
 	static HostnameVerifier allHostsValid = null;
@@ -59,7 +59,7 @@ public class Client {
             throw new RuntimeException("Unable to parse service endpoint: " + e.getMessage());
         }
         
-        HttpURLConnection conn=HttpUtils.createHttpConnection(endpointUrl, method, headers);
+        HttpURLConnection conn = HttpUtils.createHttpConnection(endpointUrl, method, headers);
         
         if (formData != null) {
         	payloadBytes=getFormData(formData, headers);
@@ -109,18 +109,150 @@ public class Client {
 	        rd.close();
 	        body= response.toString();
         }
+
+		Map<String, List<String>> responseHeaderFields = conn.getHeaderFields();
+
+		Map<String, String> responseHeaders = Maps.newHashMap();
+
+		for (Map.Entry<String, List<String>> responseHeaderField : responseHeaderFields.entrySet()) {
+			if (null != responseHeaderField.getKey()) {
+				responseHeaders.put(responseHeaderField.getKey(), StringUtils.join(responseHeaderField.getValue(), ","));
+			}
+
+		}
 		
 		if ("bytes".equals(contentType)) {
 			respMap.put("bytes", body.getBytes());
 		} else
-			respMap.put("respPayload", body);
+			respMap.put("respPayload", body + "");
 		
 		respMap.put("statusCode",conn.getResponseCode()+"");
 		respMap.put("message",conn.getResponseMessage());
-		
+		respMap.put("responseHeaders", responseHeaders);
+
 		conn.disconnect();
 		
 		return respMap;
+	}
+
+	/**
+	 * @param url
+	 * @param method
+	 * @param formData
+	 * @param reqHeaders
+	 * @param sslValidation
+	 * @return
+	 * @throws Exception
+	 */
+	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
+											 Map<String, String> reqHeaders, boolean sslValidation) throws Exception {
+		return invoke(url, method, formData, reqHeaders, null, null, new HashMap<>(), sslValidation);
+	}
+
+	public static Map<String, Object> invoke(String format, String method, Map<String, Object> formData, Map<String, String> reqHeaders, String reqPayload, boolean b) throws Exception {
+		return invoke(format, method, formData, reqHeaders, null, null, new HashMap<>(), b);
+	}
+
+	/**
+	 * @param url
+	 * @param method
+	 * @param formData
+	 * @param reqHeaders
+	 * @param sslValidation
+	 * @return
+	 * @throws Exception
+	 */
+	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
+											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, boolean sslValidation) throws Exception {
+		HttpRequest.Builder builder = HttpRequest.newBuilder();
+
+		String queries = StringUtils.join(queryParameters.entrySet().parallelStream().map(m -> String.format("%s=%s", m.getKey(), m.getValue())).collect(Collectors.toSet()), "&");
+
+		if (StringUtils.isNotBlank(queries)) {
+			builder.uri(URI.create(url + "?" + queries));
+		} else {
+			builder.uri(URI.create(url));
+		}
+
+
+		HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
+
+		if (null != formData) {
+			boolean containedBinary = formData.entrySet().stream().anyMatch(f -> f.getValue() instanceof byte[]);
+
+			if (!containedBinary) {
+				String form = formData.entrySet()
+						.stream()
+						.flatMap(e -> {
+
+							List<String> list = new ArrayList<>();
+							if (e.getValue() instanceof Collection) {
+
+								ArrayList<?> arrayList = (ArrayList<?>) e.getValue();
+
+								list.addAll(arrayList.stream().map(m -> e.getKey() + "=" + URLEncoder.encode(m.toString(), StandardCharsets.UTF_8)).
+										map(m -> m.toString()).collect(Collectors.toList()));
+
+							} else {
+								list.add(e.getKey() + "=" + URLEncoder.encode((String) e.getValue(), StandardCharsets.UTF_8));
+							}
+							return list.stream();
+						})
+						.collect(Collectors.joining("&"));
+				bodyPublisher = HttpRequest.BodyPublishers.ofString(form);
+			} else {
+				bodyPublisher = Client.addFormData(formData, reqHeaders);
+			}
+		} else if (StringUtils.isNotBlank(payload)) {
+			bodyPublisher = HttpRequest.BodyPublishers.ofString(payload);
+		} else if (null != inputStream) {
+			bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(() -> inputStream);
+		}
+
+		builder.method(method, bodyPublisher);
+
+		reqHeaders.entrySet().stream().forEach(map -> {
+			builder.header(map.getKey(), map.getValue());
+		});
+
+		HttpClient.Builder httpClientBuilder = HttpClient.newBuilder();
+		if (!sslValidation) {
+			httpClientBuilder.sslContext(unsecureCommunication());
+		}
+
+		HttpResponse<String> response = httpClientBuilder.build()
+				.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+
+		Map<String, Object> responseMap = Maps.newHashMap();
+		responseMap.put("statusCode", response.statusCode());
+		responseMap.put("respPayload", response.body());
+		responseMap.put("respHeaders", response.headers().map());
+
+		return responseMap;
+	}
+
+	private static SSLContext unsecureCommunication() {
+		TrustManager[] trustAllCerts = new TrustManager[]{
+				new X509TrustManager() {
+					public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+						return null;
+					}
+					public void checkClientTrusted(
+							java.security.cert.X509Certificate[] certs, String authType) {
+					}
+					public void checkServerTrusted(
+							java.security.cert.X509Certificate[] certs, String authType) {
+					}
+				}
+		};
+
+		try {
+			SSLContext sc = SSLContext.getInstance("SSL");
+			sc.init(null, trustAllCerts, new java.security.SecureRandom());
+			return sc;
+		} catch (Exception e) {
+		}
+		return null;
 	}
 
 	private static void addBasicAuth(HttpClient.Builder clientBuilder, String username, String password) {
@@ -202,5 +334,6 @@ public class Client {
 		baos.close();
 		return bytes;
 	}
-	
+
+
 }
