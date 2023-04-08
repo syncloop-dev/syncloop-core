@@ -1,6 +1,8 @@
 package com.eka.middleware.pub.util.document;
 
 import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -19,9 +21,9 @@ public class Function {
 	public static final Logger LOGGER = LogManager.getLogger(Function.class);
 	public static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
 
-	public static boolean isRequired(DataPipeline dp, String pointer, Map<String, String> data)
+	public static boolean isRequired(DataPipeline dp, String pointer, Map<String, String> data, Object value)
 			throws SnippetException {
-		Object obj = dp.getValueByPointer(pointer);
+		Object obj = value;
 		if (data == null)
 			return false;
 		Boolean isRequired = Boolean.parseBoolean(data.get("isRequiredField"));
@@ -35,11 +37,10 @@ public class Function {
 		return isRequired;
 	}
 
-	public static void validate(DataPipeline dp, String pointer, String typePath, Map<String, String> data)
+	public static void validate(DataPipeline dp, String pointer, String typePath, Map<String, String> data, Object object)
 			throws SnippetException {
 		try {
-			Object object = dp.getValueByPointer(pointer);
-			boolean required = isRequired(dp, pointer, data);
+			boolean required = isRequired(dp, pointer, data,object);
 			if (object == null)
 				return;
 
@@ -85,7 +86,7 @@ public class Function {
 				dp.log("Pointer : " + pointer + " :" + response + " : " + description, Level.WARN);
 
 		} catch (Exception e) {
-			ServiceUtils.printException("Exception while validating "+pointer+" of type "+typePath, e);
+			ServiceUtils.printException(dp,"Exception while validating "+pointer+" of type "+typePath, e);
 			throw new SnippetException(dp, "Exception while validating "+pointer+" of type "+typePath, e);
 		}
 
@@ -207,7 +208,7 @@ public class Function {
 			DateTimeFormatter dateformatter = DateTimeFormatter.ofPattern(dateFormat);// "yyyy-MM-dd HH:mm:ss z");
 			ZonedDateTime inDateTime = null;
 			try {
-				inDateTime = ZonedDateTime.parse(value.trim(), dateformatter);
+				inDateTime = getZonedDateTime(value.trim(), dateformatter);
 			} catch (Exception e) {
 				dp.setValueByPointer(pointer, null, typePath);
 				return "Datetime format incorrect: " + e.getMessage();
@@ -216,13 +217,13 @@ public class Function {
 			ZonedDateTime startDateTime = null;
 			ZonedDateTime endDateTime = null;
 			if (startDate != null) {
-				startDateTime = ZonedDateTime.parse(startDate, formatter);
+				startDateTime = getZonedDateTime(startDate, formatter);
 				if (inDateTime.isBefore(startDateTime))
 					return "Datetime before " + startDateTime + " is not allowed";
 			}
 
 			if (endDate != null) {
-				endDateTime = ZonedDateTime.parse(endDate, formatter);
+				endDateTime = getZonedDateTime(endDate, formatter);
 
 				if (startDateTime != null && endDateTime.isAfter(startDateTime))
 					return "Start date validation range is not mentioned correctly. End date should not come after start date";
@@ -232,7 +233,7 @@ public class Function {
 			}
 
 			if (toDateFormat != null) {
-				DateTimeFormatter toDateFormatter = DateTimeFormatter.ofPattern(dateFormat);
+				DateTimeFormatter toDateFormatter = DateTimeFormatter.ofPattern(toDateFormat);
 				String outDate = inDateTime.format(toDateFormatter);
 				dp.setValueByPointer(pointer, outDate, typePath);
 			}
@@ -240,5 +241,17 @@ public class Function {
 		}
 
 		return null;
+	}
+	
+	private static ZonedDateTime getZonedDateTime(String dateValue,DateTimeFormatter dtf) {
+		LocalDate date = LocalDate.parse(dateValue, dtf);
+		ZonedDateTime startDateTime = date.atStartOfDay(ZoneId.systemDefault());
+		return startDateTime;
+	}
+	
+	public static void main(String[] args) {
+		DateTimeFormatter dateformatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");// "yyyy-MM-dd HH:mm:ss z");
+		getZonedDateTime("2000-01-01", dateformatter);
+		//System.out.println();
 	}
 }

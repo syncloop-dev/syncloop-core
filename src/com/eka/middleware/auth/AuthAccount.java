@@ -5,9 +5,15 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Maps;
 import io.undertow.security.idm.Account;
 
 public class AuthAccount implements Account{
+	
+	public static final String STATIC_ADMIN_GROUP="administrators";
+	public static final String STATIC_DEVELOPER_GROUP="developers";
+	public static final String STATIC_RND_GROUP="rnd";
+	public static final String STATIC_DEFAULT_GROUP="default";
 	
 	public String getUserId() {
 		return userId;
@@ -16,7 +22,7 @@ public class AuthAccount implements Account{
 	private final String userId;
 	private Map<String, Object> profile;
 	
-	AuthAccount(String userId){
+	public AuthAccount(String userId){
 		this.userId=userId;
 	}
 
@@ -41,6 +47,13 @@ public class AuthAccount implements Account{
 
 	public Map<String, Object> getAuthProfile() {
 		return profile;
+	}
+
+	public void addProfileAttribute(String name, Object value) {
+		if (null == profile) {
+			profile = Maps.newHashMap();
+		}
+		profile.put(name, value);
 	}
 
 	public void setProfile(Map<String, Object> profile) {

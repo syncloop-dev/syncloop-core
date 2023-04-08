@@ -11,17 +11,33 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import java.util.Properties;
+import com.eka.middleware.service.PropertyManager;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import com.eka.middleware.heap.CacheManager;//-----reset fix
 
 public final class #className {
 
-	static JsonObject mainSqlJsonObject=null;
+	private static final Map<String,JsonObject> mainSqlJsonObjectMap=new ConcurrentHashMap<String,JsonObject>();
+	private static long timeout=0;//-----reset fix
+    private static int resetServiceInMS=5000;//-----reset fix
 	static final String syncBlock=new String("sync");
 	public static final void main(DataPipeline dataPipeline) throws SnippetException{
 		try{
-		  if(mainSqlJsonObject==null)
+		    Map<String, Object> chache=CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());//-----reset fix
+        	Boolean resetEnabled=(Boolean)chache.get("ekamw.promote.runtime.service.reload");//-----reset fix
+        	if(timeout<System.currentTimeMillis() && (resetEnabled==null || resetEnabled==true))//-----reset fix
+        		timeout=0;//-----reset fix
+		  JsonObject mainSqlJsonObject=mainSqlJsonObjectMap.get(dataPipeline.rp.getTenant().id);
+		  if(mainSqlJsonObject==null || timeout==0)//-----reset fix
 			synchronized(syncBlock){
-			  String location = ServiceUtils.getPackagesPath();
+			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
+			  if(mainSqlJsonObject==null || timeout==0){ //-----reset fix
+			      timeout=System.currentTimeMillis()+resetServiceInMS;  //-----reset fix
+				  mainSqlJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+				  mainSqlJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainSqlJsonObject);
+			  }
 			  if(mainSqlJsonObject==null)
 				  mainSqlJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
 			}
@@ -31,9 +47,9 @@ public final class #className {
 		}catch(Throwable e) {
 			dataPipeline.clear();
 			dataPipeline.put("error", e.getMessage());
-			dataPipeline.setResponseStatus(500);
+			//dataPipeline.setResponseStatus(500);
 			dataPipeline.put("status", "SQL Service error");
-			new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
+			throw new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
 		}
 	}
 }

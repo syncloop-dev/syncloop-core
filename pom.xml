@@ -10,9 +10,9 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<java.version>17</java.version>
-		<pac4j.version>5.4.5</pac4j.version>
-		<undertow-pac4j.version>5.0.0</undertow-pac4j.version>
-		<undertow.version>2.2.19.Final</undertow.version>
+		<pac4j.version>5.6.0</pac4j.version>
+		<undertow-pac4j.version>5.0.1</undertow-pac4j.version>
+		<undertow.version>2.3.0.Beta1</undertow.version>
 	</properties>
 	<build>
 		<finalName>ekamw</finalName>
@@ -123,7 +123,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.12.0</version>
+			<version>2.13.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
@@ -287,6 +287,57 @@
 			<version>2.11.1</version>
 		</dependency>
 
-	</dependencies>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt</artifactId>
+			<version>0.9.1</version>
+		</dependency>
 
+
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-layout-template-json</artifactId>
+			<version>2.18.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-undertow-adapter 
+			<dependency> <groupId>org.keycloak</groupId> <artifactId>keycloak-undertow-adapter</artifactId> 
+			<version>19.0.3</version> </dependency> https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api 
+			<dependency> <groupId>javax.servlet</groupId> <artifactId>javax.servlet-api</artifactId> 
+			<version>4.0.1</version> <scope>provided</scope> </dependency> https://mvnrepository.com/artifact/org.pytorch/pytorch_java_only 
+			<dependency> <groupId>org.pytorch</groupId> <artifactId>pytorch_java_only</artifactId> 
+			<version>1.12.2</version> <scope>provided</scope> </dependency> -->
+		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-dbcp2 -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.9.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.5</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.swagger.core.v3</groupId>
+			<artifactId>swagger-jaxrs2</artifactId>
+			<version>2.2.7</version>
+		</dependency>
+		<dependency>
+			<groupId>io.swagger.core.v3</groupId>
+			<artifactId>swagger-jaxrs2-servlet-initializer</artifactId>
+			<version>2.2.7</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.26</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+	</dependencies>
 </project>

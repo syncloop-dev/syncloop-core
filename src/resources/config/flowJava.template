@@ -10,12 +10,18 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+import com.eka.middleware.service.PropertyManager;
 import java.util.*;
 import java.net.*;
+import java.util.concurrent.ConcurrentHashMap;
+import io.undertow.util.HttpString;
+import com.eka.middleware.heap.CacheManager;//-----reset fix
 
 public final class #className {
 
-	static JsonObject mainflowJsonObject=null;
+	private static final Map<String,JsonObject> mainflowJsonObjectMap=new ConcurrentHashMap<String,JsonObject>();
+	private static long timeout=0;//-----reset fix
+	private static int resetServiceInMS=5000;//-----reset fix
 	static final String syncBlock=new String("sync");
 	public static final void main(DataPipeline dataPipeline) throws SnippetException{
 		String fqn="#package.#className";
@@ -39,22 +45,29 @@ public final class #className {
 	    	startTime=System.currentTimeMillis();
 	    }
 	    
-	    
+	    Map<String, Object> chache=CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());//-----reset fix
+		Boolean resetEnabled=(Boolean)chache.get("ekamw.promote.runtime.service.reload");//-----reset fix
+		if(timeout<System.currentTimeMillis() && (resetEnabled==null || resetEnabled==true))//-----reset fix
+			timeout=0;//-----reset fix
 		try{
-		  if(mainflowJsonObject==null)
+		  JsonObject mainflowJsonObject=mainflowJsonObjectMap.get(dataPipeline.rp.getTenant().id);
+		  if(mainflowJsonObject==null || timeout==0)//-----reset fix
 			synchronized(syncBlock){
-			  String location = ServiceUtils.getPackagesPath();
+			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
 			  String flowRef = location+"#flowRef";
-			  if(mainflowJsonObject==null)
+			  if(mainflowJsonObject==null || timeout==0){ //-----reset fix
+			  	  timeout=System.currentTimeMillis()+resetServiceInMS;  //-----reset fix
 				  mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+				  mainflowJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainflowJsonObject);
+			  }
 			}
 		  FlowResolver.execute(dataPipeline,mainflowJsonObject);
 		}catch(Throwable e) {
 			dataPipeline.clear();
 			dataPipeline.put("error", e.getMessage());
-			dataPipeline.setResponseStatus(500);
+			//dataPipeline.setResponseStatus(500);
 			dataPipeline.put("status", "Service error");
-			new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
+			throw new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
 		}finally{
 			
 			if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
@@ -96,6 +109,7 @@ public final class #className {
 				dataPipeline.applyAsync("packages.middleware.pub.service.auditLogging");
 				dataPipeline.drop("asyncInputDoc");
 				dataPipeline.drop("asyncOutputDoc");
+				dataPipeline.rp.getExchange().getResponseHeaders().put(new HttpString("CORRELATION-ID"), dataPipeline.getCorrelationId());
 			}
 		}
 	}

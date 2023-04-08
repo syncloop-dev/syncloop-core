@@ -4,22 +4,24 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
-import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
-import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
-import com.eka.middleware.template.SystemException;
+import com.eka.middleware.template.Tenant;
+import com.mongodb.diagnostics.logging.Logger;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
@@ -35,7 +37,11 @@ public class RuntimePipeline {
 	private boolean isDestroyed = false;
 	private Thread currentThread;
 	private BufferedWriter bw = null;
-
+	private Tenant tenant=null;
+	private String user=null;
+	private Date createDate=null;
+	public final Map<String, Object> payload = new ConcurrentHashMap<String, Object>();
+	
 	public boolean isExchangeInitialized() {
 		if(exchange==null)
 			return false;
@@ -51,10 +57,11 @@ public class RuntimePipeline {
 	}
 
 	public void writeSnapshot(String resource, String json) {
+		String packagePath=PropertyManager.getPackagePath(getTenant());
 		try {
 			if (bw == null) {
 				String name = sessionId + ".snap";
-				File file = new File(ServiceManager.packagePath + "/snapshots/" + resource + "/" + name);
+				File file = new File(packagePath + "/snapshots/" + resource + "/" + name);
 				file.getParentFile().mkdirs();
 				file.createNewFile();
 				BufferedWriter bufferedWriter = Files.newBufferedWriter(Path.of(file.toURI()));
@@ -64,8 +71,15 @@ public class RuntimePipeline {
 			bw.write(json+",");
 			bw.newLine();
 		} catch (Exception e) {
-			ServiceUtils.printException("Exception while saving snapshot.", e);
+			ServiceUtils.printException(getTenant(),"Exception while saving snapshot.", e);
 		}
+	}
+	
+	public void redirectRequest(String path) throws SnippetException {
+		HttpServerExchange exchange=getExchange();
+		if(exchange==null)
+			return;
+		ServiceUtils.redirectRequest(exchange, path);
 	}
 
 	public boolean isDestroyed() {
@@ -82,18 +96,32 @@ public class RuntimePipeline {
 		return sessionId;
 	}
 
-	public RuntimePipeline(String requestId, String correlationId, final HttpServerExchange exchange, String resource,
+	public RuntimePipeline(Tenant tenant, String requestId, String correlationId, final HttpServerExchange exchange, String resource,
 						   String urlPath) {
+		//Securitycont
+		
+		
+		this.tenant=tenant;
 		currentThread = Thread.currentThread();
 		sessionId = requestId;
 		this.exchange = exchange;
 		if (correlationId == null)
 			correlationId = requestId;
 		this.correlationId = correlationId;
+		setCreateDate(new Date());
+		try {
+			setUser(getCurrentLoggedInUserProfile().getAttribute("email")+" | "+getCurrentLoggedInUserProfile().getUsername()+" | "+getCurrentLoggedInUserProfile().getId());
+		} catch (Exception e) {
+			setUser("System");
+		}
 		dataPipeLine = new DataPipeline(this, resource, urlPath);
 	}
 
 	public UserProfile getCurrentLoggedInUserProfile() throws SnippetException {
+		
+		if(!isExchangeInitialized())
+			return UserProfileManager.SYSTEM_PROFILE;
+		
 		final SecurityContext context = getExchange().getSecurityContext();
 		if (context != null)
 			return ((Pac4jAccount)context.getAuthenticatedAccount()).getProfile();
@@ -129,15 +157,17 @@ public class RuntimePipeline {
 		}
 	}
 
-	public static RuntimePipeline create(String requestId, String correlationId, final HttpServerExchange exchange,
+	public static RuntimePipeline create(Tenant tenant,String requestId, String correlationId, final HttpServerExchange exchange,
 										 String resource, String urlPath) {
 		// String md5=ServiceUtils.generateMD5(requestId+""+System.nanoTime());
 		RuntimePipeline rp = pipelines.get(requestId);
 		if (rp == null) {
-			rp = new RuntimePipeline(requestId, correlationId, exchange, resource, urlPath);
+			rp = new RuntimePipeline(tenant,requestId, correlationId, exchange, resource, urlPath);
 			pipelines.put(requestId, rp);
-		} else
-			rp = create(requestId, correlationId, exchange, resource, urlPath);
+		}else {
+			ServiceUtils.printException(tenant, "Unable to create unique runtime pipeline", null);
+			return null;
+		}
 		return rp;
 	}
 
@@ -146,8 +176,12 @@ public class RuntimePipeline {
 		return rp;
 	}
 
-	public List<RuntimePipeline> listActivePipelines() {
-		List<RuntimePipeline> list = Arrays.asList((RuntimePipeline[]) pipelines.entrySet().toArray());
+	public static List<RuntimePipeline> listActivePipelines() {
+		List<RuntimePipeline> list = new ArrayList<>();
+		Set<Entry<String, RuntimePipeline>>  rtSet=pipelines.entrySet();
+		for (Entry<String, RuntimePipeline> entry : rtSet) {
+			list.add(entry.getValue());
+		}
 		return list;
 	}
 
@@ -158,7 +192,7 @@ public class RuntimePipeline {
 			bw.close();
 			bw=null;
 		}catch (Exception e) {
-			ServiceUtils.printException("Exception while closing snapshot file.", e);
+			ServiceUtils.printException(getTenant(),"Exception while closing snapshot file.", e);
 		}
 		RuntimePipeline rtp = pipelines.get(sessionId);
 		ScriptEngineContextManager.removeContext(dataPipeLine.getUniqueThreadName());
@@ -178,5 +212,25 @@ public class RuntimePipeline {
 		return correlationId;
 	}
 
-	public final Map<String, Object> payload = new ConcurrentHashMap<String, Object>();
+	public Tenant getTenant() {
+		return tenant;
+	}
+
+	public Date getCreateDate() {
+		return createDate;
+	}
+
+	public void setCreateDate(Date createDate) {
+		this.createDate = createDate;
+	}
+
+	public String getUser() {
+		return user;
+	}
+
+	public void setUser(String user) {
+		this.user = user;
+	}
+
+	
 }

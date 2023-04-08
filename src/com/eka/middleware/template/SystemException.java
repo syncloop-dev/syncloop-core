@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.eka.middleware.server.MiddlewareServer;
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 
 public class SystemException extends Exception {
@@ -19,7 +20,7 @@ public class SystemException extends Exception {
 		super(e);
 		if (errorMap.size()==0) {
 			try {
-				String errorFilePath = MiddlewareServer.getConfigFolderPath() + "/errors.json";
+				String errorFilePath = PropertyManager.getConfigFolderPath() + "errors.json";
 				URL url = new URL(errorFilePath);
 				File file = new File(url.toURI());
 				byte bytes[];
