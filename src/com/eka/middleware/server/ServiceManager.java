@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
@@ -22,23 +23,25 @@ public class ServiceManager {
 
 	private static final Map<String, Class> classMap = new ConcurrentHashMap<String, Class>();
 
-//	private static final Map<String, Long> lastModified = new ConcurrentHashMap<String, Long>();
+	private static final Map<String, Long> lastModified = new ConcurrentHashMap<String, Long>();
 
 	// public static final String packagePath =
 	// ServiceUtils.getServerProperty("middleware.server.home.dir");
 
-	public static Class compileJava(final String fqn, final DataPipeline dataPipeLine) throws Throwable {
-
+	private static String getClassFilePath(final String fqn, final DataPipeline dataPipeLine) {
 		String expandFQN[] = fqn.split(Pattern.quote("."));
 		String funcName = expandFQN[expandFQN.length - 1];
 		String className = expandFQN[expandFQN.length - 2];
 		String classFile = fqn.replace(".", "/").replace(className + "/" + funcName, className + ".java");
-		String fqnClass = classFile.replace(".java", "").replace("/", ".");
-		final String packagePath = PropertyManager.getPackagePath(dataPipeLine.rp.getTenant());
-		final String tid = dataPipeLine.rp.getTenant().id;
+		// String fqnClass = classFile.replace(".java", "").replace("/", ".");
+		return classFile;
+	}
+
+	private static File getTenantFile(final DataPipeline dataPipeLine, String classFile) throws SnippetException {
 		URI path = null;
+		final String packagePath = PropertyManager.getPackagePath(dataPipeLine.rp.getTenant());
 		try {
-			// dataPipeLine.log((packagePath + classFile).replace("//", "/"));
+
 			File uriFile = new File((packagePath + classFile).replace("//", "/"));
 			path = uriFile.toURI();
 
@@ -51,9 +54,23 @@ public class ServiceManager {
 			throw new SnippetException(dataPipeLine, "Resource not found\n" + file.getAbsolutePath(),
 					new Exception("Resource not found\n" + file.getAbsolutePath()));
 		}
+
+		return file;
+	}
+
+	public static Class compileJava(final String fqn, final DataPipeline dataPipeLine) throws Throwable {
+
+		String classFile = getClassFilePath(fqn, dataPipeLine);
+		String fqnClass = classFile.replace(".java", "").replace("/", ".");
+
+		final String tid = dataPipeLine.rp.getTenant().id;
+
+		File file = getTenantFile(dataPipeLine, classFile);
+
 		String classID = tid + "-" + fqn;// + "." + lastChangedTime;
 		Class cls = classMap.get(classID);
 		cls = RTCompile.getClassRef(fqnClass, file.getAbsolutePath(), true, dataPipeLine);
+		lastModified.put(classID, file.lastModified());
 		classMap.put(classID, cls);
 		return cls;
 	}
@@ -70,22 +87,30 @@ public class ServiceManager {
 		} else
 			classMap.remove(classID);
 	}
-	private static Object obj=new Object();
+
+	private static Object obj = new Object();
+
 	public static void invokeJavaMethod(final String fqn, final DataPipeline dataPipeLine) throws SnippetException {
-//		Long lastChangedTimeSaved = lastModified.get(fqn);
-//		long lastChangedTime = file.lastModified();
+		String classFile = getClassFilePath(fqn, dataPipeLine);
+		File file = getTenantFile(dataPipeLine, classFile);
+		long lastChangedTime = file.lastModified();
 		final String tid = dataPipeLine.rp.getTenant().id;
 		String classID = tid + "-" + fqn;// + "." + lastChangedTime;
-
+		Long lastChangedTimeSaved = lastModified.get(classID);
 		Class cls = classMap.get(classID);
-		if (cls == null)
+		Map<String, Object> chache=CacheManager.getCacheAsMap(dataPipeLine.rp.getTenant());
+		Boolean resetEnabled=(Boolean)chache.get("ekamw.promote.runtime.service.reload");
+		if (cls == null || (lastChangedTimeSaved==null || (lastChangedTimeSaved < lastChangedTime && (resetEnabled==null || resetEnabled))))
 			synchronized (obj) {
-				try {
-					ScriptEngineContextManager.clear();
-					cls = compileJava(fqn, dataPipeLine);
-				} catch (Throwable e) {
-					e.printStackTrace();
-					throw new SnippetException(dataPipeLine, "Error during compilation", new Exception(e));
+				lastChangedTimeSaved = lastModified.get(classID);
+				if (lastChangedTimeSaved==null || lastChangedTimeSaved < lastChangedTime) {
+					try {
+						ScriptEngineContextManager.clear();
+						cls = compileJava(fqn, dataPipeLine);
+					} catch (Throwable e) {
+						e.printStackTrace();
+						throw new SnippetException(dataPipeLine, "Error during compilation", new Exception(e));
+					}
 				}
 			}
 		String expandFQN[] = fqn.split(Pattern.quote("."));
@@ -95,7 +120,6 @@ public class ServiceManager {
 			Method method = cls.getMethod(funcName, DataPipeline.class);// cls.getMethods();// ;
 			if (method != null) {
 				try {
-					System.out.println(method);
 					method.invoke(null, dataPipeLine);
 				} catch (InvocationTargetException e) {
 					Exception ex = null;
