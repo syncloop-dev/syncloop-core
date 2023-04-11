@@ -474,8 +474,7 @@ public class ImportSwagger {
 		String code = entry.getKey();
 		ApiResponse apiResponse = entry.getValue();
 		Map<String, Object> switchContentTypeMapping = createSwitch(contentTypeSwitch,"switch","SWITCH", "Checking content type for response");
-		addData(switchContentTypeMapping, "switch", "respHeaders/Content-Type");
-
+		addData(switchContentTypeMapping, "switch", "respHeaders/content-type");
 
 		List<Object> contentTypeCases = Lists.newArrayList();
 		Content content = apiResponse.getContent();
@@ -522,7 +521,7 @@ public class ImportSwagger {
 		} else {
 			{
 				Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases,"CASE", "Handling JSON response");
-				addData(sequenceContentTypeMapping, "case", "application/json");
+				addData(sequenceContentTypeMapping, "case", "#regex:.*json.*");
 
 				List<Object> jsonConversionCase = Lists.newArrayList();
 				createVariables(intiMapStep, "rootName_Error", "Error", null, "string");
@@ -536,7 +535,7 @@ public class ImportSwagger {
 			}
 			{
 				Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases,"CASE", "Handling XML response");
-				addData(sequenceContentTypeMapping, "case", "application/xml");
+				addData(sequenceContentTypeMapping, "case", "#regex:.*xml.*");
 
 				List<Object> jsonConversionCase = Lists.newArrayList();
 				Map<String, Object> invokeStepToJson = createInvokeStep(jsonConversionCase,"service","packages/middleware/pub/xml/fromXML", "Initialize");
