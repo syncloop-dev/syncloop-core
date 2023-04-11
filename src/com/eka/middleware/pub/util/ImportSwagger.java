@@ -846,23 +846,14 @@ public class ImportSwagger {
 
 	private static List<Object> getBody(Schema bodySchema, OpenAPI swagger) {
 
-		if (null == bodySchema) {
-			return null;
-		}
-
 		String ref = bodySchema.get$ref();
 		String name = bodySchema.getName();
 		String type = bodySchema.getType();
 		if (ref != null) {
 			// bodySchema=bodySchema.raw$ref(ref);
 			name = ref.substring(ref.lastIndexOf("/") + 1);
-			if (null != swagger.getComponents()) {
-				bodySchema = swagger.getComponents().getSchemas().get(name);
-				type = bodySchema.getType();
-			} else {
-				type = "object";
-			}
-
+			bodySchema = swagger.getComponents().getSchemas().get(name);
+			type = bodySchema.getType();
 		}
 		List<Object> body = new ArrayList();
 		// String name = bodySchema.getName();
@@ -893,8 +884,15 @@ public class ImportSwagger {
 				break;
 			}
 			case "OBJECT": {
-
+				param.put("type", "document");
 				Map<String, Schema> addPropMap = bodySchema.getProperties();
+				Schema addProp = (Schema) bodySchema.getAdditionalProperties();
+				if (addProp != null) {
+					String subType = addProp.getType();
+					if (subType != null)
+						param.put("type", subType);
+					break;
+				}
 				if (addPropMap != null) {
 					Schema subType = addPropMap.get("type");
 					if (subType != null) {
@@ -902,39 +900,20 @@ public class ImportSwagger {
 						break;
 					}
 				}
-
-				Object object = bodySchema.getAdditionalProperties();
-				if (object instanceof Schema) {
-					param.put("type", "document");
-
-					Schema addProp = (Schema) object;
-					if (addProp != null) {
-						String subType = addProp.getType();
-						if (subType != null)
-							param.put("type", subType);
-						break;
+				if (bodySchema.getProperties() != null && bodySchema.getProperties().size() > 0) {
+					Set<Entry<String, Schema>> children = bodySchema.getProperties().entrySet();
+					List<Object> childParams = new ArrayList();
+					addChildren(param, childParams);
+					for (Entry<String, Schema> child : children) {
+						Schema childSchema = child.getValue();
+						childSchema.setName(child.getKey());
+						List<Object> list = getBody(childSchema, swagger);
+						if (list != null && list.size() > 0)
+							childParams.addAll(list);
 					}
-
-					if (bodySchema.getProperties() != null && bodySchema.getProperties().size() > 0) {
-						Set<Entry<String, Schema>> children = bodySchema.getProperties().entrySet();
-						List<Object> childParams = new ArrayList();
-						addChildren(param, childParams);
-						for (Entry<String, Schema> child : children) {
-							Schema childSchema = child.getValue();
-							childSchema.setName(child.getKey());
-							List<Object> list = getBody(childSchema, swagger);
-							if (list != null && list.size() > 0)
-								childParams.addAll(list);
-						}
-						if (childParams.size() == 0)
-							param.remove("children");
-					}
-				} else if (null != object) {
-					param.put("type", object.toString());
-				} else {
-					param.put("type", "object");
+					if (childParams.size() == 0)
+						param.remove("children");
 				}
-
 				break;
 			}
 			case "ARRAY": {
@@ -1013,6 +992,9 @@ public class ImportSwagger {
 		return document;
 	}
 	public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
+		if ( true ) {
+			return ;
+		}
 		String flowJavaTemplatePath= MiddlewareServer.getConfigFolderPath()+"flowJava.template";
 		String className=file.getName().replace(".flow", "");
 		String fullCode="";
