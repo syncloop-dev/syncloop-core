@@ -117,6 +117,7 @@ public class Client {
 		for (Map.Entry<String, List<String>> responseHeaderField : responseHeaderFields.entrySet()) {
 			if (null != responseHeaderField.getKey()) {
 				responseHeaders.put(responseHeaderField.getKey(), StringUtils.join(responseHeaderField.getValue(), ","));
+				responseHeaders.put(responseHeaderField.getKey().toLowerCase(), StringUtils.join(responseHeaderField.getValue(), ","));
 			}
 
 		}
