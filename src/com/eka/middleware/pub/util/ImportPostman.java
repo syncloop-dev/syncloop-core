@@ -893,7 +893,7 @@ public class ImportPostman {
         String code = postmanItemResponse.getCode() + "";
 
         Map<String, Object> switchContentTypeMapping = createSwitch(contentTypeSwitch, "switch", "SWITCH", "Checking content type for response");
-        addData(switchContentTypeMapping, "switch", "respHeaders/Content-Type");
+        addData(switchContentTypeMapping, "switch", "respHeaders/content-type");
 
         List<Object> contentTypeCases = com.beust.jcommander.internal.Lists.newArrayList();
         String body = postmanItemResponse.getBody();
@@ -901,7 +901,7 @@ public class ImportPostman {
         if (null != body) {
             {
                 Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases, "CASE", "Handling JSON response");
-                addData(sequenceContentTypeMapping, "case", "application/json");
+                addData(sequenceContentTypeMapping, "case", "#regex:.*json.*");
 
                 List<Object> jsonConversionCase = com.beust.jcommander.internal.Lists.newArrayList();
                 createVariables(intiMapStep, "rootName_Error", "Error", null, "string");
@@ -916,7 +916,7 @@ public class ImportPostman {
             }
             {
                 Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases, "CASE", "Handling XML response");
-                addData(sequenceContentTypeMapping, "case", "application/xml");
+                addData(sequenceContentTypeMapping, "case", "#regex:.*xml.*");
 
                 List<Object> jsonConversionCase = com.beust.jcommander.internal.Lists.newArrayList();
                 Map<String, Object> invokeStepToJson = createInvokeStep(jsonConversionCase, "service", "packages/middleware/pub/xml/fromXML", "Initialize");
@@ -928,7 +928,7 @@ public class ImportPostman {
         } else {
             {
                 Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases, "CASE", "Handling JSON response");
-                addData(sequenceContentTypeMapping, "case", "application/json");
+                addData(sequenceContentTypeMapping, "case", "#regex:.*json.*");
 
                 List<Object> jsonConversionCase = com.beust.jcommander.internal.Lists.newArrayList();
                 createVariables(intiMapStep, "rootName_Error", "Error", null, "string");
@@ -942,7 +942,7 @@ public class ImportPostman {
             }
             {
                 Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases, "CASE", "Handling XML response");
-                addData(sequenceContentTypeMapping, "case", "application/xml");
+                addData(sequenceContentTypeMapping, "case", "#regex:.*xml.*");
 
                 List<Object> jsonConversionCase = com.beust.jcommander.internal.Lists.newArrayList();
                 Map<String, Object> invokeStepToJson = createInvokeStep(jsonConversionCase, "service", "packages/middleware/pub/xml/fromXML", "Initialize");
