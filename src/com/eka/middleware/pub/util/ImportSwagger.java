@@ -992,9 +992,6 @@ public class ImportSwagger {
 		return document;
 	}
 	public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
-		if ( true ) {
-			return ;
-		}
 		String flowJavaTemplatePath= MiddlewareServer.getConfigFolderPath()+"flowJava.template";
 		String className=file.getName().replace(".flow", "");
 		String fullCode="";
