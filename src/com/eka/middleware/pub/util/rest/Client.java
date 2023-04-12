@@ -1,16 +1,17 @@
 package com.eka.middleware.pub.util.rest;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import com.eka.middleware.pub.util.auth.aws.AWS4SignerForChunkedUpload;
+import com.google.common.collect.Maps;
+import org.apache.commons.lang3.StringUtils;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
 import java.net.http.HttpClient;
-import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -20,17 +21,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import com.google.common.collect.Maps;
-import org.apache.commons.io.IOUtils;
-
-import com.eka.middleware.pub.util.auth.aws.AWS4SignerForChunkedUpload;
-import org.apache.commons.lang3.StringUtils;
-
 public class Client {
 	static HostnameVerifier allHostsValid = null;
 	private static final HttpClient.Builder clientBuilder = HttpClient.newBuilder();
@@ -38,7 +28,8 @@ public class Client {
 			.connectTimeout(Duration.ofSeconds(10)).build();
 
 	
-	
+
+	@Deprecated(since = "release/1.4.2")
 	public static Map<String, Object> invokeREST(int itr, String url, String method, Map<String, String> headers,
 			Map<String, Object> formData, String payload, File binary, String basicAuthUser, String basicAuthPass,
 			Map<String, Object> respHandling, byte[] payloadBytes, InputStream payloadIS, AWS4SignerForChunkedUpload signer) throws Exception {
@@ -117,6 +108,7 @@ public class Client {
 		for (Map.Entry<String, List<String>> responseHeaderField : responseHeaderFields.entrySet()) {
 			if (null != responseHeaderField.getKey()) {
 				responseHeaders.put(responseHeaderField.getKey(), StringUtils.join(responseHeaderField.getValue(), ","));
+				responseHeaders.put(responseHeaderField.getKey().toLowerCase(), StringUtils.join(responseHeaderField.getValue(), ","));
 			}
 
 		}
@@ -150,7 +142,24 @@ public class Client {
 	}
 
 	public static Map<String, Object> invoke(String format, String method, Map<String, Object> formData, Map<String, String> reqHeaders, String reqPayload, boolean b) throws Exception {
-		return invoke(format, method, formData, reqHeaders, null, null, new HashMap<>(), b);
+		return invoke(format, method, formData, reqHeaders, reqPayload, null, new HashMap<>(), b);
+	}
+
+	/**
+	 * @param url
+	 * @param method
+	 * @param formData
+	 * @param reqHeaders
+	 * @param payload
+	 * @param inputStream
+	 * @param queryParameters
+	 * @param sslValidation
+	 * @return
+	 * @throws Exception
+	 */
+	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
+											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, boolean sslValidation) throws Exception {
+		return invoke(url, method, formData, reqHeaders, payload, inputStream, queryParameters, Maps.newHashMap(), sslValidation);
 	}
 
 	/**
@@ -163,7 +172,7 @@ public class Client {
 	 * @throws Exception
 	 */
 	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
-											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, boolean sslValidation) throws Exception {
+											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, Map<String, Object> settings, boolean sslValidation) throws Exception {
 		HttpRequest.Builder builder = HttpRequest.newBuilder();
 
 		String queries = StringUtils.join(queryParameters.entrySet().parallelStream().map(m -> String.format("%s=%s", m.getKey(), m.getValue())).collect(Collectors.toSet()), "&");
@@ -220,13 +229,34 @@ public class Client {
 			httpClientBuilder.sslContext(unsecureCommunication());
 		}
 
-		HttpResponse<String> response = httpClientBuilder.build()
-				.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+		HttpResponse<?> response = null;
+		Boolean responseAsInputStream = false;
+		if (null != settings.get("responseAsInputStream")) {
+			responseAsInputStream = (Boolean) settings.get("responseAsInputStream");
+		}
+
+		if (responseAsInputStream) {
+			response = httpClientBuilder.build().send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
+		} else {
+			response = httpClientBuilder.build().send(builder.build(), HttpResponse.BodyHandlers.ofString());
+		}
+
+		Map<String, List<String>> responseHeaderFields = response.headers().map();
+
+		Map<String, String> responseHeaders = Maps.newHashMap();
+
+		for (Map.Entry<String, List<String>> responseHeaderField : responseHeaderFields.entrySet()) {
+			if (null != responseHeaderField.getKey()) {
+				responseHeaders.put(responseHeaderField.getKey(), StringUtils.join(responseHeaderField.getValue(), ","));
+				responseHeaders.put(responseHeaderField.getKey().toLowerCase(), StringUtils.join(responseHeaderField.getValue(), ","));
+			}
+		}
 
 		Map<String, Object> responseMap = Maps.newHashMap();
 		responseMap.put("statusCode", response.statusCode());
 		responseMap.put("respPayload", response.body());
-		responseMap.put("respHeaders", response.headers().map());
+		responseMap.put("inputStream", response.body());
+		responseMap.put("respHeaders", responseHeaderFields);
 
 		return responseMap;
 	}
