@@ -95,7 +95,7 @@ public class MiddlewareServer {
 					profile.put("groups", groups);
 					profile.put("forceCreateUser", true);
 					authAcc.setProfile(profile);
-					// UserProfileManager.addUser(authAcc);
+					UserProfileManager.addUser(authAcc);
 					ServiceUtils.initNewTenant("default", authAcc);
 				} else {
 					LOGGER.info("Starting default tenant......................");
