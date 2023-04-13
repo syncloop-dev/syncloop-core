@@ -16,6 +16,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.nimbusds.jose.shaded.gson.Gson;
 import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
@@ -447,6 +448,43 @@ public class ImportSwagger {
 		if (!"GET".equalsIgnoreCase(method)) {
 			createPreInvokeMapping(invokeStepRequest, "copy", "string", "/body", "string", "/payload");
 			dropVariables(invokeStepRequest, "payload", "string");
+		}
+
+		Map<String, SecurityScheme> securitySchemes = swagger.getComponents().getSecuritySchemes();
+		for (String securitySchemesList: securitySchemes.keySet()){
+
+			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
+			SecurityScheme.Type type = securityScheme.getType();
+
+			if (SecurityScheme.Type.APIKEY.equals(type)) {
+				Map<String, String> commonApiKey = Maps.newHashMap();
+				commonApiKey.put("text", "apiKey");
+				commonApiKey.put("type", "string");
+				inputs.add(commonApiKey);
+
+				if (SecurityScheme.In.HEADER.equals(securityScheme.getIn())) {
+					createVariables(intiMapStep, "requestHeaders/"+securityScheme.getName(),  "${apiKey}" , Evaluate.EEV, "document/string");
+				} else if (SecurityScheme.In.QUERY.equals(securityScheme.getIn())) {
+					createVariables(intiMapStep, "queryParameters/"+securityScheme.getName(),  "${apiKey}" , Evaluate.EEV, "document/string");
+				}
+			}
+			else if (SecurityScheme.Type.HTTP.equals(type)) {
+				Map<String, String> commonAccessToken = Maps.newHashMap();
+				commonAccessToken.put("text", "access_token");
+				commonAccessToken.put("type", "string");
+				inputs.add(commonAccessToken);
+				createVariables(intiMapStep, "requestHeaders/Authorization",  "Bearer ${access_token}" , Evaluate.EEV, "document/string");
+			}
+			/* else if (SecurityScheme.Type.OAUTH2.equals(type)) {
+
+				 SecurityScheme.Type type1 = securityScheme.getType();
+				 OAuthFlows flows = securityScheme.getFlows();
+				 OAuthFlow authorizationCode = flows.getAuthorizationCode();
+				 String authorizationUrl = authorizationCode.getAuthorizationUrl();
+				 String tokenUrl = authorizationCode.getTokenUrl();
+				 Scopes scopes = authorizationCode.getScopes();
+
+			 }*/
 		}
 
 		Map<String, Object> switchMapping = createSwitch(flowSteps,"switch","SWITCH", "Checking status for response");
