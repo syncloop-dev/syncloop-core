@@ -450,8 +450,9 @@ public class ImportSwagger {
 			dropVariables(invokeStepRequest, "payload", "string");
 		}
 
-		Map<String, SecurityScheme> securitySchemes = swagger.getComponents().getSecuritySchemes();
-		for (String securitySchemesList: securitySchemes.keySet()){
+		Map<String, SecurityScheme> securitySchemes =
+				null == swagger.getComponents().getSecuritySchemes() ? Maps.newHashMap() : swagger.getComponents().getSecuritySchemes();
+		for (String securitySchemesList: securitySchemes.keySet()) {
 
 			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
 			SecurityScheme.Type type = securityScheme.getType();
@@ -520,7 +521,7 @@ public class ImportSwagger {
 
 		List<Object> contentTypeCases = Lists.newArrayList();
 		Content content = apiResponse.getContent();
-		if (null != content) {
+		if (null != content && false) {
 			for (Map.Entry<String, MediaType> mediaTypeEntry : apiResponse.getContent().entrySet()) {
 
 				Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases,"CASE", "Handling " + mediaTypeEntry.getKey() + " response");
