@@ -104,6 +104,9 @@ public class MiddlewareServer {
 				}
 
 				Thread.sleep(500);
+				startServer(ports, keyStoreFilePath, keyStorePassword, securePorts);
+
+				Thread.sleep(2000);
 				for (String tenant : tenants) {
 					Tenant tent = Tenant.getTenant(tenant);
 					dirPath = PropertyManager.getPackagePath(tent) + "packages";
@@ -118,37 +121,41 @@ public class MiddlewareServer {
 						LOGGER.info("Starting " + tenant + " tenant......................");
 						tent.logDebug(null, "Starting " + tenant + " tenant......................");
 						ServiceUtils.startTenantServices(tenant);
-						Thread.sleep(500);
+						Thread.sleep(2000);
 					}
 				}
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);
 			}
-			LOGGER.trace("Creating server builder ........");
-			PathHandler pathHandler = Security.init();
 
-			for (String port : ports) {
-				builder.addHttpListener(Integer.parseInt(port), local_IP).setHandler(new SessionAttachmentHandler(
-						pathHandler, new InMemorySessionManager("SessionManager"), new SessionCookieConfig()));
-			}
-			SSLContext context = null;
-			if (keyStoreFilePath != null && new File(keyStoreFilePath).exists())
-				context = createSSLContext(keyStoreFilePath, keyStorePassword);
-
-			if (context != null)
-				for (String port : securePorts) {
-					builder.addHttpsListener(Integer.parseInt(port), local_IP, context)
-							.setHandler(new SessionAttachmentHandler(pathHandler,
-									new InMemorySessionManager("SessionManager"), new SessionCookieConfig()));
-				}
-
-			configureUndertow(builder);
-			server = builder.build();
-			server.start();
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new SystemException("EKA_MWS_1004", e);
 		}
+	}
+
+	private static void startServer(String[] ports, String keyStoreFilePath, String keyStorePassword, String[] securePorts) throws Exception {
+		LOGGER.trace("Creating server builder ........");
+		PathHandler pathHandler = Security.init();
+
+		for (String port : ports) {
+			builder.addHttpListener(Integer.parseInt(port), local_IP).setHandler(new SessionAttachmentHandler(
+					pathHandler, new InMemorySessionManager("SessionManager"), new SessionCookieConfig()));
+		}
+		SSLContext context = null;
+		if (keyStoreFilePath != null && new File(keyStoreFilePath).exists())
+			context = createSSLContext(keyStoreFilePath, keyStorePassword);
+
+		if (context != null)
+			for (String port : securePorts) {
+				builder.addHttpsListener(Integer.parseInt(port), local_IP, context)
+						.setHandler(new SessionAttachmentHandler(pathHandler,
+								new InMemorySessionManager("SessionManager"), new SessionCookieConfig()));
+			}
+
+		configureUndertow(builder);
+		server = builder.build();
+		server.start();
 	}
 
 	private static void configureUndertow(Builder builder) throws IllegalArgumentException, IOException {
@@ -293,9 +300,9 @@ public class MiddlewareServer {
 		 */
 		private static void bootBuild() throws Exception {
 
-			String distributionName = "eka-distribution-v1.4.1.zip";
+			String distributionName = "eka-distribution-v1.4.2.zip";
 			if (Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-				distributionName = "eka-distribution-community-v1.4.1.zip";
+				distributionName = "eka-distribution-community-v1.4.2.zip";
 			}
 
 			File eka = new File("./eka/version");
