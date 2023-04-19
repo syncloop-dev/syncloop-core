@@ -160,7 +160,8 @@ public class UserProfileManager implements IdentityManager {
 			if (account.getUserId().equals("admin")) {
 				
 				Scanner in = new Scanner(System.in);
-				String pass=null;
+				String pass = "admin";
+				LOGGER.info("Default tenant is created with user: admin & password: admin.");
 				while(pass==null) {
 					LOGGER.info("Creating Admin account for default tenant.\nPlease enter strong password:");
 					pass=in.nextLine();
