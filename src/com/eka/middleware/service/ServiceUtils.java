@@ -1165,11 +1165,11 @@ public class ServiceUtils {
 
 		String[] paths = StringUtils.split(s, "/");
 		StringBuilder pathBuilder = new StringBuilder();
-		for ( int i = 0 ; i < paths.length ; i++ ) {
+		for (int i = 0; i < paths.length; i++) {
 			if (paths.length != 1 && (i == (paths.length - 1) && !(paths[i].indexOf("}") > 0))) {
 				break;
 			}
-			pathBuilder.append("/").append(paths[i].replaceAll("\\{", "").replaceAll("\\}", ""));
+			pathBuilder.append("/").append(paths[i].replaceAll("\\{", "").replaceAll("\\}", "").replace(".", "_"));
 		}
 
 		return pathBuilder.toString();
