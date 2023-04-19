@@ -25,6 +25,7 @@ import javax.net.ssl.TrustManager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.xnio.CompressionType;
 import org.xnio.Options;
 
@@ -73,6 +74,8 @@ public class MiddlewareServer {
 			String keyStoreFilePath = ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
 			String keyStorePassword = ServiceUtils.getServerProperty("middleware.server.keyStore.jks.password");
 
+			java.security.Security.addProvider(new BouncyCastleProvider()); // Initializing Security for secure properties.
+
 			// https="8443";
 			String securePorts[] = null;
 			if (https != null)
@@ -95,7 +98,7 @@ public class MiddlewareServer {
 					profile.put("groups", groups);
 					profile.put("forceCreateUser", true);
 					authAcc.setProfile(profile);
-					// UserProfileManager.addUser(authAcc);
+					UserProfileManager.addUser(authAcc);
 					ServiceUtils.initNewTenant("default", authAcc);
 				} else {
 					LOGGER.info("Starting default tenant......................");
@@ -293,9 +296,9 @@ public class MiddlewareServer {
 		 */
 		private static void bootBuild() throws Exception {
 
-			String distributionName = "eka-distribution-v1.4.zip";
+			String distributionName = "eka-distribution-v1.4.1.zip";
 			if (Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-				distributionName = "eka-distribution-community-v1.4.zip";
+				distributionName = "eka-distribution-community-v1.4.1.zip";
 			}
 
 			File eka = new File("./eka/version");
