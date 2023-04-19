@@ -25,6 +25,7 @@ import javax.net.ssl.TrustManager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.xnio.CompressionType;
 import org.xnio.Options;
 
@@ -72,6 +73,8 @@ public class MiddlewareServer {
 			String https = ServiceUtils.getServerProperty("middleware.server.https.ports");
 			String keyStoreFilePath = ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
 			String keyStorePassword = ServiceUtils.getServerProperty("middleware.server.keyStore.jks.password");
+
+			java.security.Security.addProvider(new BouncyCastleProvider()); // Initializing Security for secure properties.
 
 			// https="8443";
 			String securePorts[] = null;
