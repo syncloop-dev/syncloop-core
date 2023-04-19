@@ -170,6 +170,7 @@ public class ImportSwagger {
 				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
+				System.err.println("client service path >> " + servicePath);
 				saveFlow(servicePath, json);
 				File file = new File(servicePath);
 				generateJavaClass(file,servicePath,dataPipeline);
@@ -194,6 +195,7 @@ public class ImportSwagger {
 				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
+				System.err.println("client service path >> " + servicePath);
 				saveFlow(servicePath, json);
 				File file = new File(servicePath);
 				generateJavaClass(file,servicePath,dataPipeline);
