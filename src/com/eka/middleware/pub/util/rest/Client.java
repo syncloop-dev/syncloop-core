@@ -183,10 +183,9 @@ public class Client {
 			builder.uri(URI.create(url));
 		}
 
-
 		HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
 
-		if (null != formData) {
+		if (null != formData && !formData.isEmpty()) {
 			boolean containedBinary = formData.entrySet().stream().anyMatch(f -> f.getValue() instanceof byte[] || f.getValue() instanceof File);
 
 			if (!containedBinary) {
