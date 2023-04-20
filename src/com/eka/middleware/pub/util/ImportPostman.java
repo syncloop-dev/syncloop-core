@@ -53,7 +53,7 @@ public class ImportPostman {
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested,dataPipeline);
+                list.addAll(createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested,dataPipeline));
             } else {
                list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested, Evaluate.EEV,dataPipeline));
             }
@@ -67,7 +67,7 @@ public class ImportPostman {
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(),dataPipeline);
+                list.addAll(createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(),dataPipeline));
             } else {
                 String method = postmanItems.getRequest().getMethod();
                 list.add(generateClientLib(folder, servicePath, packageName, postmanItems, method, Evaluate.EEV,dataPipeline));
