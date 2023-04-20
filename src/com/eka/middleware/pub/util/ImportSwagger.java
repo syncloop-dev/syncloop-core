@@ -68,7 +68,7 @@ public class ImportSwagger {
 			String alias = entry.getKey();
 			PathItem pi = entry.getValue();
 			Operation op = pi.getGet();
-			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
+			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 			String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
 
 			File file = new File(servicePath);
@@ -80,46 +80,46 @@ public class ImportSwagger {
 				response.put("GET" + alias, opId);
 			}
 			op = pi.getPost();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) + alias : op.getOperationId());
-			String servicePath1 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath1);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) + alias : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath1, json);
-				generateJavaClass(file,servicePath1,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("POST" + alias, opId);
 			}
 
 			op = pi.getDelete();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
-			String servicePath2 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath2);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath2, json);
-				generateJavaClass(file,servicePath2,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("DELETE" + alias, opId);
 			}
 
 			op = pi.getPatch();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) + alias : op.getOperationId());
-			String servicePath3 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath3);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) + alias : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath3, json);
-				generateJavaClass(file,servicePath3,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PATCH" + alias, opId);
 			}
 
 			op = pi.getPut();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
-			String servicePath4 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath4);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath4, json);
-				generateJavaClass(file,servicePath4,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PUT" + alias, opId);
 			}
 		}
@@ -144,7 +144,7 @@ public class ImportSwagger {
 
 			flow = generateClientLib(alias, op, swagger, "GET");
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -155,7 +155,7 @@ public class ImportSwagger {
 			op = pi.getPost();
 			flow = generateClientLib(alias, op, swagger, "POST");
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -167,7 +167,7 @@ public class ImportSwagger {
 			op = pi.getDelete();
 			flow = generateClientLib(alias, op, swagger, "DELETE");
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				System.err.println("client service path >> " + servicePath);
@@ -180,7 +180,7 @@ public class ImportSwagger {
 			op = pi.getPatch();
 			flow = generateClientLib(alias, op, swagger, "PATCH");
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -192,7 +192,7 @@ public class ImportSwagger {
 			op = pi.getPut();
 			flow = generateClientLib(alias, op, swagger, "PUT");
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				System.err.println("client service path >> " + servicePath);
@@ -452,8 +452,9 @@ public class ImportSwagger {
 			dropVariables(invokeStepRequest, "payload", "string");
 		}
 
-		Map<String, SecurityScheme> securitySchemes = swagger.getComponents().getSecuritySchemes();
-		for (String securitySchemesList: securitySchemes.keySet()){
+		Map<String, SecurityScheme> securitySchemes =
+				null == swagger.getComponents().getSecuritySchemes() ? Maps.newHashMap() : swagger.getComponents().getSecuritySchemes();
+		for (String securitySchemesList: securitySchemes.keySet()) {
 
 			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
 			SecurityScheme.Type type = securityScheme.getType();
@@ -522,7 +523,7 @@ public class ImportSwagger {
 
 		List<Object> contentTypeCases = Lists.newArrayList();
 		Content content = apiResponse.getContent();
-		if (null != content) {
+		if (null != content && false) {
 			for (Map.Entry<String, MediaType> mediaTypeEntry : apiResponse.getContent().entrySet()) {
 
 				Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases,"CASE", "Handling " + mediaTypeEntry.getKey() + " response");
@@ -1035,6 +1036,9 @@ public class ImportSwagger {
 		return document;
 	}
 	public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
+		if (true) {
+			return ;
+		}
 		String flowJavaTemplatePath= MiddlewareServer.getConfigFolderPath()+"flowJava.template";
 		String className=file.getName().replace(".flow", "");
 		String fullCode="";

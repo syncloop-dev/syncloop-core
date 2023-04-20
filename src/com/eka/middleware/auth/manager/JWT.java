@@ -1,5 +1,6 @@
 package com.eka.middleware.auth.manager;
 
+import org.apache.commons.lang3.StringUtils;
 import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.core.util.Pac4jConstants;
@@ -17,6 +18,7 @@ import com.eka.middleware.template.Tenant;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.Date;
+import java.util.Deque;
 
 public class JWT {
 	public static String generate(HttpServerExchange exchange) {
@@ -36,8 +38,15 @@ public class JWT {
             profile.addAttribute("groups", authacc.getAuthProfile().get("groups"));
             Tenant tenant = Tenant.getTenant(tenantName);
 
+            Deque<String> stringDeque = exchange.getQueryParameters().get("expiration_time");
+            String expirationTimeStr = (null == stringDeque) ? null : stringDeque.pop();
+            int expirationTime = 8;
+            if (StringUtils.isNotBlank(expirationTimeStr)) {
+                expirationTime = Integer.parseInt(expirationTimeStr);
+            }
+
             Date expiryDate = new Date();
-            expiryDate = ServiceUtils.addHoursToDate(expiryDate, 8);
+            expiryDate = ServiceUtils.addHoursToDate(expiryDate, expirationTime == -1 ? Integer.MAX_VALUE : expirationTime);
 
             tenant.jwtGenerator.setExpirationTime(expiryDate);
             token = tenant.jwtGenerator.generate(profile);

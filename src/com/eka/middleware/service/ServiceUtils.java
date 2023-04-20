@@ -1172,7 +1172,7 @@ public class ServiceUtils {
 			pathBuilder.append("/").append(paths[i].replaceAll("\\{", "").replaceAll("\\}", "").replace(".", "_"));
 		}
 
-		return pathBuilder.toString();
+		return pathBuilder.toString().replaceAll(Pattern.quote("."), "_").replaceAll("-", "");
 	}
 
 	public static String normalizeApiPathName(String method, String s) {
