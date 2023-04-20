@@ -208,9 +208,10 @@ public class Client {
 							return list.stream();
 						})
 						.collect(Collectors.joining("&"));
+				reqHeaders.put("Content-Type", "application/x-www-form-urlencoded");
 				bodyPublisher = HttpRequest.BodyPublishers.ofString(form);
 			} else {
-				bodyPublisher = Client.addFormData(formData, reqHeaders);
+				bodyPublisher = Client.addFormDataV2(formData, reqHeaders);
 			}
 		} else if (StringUtils.isNotBlank(payload)) {
 			bodyPublisher = HttpRequest.BodyPublishers.ofString(payload);
@@ -292,6 +293,42 @@ public class Client {
 				return new PasswordAuthentication(username, password.toCharArray());
 			}
 		});
+	}
+
+	private static HttpRequest.BodyPublisher addFormDataV2(Map<String, Object> data, Map<String, String> headers) throws Exception {
+
+		String boundary = "------syncloop" + new BigInteger(35, new java.util.Random()).toString();
+
+		headers.put("Content-Type", "multipart/form-data; boundary=" + boundary);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		for (Map.Entry<String, Object> entry : data.entrySet()) {
+
+			baos.write(("--" + boundary).getBytes(StandardCharsets.UTF_8));
+			baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+			if (entry.getValue() instanceof File) {
+				File file = (File) entry.getValue();
+				var path = Path.of(file.toURI());
+				String fileName = file.getName();
+				String mimeType = Files.probeContentType(path);
+
+				baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"; filename=\"" + fileName + "\"").getBytes(StandardCharsets.UTF_8));
+				baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+				baos.write(("Content-Type: " + mimeType).getBytes(StandardCharsets.UTF_8));
+				baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+				baos.write(Files.readAllBytes(path));
+			} else {
+				baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() +"\"").getBytes(StandardCharsets.UTF_8));
+				baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+				baos.write(entry.getValue().toString().getBytes(StandardCharsets.UTF_8));
+			}
+			baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+		}
+
+		baos.write(("--" + boundary + "--").getBytes(StandardCharsets.UTF_8));
+		baos.close();
+
+		return HttpRequest.BodyPublishers.ofByteArray(baos.toByteArray());
 	}
 
 	private static HttpRequest.BodyPublisher addFormData(Map<String, Object> data, Map<String, String> headers)
