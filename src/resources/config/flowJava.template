@@ -109,7 +109,9 @@ public final class #className {
 				dataPipeline.applyAsync("packages.middleware.pub.service.auditLogging");
 				dataPipeline.drop("asyncInputDoc");
 				dataPipeline.drop("asyncOutputDoc");
-				dataPipeline.rp.getExchange().getResponseHeaders().put(new HttpString("CORRELATION-ID"), dataPipeline.getCorrelationId());
+				if (dataPipeline.rp.isExchangeInitialized()) {
+				    dataPipeline.rp.getExchange().getResponseHeaders().put(new HttpString("CORRELATION-ID"), dataPipeline.getCorrelationId());
+				}
 			}
 		}
 	}
