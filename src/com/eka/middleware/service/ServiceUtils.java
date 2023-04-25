@@ -9,8 +9,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -34,6 +36,7 @@ import java.util.zip.*;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import javax.json.JsonObject;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
@@ -591,6 +594,7 @@ public class ServiceUtils {
 		try {
 			handleFileResponse(rp.getExchange(), mp);
 		} catch (Exception e) {
+			e.printStackTrace();
 			// TODO Auto-generated catch block
 			throw new SnippetException(rp.dataPipeLine, "Exception while streaming file.\n" + e.getMessage(), e);
 
@@ -1256,5 +1260,83 @@ public class ServiceUtils {
 		// }
 
 		return destFile;
+	}
+
+	public static Map<String, Object> beforeServiceExecution(DataPipeline dp, String fqn, JsonObject mainflowJsonObject, Map<String, Object> passThroughData) throws Exception{
+		String logRequest = null;
+		String logResponse = null;
+		String requestJson="";
+		String responseJson="";
+		Date dateTimeStmp=null;
+		String stopRecursiveLogging=dp.getString("stopRecursiveLogging");
+		if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
+			logRequest = dp.getMyConfig("logRequest");
+			logResponse = dp.getMyConfig("logResponse");
+			requestJson="";
+			responseJson="";
+			if("true".equalsIgnoreCase(logRequest))
+				requestJson=dp.toJson();
+			dateTimeStmp=new Date();
+		}
+		passThroughData.put("stopRecursiveLogging", stopRecursiveLogging);
+		passThroughData.put("logRequest", logRequest);
+		passThroughData.put("logResponse", logResponse);
+		passThroughData.put("requestJson", requestJson);
+		passThroughData.put("responseJson", responseJson);
+		passThroughData.put("dateTimeStmp", dateTimeStmp);
+		return passThroughData;
+	}
+
+	public static void afterServiceExecution(DataPipeline dp,String fqn,Map<String, Object> passThroughData) throws Exception {
+		Long nanoSec=(Long)passThroughData.get("nanoSec");
+		String logRequest = (String)passThroughData.get("logRequest");
+		String logResponse = (String)passThroughData.get("logResponse");
+		String requestJson=(String)passThroughData.get("requestJson");
+		String responseJson=(String)passThroughData.get("responseJson");
+		Date dateTimeStmp=(Date)passThroughData.get("dateTimeStmp");
+		Long startTime=(Long)passThroughData.get("startTime");
+		String stopRecursiveLogging=(String)passThroughData.get("stopRecursiveLogging");
+		if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
+			if("true".equalsIgnoreCase(logResponse))
+				responseJson=dp.toJson();
+			long endTime=System.currentTimeMillis();
+			Map<String,String> auditLog=new HashMap();
+			auditLog.put("correlationId",dp.getCorrelationId());
+			auditLog.put("sessionId",dp.getSessionId());
+			auditLog.put("dateTimeStmp",dateTimeStmp+"");
+			auditLog.put("duration",(endTime-startTime)+"");
+			if (null == dp.getString("error")) {
+				auditLog.put("error","");
+			} else {
+				auditLog.put("error",dp.getString("error"));
+			}
+
+			auditLog.put("fqn",fqn);
+			auditLog.put("request",requestJson);
+			auditLog.put("response",responseJson);
+			auditLog.put("nanoInstance",nanoSec+"");
+
+			try {
+				auditLog.put("hostName", InetAddress.getLocalHost().getHostName());
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+			String nodeName = dp.getGlobalConfig("nodeName");
+			auditLog.put("nodeName", nodeName);
+
+			auditLog.put("remoteAddr", dp.getRemoteIpAddr());
+			auditLog.put("userId", dp.getCurrentUserProfile().getId());
+			auditLog.put("urlPath", dp.getUrlPath());
+
+			Map<String,Object> asyncInputDoc=new HashMap();
+			asyncInputDoc.put("auditLog",auditLog);
+			asyncInputDoc.put("stopRecursiveLogging","true");
+			dp.put("asyncInputDoc",asyncInputDoc);
+			dp.applyAsync("packages.middleware.pub.service.auditLogging");
+			dp.drop("asyncInputDoc");
+			dp.drop("asyncOutputDoc");
+			if(dp.rp.isExchangeInitialized())
+				dp.rp.getExchange().getResponseHeaders().put(new HttpString("CORRELATION-ID"), dp.getCorrelationId());
+		}
 	}
 }
