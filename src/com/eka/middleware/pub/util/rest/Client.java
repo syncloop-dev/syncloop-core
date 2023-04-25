@@ -317,9 +317,15 @@ public class Client {
 				baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 				baos.write(Files.readAllBytes(path));
 			} else {
-				baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() +"\"").getBytes(StandardCharsets.UTF_8));
+
+				String fileName = entry.getKey();
+				String mimeType = "application/octet-stream";
+
+				baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"; filename=\"" + fileName + "\"").getBytes(StandardCharsets.UTF_8));
+				baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+				baos.write(("Content-Type: " + mimeType).getBytes(StandardCharsets.UTF_8));
 				baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
-				baos.write(entry.getValue().toString().getBytes(StandardCharsets.UTF_8));
+				baos.write((byte[]) entry.getValue());
 			}
 			baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
 		}
