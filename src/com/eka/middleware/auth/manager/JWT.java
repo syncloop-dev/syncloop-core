@@ -46,7 +46,7 @@ public class JWT {
             }
 
             Date expiryDate = new Date();
-            expiryDate = ServiceUtils.addHoursToDate(expiryDate, expirationTime == -1 ? Integer.MAX_VALUE : expirationTime);
+            expiryDate = ServiceUtils.addHoursToDate(expiryDate, expirationTime);
 
             tenant.jwtGenerator.setExpirationTime(expiryDate);
             token = tenant.jwtGenerator.generate(profile);
