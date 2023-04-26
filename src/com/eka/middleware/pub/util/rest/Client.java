@@ -224,7 +224,12 @@ public class Client {
 			builder.header(map.getKey(), map.getValue());
 		});
 
-		HttpClient.Builder httpClientBuilder = HttpClient.newBuilder();
+		Long timeout = 30l;
+		if (null != settings.get("requestTimeout")) {
+			timeout = Long.parseLong(settings.get("requestTimeout").toString());
+		}
+
+		HttpClient.Builder httpClientBuilder = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(timeout));
 		if (!sslValidation) {
 			httpClientBuilder.sslContext(unsecureCommunication());
 		}
@@ -318,14 +323,20 @@ public class Client {
 				baos.write(Files.readAllBytes(path));
 			} else {
 
-				String fileName = entry.getKey();
-				String mimeType = "application/octet-stream";
+				if (entry.getValue() instanceof byte[]) {
+					String fileName = entry.getKey();
+					String mimeType = "application/octet-stream";
 
-				baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"; filename=\"" + fileName + "\"").getBytes(StandardCharsets.UTF_8));
-				baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
-				baos.write(("Content-Type: " + mimeType).getBytes(StandardCharsets.UTF_8));
-				baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
-				baos.write((byte[]) entry.getValue());
+					baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"; filename=\"" + fileName + "\"").getBytes(StandardCharsets.UTF_8));
+					baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+					baos.write(("Content-Type: " + mimeType).getBytes(StandardCharsets.UTF_8));
+					baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+					baos.write((byte[]) entry.getValue());
+				} else {
+					baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() +"\"").getBytes(StandardCharsets.UTF_8));
+					baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+					baos.write(entry.getValue().toString().getBytes(StandardCharsets.UTF_8));
+				}
 			}
 			baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
 		}
