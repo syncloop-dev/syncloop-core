@@ -423,6 +423,74 @@ public class ImportSwagger {
 		dropVariables(intiMapStep, "basePath", "string");
 		dropVariables(intiMapStep, "pathParameters", "document");
 
+		Map<String, SecurityScheme> securitySchemes =
+				null == swagger.getComponents().getSecuritySchemes() ? Maps.newHashMap() : swagger.getComponents().getSecuritySchemes();
+		for (String securitySchemesList: securitySchemes.keySet()) {
+
+			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
+			SecurityScheme.Type type = securityScheme.getType();
+
+			List<Object> headersChildren = Lists.newArrayList();
+			if (null != inputHeaders.get("children")) {
+				headersChildren = (List<Object>)inputHeaders.get("children");
+			}
+
+			List<Object> queryChildren = Lists.newArrayList();
+			if (null != inputHeaders.get("children")) {
+				queryChildren = (List<Object>)inputQuery.get("children");
+			}
+
+			if (SecurityScheme.Type.APIKEY.equals(type)) {
+
+				Map<String, String> commonApiKey = Maps.newHashMap();
+				commonApiKey.put("text", securityScheme.getName());
+				commonApiKey.put("type", "string");
+
+				if (SecurityScheme.In.HEADER.equals(securityScheme.getIn())) {
+					headersChildren.add(commonApiKey);
+
+				} else if (SecurityScheme.In.QUERY.equals(securityScheme.getIn())) {
+					queryChildren.add(commonApiKey);
+				}
+			}
+
+			if (SecurityScheme.Type.HTTP.equals(type)) {
+				List<Object> basicAuth = com.google.common.collect.Lists.newArrayList();
+
+				Map<String, String> inputVar = Maps.newHashMap();
+				inputVar.put("text", "username");
+				inputVar.put("type", "string");
+				basicAuth.add(inputVar);
+
+				inputVar = Maps.newHashMap();
+				inputVar.put("text", "password");
+				inputVar.put("type", "string");
+				basicAuth.add(inputVar);
+
+				Map<String, Object> inputAuthVar = Maps.newHashMap();
+				inputAuthVar.put("text", "basicAuth");
+				inputAuthVar.put("type", "document");
+				inputAuthVar.put("children", basicAuth);
+				inputs.add(inputAuthVar);
+
+				Map<String, Object> authRequest =
+						createInvokeStep(flowSteps,"service","packages/Wrapper/Authorization/Basic", "Basic Auth");
+
+				createPreInvokeMapping(authRequest, "copy", "document/string", "/basicAuth/username", "string","/username");
+				createPreInvokeMapping(authRequest, "copy", "document/string", "/basicAuth/password", "string","/password");
+
+				createPostInvokeMapping(authRequest, "copy", "string", "/Authorization", "document/string", "/requestHeaders/Authorization");
+			}
+
+			if (SecurityScheme.Type.OAUTH2.equals(type)) {
+				Map<String, String> commonAccessToken = Maps.newHashMap();
+				commonAccessToken.put("text", "access_token");
+				commonAccessToken.put("type", "string");
+				inputs.add(commonAccessToken);
+				createVariables(intiMapStep, "requestHeaders/Authorization",  "Bearer #{access_token}" , Evaluate.EEV, "document/string");
+			}
+		}
+
 		if (!"GET".equalsIgnoreCase(method)) {
 			Map<String, Object> invokeStepToJson= createInvokeStep(flowSteps,"service","packages/middleware/pub/json/toString", "Initialize");
 			createPreInvokeMapping(invokeStepToJson, "copy", "document", "/payload", "documentList", "/root");
@@ -451,55 +519,6 @@ public class ImportSwagger {
 		if (!"GET".equalsIgnoreCase(method)) {
 			createPreInvokeMapping(invokeStepRequest, "copy", "string", "/body", "string", "/payload");
 			dropVariables(invokeStepRequest, "payload", "string");
-		}
-
-		Map<String, SecurityScheme> securitySchemes =
-				null == swagger.getComponents().getSecuritySchemes() ? Maps.newHashMap() : swagger.getComponents().getSecuritySchemes();
-		for (String securitySchemesList: securitySchemes.keySet()) {
-
-			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
-			SecurityScheme.Type type = securityScheme.getType();
-
-			if (SecurityScheme.Type.APIKEY.equals(type)) {
-
-				Map<String, String> commonApiKey = Maps.newHashMap();
-				commonApiKey.put("text", securityScheme.getName());
-				commonApiKey.put("type", "string");
-
-				if (SecurityScheme.In.HEADER.equals(securityScheme.getIn())) {
-					if (null == inputHeaders.get("children")) {
-						inputHeaders.put("children", Lists.newArrayList(commonApiKey));
-					} else {
-						List<Object> children = (List<Object>)inputHeaders.get("children");
-						children.add(commonApiKey);
-					}
-
-				} else if (SecurityScheme.In.QUERY.equals(securityScheme.getIn())) {
-					if (null == inputHeaders.get("children")) {
-						inputQuery.put("children", Lists.newArrayList(commonApiKey));
-					} else {
-						List<Object> children = (List<Object>)inputQuery.get("children");
-						children.add(commonApiKey);
-					}
-				}
-			}
-			else if (SecurityScheme.Type.HTTP.equals(type)) {
-				Map<String, String> commonAccessToken = Maps.newHashMap();
-				commonAccessToken.put("text", "access_token");
-				commonAccessToken.put("type", "string");
-				inputs.add(commonAccessToken);
-				createVariables(intiMapStep, "requestHeaders/Authorization",  "Bearer ${access_token}" , Evaluate.EEV, "document/string");
-			}
-			/* else if (SecurityScheme.Type.OAUTH2.equals(type)) {
-
-				 SecurityScheme.Type type1 = securityScheme.getType();
-				 OAuthFlows flows = securityScheme.getFlows();
-				 OAuthFlow authorizationCode = flows.getAuthorizationCode();
-				 String authorizationUrl = authorizationCode.getAuthorizationUrl();
-				 String tokenUrl = authorizationCode.getTokenUrl();
-				 Scopes scopes = authorizationCode.getScopes();
-
-			 }*/
 		}
 
 		Map<String, Object> switchMapping = createSwitch(flowSteps,"switch","SWITCH", "Checking status for response");
@@ -668,7 +687,6 @@ public class ImportSwagger {
 			}
 
 			createPreInvokeMapping(invokeClient, "copy", "document", "/*payload", "document", "/payload");
-			//  createPreInvokeMapping(invokeClient, "copy", "string", "/apiKey", "document/string", "/requestHeaders/apiKey");
 			createPreInvokeMapping(invokeClient, "copy", "document", "/*pathParameters", "document", "/pathParameters   ");
 
 			createPostInvokeMapping(invokeClient, "copy", "string", "/rawResponse", "string", "/rawResponse");
@@ -708,13 +726,30 @@ public class ImportSwagger {
 
 						createPreInvokeMapping(invokeClient, "copy", "string", "/" + securityScheme.getName(), "document/string", "/queryParameters/" + securityScheme.getName());
 					}
-				} else if (SecurityScheme.Type.HTTP.equals(type)) {
-					Map<String, String> commonAccessToken = Maps.newHashMap();
-					commonAccessToken.put("text", "access_token");
-					commonAccessToken.put("type", "string");
-					inputs.add(commonAccessToken);
-					createVariables(intiMapStep, "requestHeaders/Authorization", "Bearer ${access_token}", Evaluate.EEV, "document/string");
+				}
 
+				if (SecurityScheme.Type.HTTP.equals(type)) {
+					Map<String, String> username = Maps.newHashMap();
+					username.put("text", "username");
+					username.put("type", "string");
+					inputs.add(username);
+
+					Map<String, String> password = Maps.newHashMap();
+					password.put("text", "password");
+					password.put("type", "string");
+					inputs.add(password);
+
+					createPreInvokeMapping(invokeClient, "copy", "string", "/username", "document/string", "/basicAuth/username");
+					createPreInvokeMapping(invokeClient, "copy", "string", "/password", "document/string", "/basicAuth/password");
+
+				}
+
+				if (SecurityScheme.Type.OAUTH2.equals(type)) {
+					Map<String, String> username = Maps.newHashMap();
+					username.put("text", "access_token");
+					username.put("type", "string");
+					inputs.add(username);
+					createPreInvokeMapping(invokeClient, "copy", "string", "/access_token", "string", "/access_token");
 				}
 			}
 
