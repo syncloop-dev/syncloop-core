@@ -15,12 +15,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.nimbusds.jose.shaded.gson.Gson;
+import com.nimbusds.jose.shaded.gson.GsonBuilder;
 import com.nimbusds.jose.shaded.gson.JsonSyntaxException;
 import net.minidev.json.JSONObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import javax.json.JsonReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -53,7 +55,7 @@ public class ImportPostman {
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested,dataPipeline);
+                list.addAll(createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested,dataPipeline));
             } else {
                list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested, Evaluate.EEV,dataPipeline));
             }
@@ -67,11 +69,10 @@ public class ImportPostman {
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(),dataPipeline);
+                list.addAll(createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(),dataPipeline));
             } else {
                 String method = postmanItems.getRequest().getMethod();
-                list.add(generateClientLib(folder, servicePath, packageName, postmanItems, method, Evaluate.EEV,dataPipeline));
-            }
+ }
         }
         return list;
     }
@@ -85,7 +86,7 @@ public class ImportPostman {
         if (file.exists() && false) {
             flowService = new Gson().fromJson(new FileReader(file), FlowService.class);
         } else {
-            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"));
+            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"),dataPipeline);
         }
         List<Object> inputs = flowService.getInput();
 
@@ -264,6 +265,24 @@ public class ImportPostman {
         return filePath;
     }
 
+  /*  public static String getRequestBody(PostmanItems item) throws IOException {
+
+        String jsonSchema = null;
+
+        PostmanItemRequest request = item.getRequest();
+        if (request != null) {
+            PostmanRequestItemBody requestBody = request.getBody();
+            if (requestBody != null && StringUtils.isNotBlank(requestBody.getRaw())) {
+                String raw = requestBody.getRaw();
+                System.out.println("raw " + raw);
+                Gson gson = new GsonBuilder();
+                Object map = gson.fromJson(raw, Object.class);
+                jsonSchema = getJsonSchema(map);
+            }
+        }
+        return jsonSchema;
+    }*/
+
     public static String getRequestBody(PostmanItems item) throws IOException {
 
         String jsonSchema = null;
@@ -273,9 +292,23 @@ public class ImportPostman {
             PostmanRequestItemBody requestBody = request.getBody();
             if (requestBody != null && StringUtils.isNotBlank(requestBody.getRaw())) {
                 String raw = requestBody.getRaw();
-                Gson gson = new Gson();
-                Object map = gson.fromJson(raw, Object.class);
-                jsonSchema = getJsonSchema(map);
+                try {
+                    Gson gson = new Gson();
+                    Object map = gson.fromJson(raw, Object.class);
+                    jsonSchema = getJsonSchema(map);
+                } catch (JsonSyntaxException ex) {
+                    String[] lines = raw.split("\n");
+                    int lineNumber = 1;
+                    for (String line : lines) {
+                        try {
+                            Gson gson = new Gson();
+                            gson.fromJson(line, Object.class);
+                        } catch (JsonSyntaxException e) {
+                            break;
+                        }
+                        lineNumber++;
+                    }
+                }
             }
         }
         return jsonSchema;
@@ -535,7 +568,7 @@ public class ImportPostman {
         if (file.exists() && false) {
             flowService = new Gson().fromJson(new FileReader(file), FlowService.class);
         } else {
-            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"));
+            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"),dataPipeline);
         }
         List<Object> inputs = flowService.getInput();
         List<Object> outputs = flowService.getOutput();
@@ -570,7 +603,8 @@ public class ImportPostman {
         }
 
         createVariables(intiMapStep, "method", method, null, "string");
-        createVariables(intiMapStep, "url", "#{basePath}" + postmanToSyncloopProps(updatedAlias, "pathParameters"), Evaluate.EEV, "string");
+       // createVariables(intiMapStep, "url", "#{basePath}" + postmanToSyncloopProps(updatedAlias, "pathParameters"), Evaluate.EEV, "string");
+        createVariables(intiMapStep, "url", "#{basePath}" + updatedAlias.replaceAll(Pattern.quote("{"), "#{pathParameters/").replaceAll("(#+)", "#"), Evaluate.EEV, "string");
         dropVariables(intiMapStep, "basePath", "string");
         dropVariables(intiMapStep, "pathParameters", "document");
 
@@ -997,19 +1031,16 @@ public class ImportPostman {
         //System.out.println(fullCode);
         //System.out.println(className+".service");
         String javaFilePath=file.getAbsolutePath().replace(className+".flow", className+".java");
-        System.err.println("javaFilePath " + javaFilePath);
         File javaFile=new File(javaFilePath);
         if (!javaFile.exists()) {
             javaFile.createNewFile();
         }
-        System.out.println(javaFilePath);
         FileOutputStream fos = new FileOutputStream(javaFile);
         fos.write(fullCode.getBytes());
         fos.flush();
         fos.close();
         String fqn=pkg.replace("package ", "").replace(";","")+"."+className+".main";
 
-        System.err.println("fqn>>>> : " + fqn);
         dataPipeline.log("fqn: "+fqn);
        // ServiceUtils.compileJavaCode(fqn,dataPipeline);
     }
