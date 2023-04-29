@@ -899,6 +899,9 @@ public class DataPipeline {
 		
 		if(resource==null)
 			resource=currentResource;
+
+		resource=resource.split("@")[0];
+
 		String log = ServiceUtils.getFormattedLogLine(getCorrelationId(), resource, msg);
 		
 		if(Level.INFO.intLevel()==level.intLevel()) {

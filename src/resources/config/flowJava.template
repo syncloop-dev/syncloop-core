@@ -19,48 +19,32 @@ import com.eka.middleware.heap.CacheManager;//-----reset fix
 
 public final class #className {
 
-	private static final Map<String,JsonObject> mainflowJsonObjectMap=new ConcurrentHashMap<String,JsonObject>();
 	private static long timeout=0;//-----reset fix
 	private static int resetServiceInMS=5000;//-----reset fix
 	static final String syncBlock=new String("sync");
+	private static JsonObject mainflowJsonObject=null;
 	public static final void main(DataPipeline dataPipeline) throws SnippetException{
 		String fqn="#package.#className";
-		long nanoSec=0;
-		String logRequest = null;
-		String logResponse = null;
-		String requestJson="";
-		String responseJson="";
-	    Date dateTimeStmp=null;
-	    long startTime=0;
-	    String stopRecursiveLogging=dataPipeline.getString("stopRecursiveLogging");
-	    if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
-	    	nanoSec=System.nanoTime();
-			logRequest = dataPipeline.getMyConfig("logRequest");
-			logResponse = dataPipeline.getMyConfig("logResponse");
-			requestJson="";
-			responseJson="";
-			if("true".equalsIgnoreCase(logRequest))
-				requestJson=dataPipeline.toJson();
-	    	dateTimeStmp=new Date();
-	    	startTime=System.currentTimeMillis();
-	    }
-	    
+		Map<String, Object> passThroughData=new HashMap<>();
+		Long startTime=System.currentTimeMillis();
+		Long nanoSec=System.nanoTime();
+		passThroughData.put("nanoSec", nanoSec);
+	    passThroughData.put("startTime", startTime);
+
 	    Map<String, Object> chache=CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());//-----reset fix
 		Boolean resetEnabled=(Boolean)chache.get("ekamw.promote.runtime.service.reload");//-----reset fix
 		if(timeout<System.currentTimeMillis() && (resetEnabled==null || resetEnabled==true))//-----reset fix
 			timeout=0;//-----reset fix
 		try{
-		  JsonObject mainflowJsonObject=mainflowJsonObjectMap.get(dataPipeline.rp.getTenant().id);
-		  if(mainflowJsonObject==null || timeout==0)//-----reset fix
-			synchronized(syncBlock){
-			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
-			  String flowRef = location+"#flowRef";
-			  if(mainflowJsonObject==null || timeout==0){ //-----reset fix
-			  	  timeout=System.currentTimeMillis()+resetServiceInMS;  //-----reset fix
-				  mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
-				  mainflowJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainflowJsonObject);
-			  }
-			}
+		  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
+		  String flowRef = location+"#flowRef";
+		  if(mainflowJsonObject==null || timeout==0){ //-----reset fix
+			timeout=System.currentTimeMillis()+resetServiceInMS;  //-----reset fix
+			mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+	      }
+
+		  ServiceUtils.beforeServiceExecution(dataPipeline,fqn,mainflowJsonObject,passThroughData);
+
 		  FlowResolver.execute(dataPipeline,mainflowJsonObject);
 		}catch(Throwable e) {
 			dataPipeline.clear();
@@ -69,48 +53,9 @@ public final class #className {
 			dataPipeline.put("status", "Service error");
 			throw new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
 		}finally{
-			
-			if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
-				if("true".equalsIgnoreCase(logResponse))
-					responseJson=dataPipeline.toJson();
-			    long endTime=System.currentTimeMillis();
-				Map<String,String> auditLog=new HashMap();
-				auditLog.put("correlationId",dataPipeline.getCorrelationId());
-				auditLog.put("sessionId",dataPipeline.getSessionId());
-				auditLog.put("dateTimeStmp",dateTimeStmp+"");
-				auditLog.put("duration",(endTime-startTime)+"");
-				if (null == dataPipeline.getString("error")) {
-				    auditLog.put("error","");
-				} else {
-				    auditLog.put("error",dataPipeline.getString("error"));
-				}
-
-				auditLog.put("fqn",fqn);
-				auditLog.put("request",requestJson);
-				auditLog.put("response",responseJson);
-				auditLog.put("nanoInstance",nanoSec+"");
-
-				try {
-                    auditLog.put("hostName", InetAddress.getLocalHost().getHostName());
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                }
-                String nodeName = dataPipeline.getGlobalConfig("nodeName");
-                auditLog.put("nodeName", nodeName);
-
-                auditLog.put("remoteAddr", dataPipeline.getRemoteIpAddr());
-                auditLog.put("userId", dataPipeline.getCurrentUserProfile().getId());
-                auditLog.put("urlPath", dataPipeline.getUrlPath());
-
-				Map<String,Object> asyncInputDoc=new HashMap();
-				asyncInputDoc.put("auditLog",auditLog);
-				asyncInputDoc.put("stopRecursiveLogging","true");
-				dataPipeline.put("asyncInputDoc",asyncInputDoc);
-				dataPipeline.applyAsync("packages.middleware.pub.service.auditLogging");
-				dataPipeline.drop("asyncInputDoc");
-				dataPipeline.drop("asyncOutputDoc");
-				dataPipeline.rp.getExchange().getResponseHeaders().put(new HttpString("CORRELATION-ID"), dataPipeline.getCorrelationId());
-			}
+			try{
+				ServiceUtils.afterServiceExecution(dataPipeline,fqn,passThroughData);
+			}catch(Exception e){}
 		}
 	}
 }

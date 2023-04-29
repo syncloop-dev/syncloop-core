@@ -53,7 +53,7 @@ public class ImportSwagger {
 		//System.out.println(json);
 	}
 
-	public static Map<String, String> asServerStub(String folderPath, byte[] openAPI,DataPipeline dataPipeline) throws Exception {
+	public static Map<String, String> asServerStub(String folderPath, byte[] openAPI, DataPipeline dataPipeline, Boolean isClientRequested, String packageName) throws Exception {
 
 		File folder = new File(folderPath);
 		folder.mkdirs();
@@ -68,11 +68,11 @@ public class ImportSwagger {
 			String alias = entry.getKey();
 			PathItem pi = entry.getValue();
 			Operation op = pi.getGet();
-			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
+			String opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 			String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
 
 			File file = new File(servicePath);
-			flow = generateServerStub(op, swagger, servicePath);
+			flow = generateServerStub(op, swagger, servicePath,isClientRequested, packageName, alias, dataPipeline);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
 				saveFlow(servicePath, json);
@@ -80,46 +80,46 @@ public class ImportSwagger {
 				response.put("GET" + alias, opId);
 			}
 			op = pi.getPost();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) + alias : op.getOperationId());
-			String servicePath1 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath1);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) + alias : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath,isClientRequested, packageName, alias, dataPipeline);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath1, json);
-				generateJavaClass(file,servicePath1,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("POST" + alias, opId);
 			}
 
 			op = pi.getDelete();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
-			String servicePath2 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath2);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath,isClientRequested, packageName, alias, dataPipeline);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath2, json);
-				generateJavaClass(file,servicePath2,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("DELETE" + alias, opId);
 			}
 
 			op = pi.getPatch();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) + alias : op.getOperationId());
-			String servicePath3 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath3);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) + alias : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath,isClientRequested, packageName, alias, dataPipeline);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath3, json);
-				generateJavaClass(file,servicePath3,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PATCH" + alias, opId);
 			}
 
 			op = pi.getPut();
-			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
-			String servicePath4 = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
-			flow = generateServerStub(op, swagger, servicePath4);
+			opId = ServiceUtils.normalizeUri( null == op || op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
+			servicePath = folderPath + ServiceUtils.normalizeApiPath(alias)+ File.separator + opId + ".flow";
+			flow = generateServerStub(op, swagger, servicePath,isClientRequested, packageName, alias, dataPipeline);
 			if (flow != null) {
 				String json = Json.pretty().writeValueAsString(flow);
-				saveFlow(servicePath4, json);
-				generateJavaClass(file,servicePath4,dataPipeline);
+				saveFlow(servicePath, json);
+				generateJavaClass(file,servicePath,dataPipeline);
 				response.put("PUT" + alias, opId);
 			}
 		}
@@ -142,9 +142,9 @@ public class ImportSwagger {
 			PathItem pi = entry.getValue();
 			Operation op = pi.getGet();
 
-			flow = generateClientLib(alias, op, swagger, "GET");
+			flow = generateClientLib(alias, op, swagger, "GET",dataPipeline);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("get", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -153,9 +153,9 @@ public class ImportSwagger {
 				response.put("GET" + alias, opId);
 			}
 			op = pi.getPost();
-			flow = generateClientLib(alias, op, swagger, "POST");
+			flow = generateClientLib(alias, op, swagger, "POST",dataPipeline);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("post", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -165,9 +165,9 @@ public class ImportSwagger {
 			}
 
 			op = pi.getDelete();
-			flow = generateClientLib(alias, op, swagger, "DELETE");
+			flow = generateClientLib(alias, op, swagger, "DELETE",dataPipeline);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("delete", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -177,9 +177,9 @@ public class ImportSwagger {
 			}
 
 			op = pi.getPatch();
-			flow = generateClientLib(alias, op, swagger, "PATCH");
+			flow = generateClientLib(alias, op, swagger, "PATCH",dataPipeline);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("patch", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -189,9 +189,9 @@ public class ImportSwagger {
 			}
 
 			op = pi.getPut();
-			flow = generateClientLib(alias, op, swagger, "PUT");
+			flow = generateClientLib(alias, op, swagger, "PUT",dataPipeline);
 			if (flow != null) {
-				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : op.getOperationId());
+				String opId = ServiceUtils.normalizeUri(op.getOperationId() == null ? ServiceUtils.normalizeApiPathName("put", alias) : ServiceUtils.toServiceSlug(op.getOperationId()));
 				String json = Json.pretty().writeValueAsString(flow);
 				String servicePath = folderPath + ServiceUtils.normalizeApiPath(alias) + File.separator + opId + ".flow";
 				saveFlow(servicePath, json);
@@ -372,10 +372,10 @@ public class ImportSwagger {
 		}
 	}
 
-	private static Map<String, Object> generateClientLib(String alias, Operation op, OpenAPI swagger, String method) {
+	private static Map<String, Object> generateClientLib(String alias, Operation op, OpenAPI swagger, String method,DataPipeline dataPipeline) {
 		if (op == null)
 			return null;
-		FlowService flowService = new FlowService(op.getDescription(), op.getSummary(), com.google.common.collect.Sets.newHashSet("consumers"), Sets.newHashSet("developers"));
+		FlowService flowService = new FlowService(op.getDescription(), op.getSummary(), com.google.common.collect.Sets.newHashSet("consumers"), Sets.newHashSet("developers"),dataPipeline);
 
 		//Map<String, Object> latest = flowService.getVersion();
 		List<Object> inputs = flowService.getInput();
@@ -404,12 +404,15 @@ public class ImportSwagger {
 		commonOutputStatusCode.put("type", "string");
 		outputs.add(commonOutputStatusCode);
 
-		if (headers.size() > 0)
-			inputs.add(createDocument("requestHeaders", headers, ""));
-		if (parameters.size() > 0)
+		Map<String, Object> inputHeaders = createDocument("requestHeaders", headers, "");
+		Map<String, Object> inputQuery = createDocument("queryParameters", query, "");
+
+		if (parameters.size() > 0) {
 			inputs.add(createDocument("pathParameters", parameters, ""));
-		if (query.size() > 0)
-			inputs.add(createDocument("queryParameters", query, ""));
+		}
+
+		inputs.add(inputHeaders);
+		inputs.add(inputQuery);
 
 		Map<String, Object> intiMapStep = createMapStep(flowSteps, "Resolving Parameters");
 		createVariables(intiMapStep, "basePath", "#{basePath}", Evaluate.EEV, "string");
@@ -419,6 +422,74 @@ public class ImportSwagger {
 		createVariables(intiMapStep, "url", "#{basePath}" + alias.replaceAll(Pattern.quote("{"), "#{pathParameters/"), Evaluate.EEV, "string");
 		dropVariables(intiMapStep, "basePath", "string");
 		dropVariables(intiMapStep, "pathParameters", "document");
+
+		Map<String, SecurityScheme> securitySchemes =
+				null == swagger.getComponents().getSecuritySchemes() ? Maps.newHashMap() : swagger.getComponents().getSecuritySchemes();
+		for (String securitySchemesList: securitySchemes.keySet()) {
+
+			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
+			SecurityScheme.Type type = securityScheme.getType();
+
+			List<Object> headersChildren = Lists.newArrayList();
+			if (null != inputHeaders.get("children")) {
+				headersChildren = (List<Object>)inputHeaders.get("children");
+			}
+
+			List<Object> queryChildren = Lists.newArrayList();
+			if (null != inputHeaders.get("children")) {
+				queryChildren = (List<Object>)inputQuery.get("children");
+			}
+
+			if (SecurityScheme.Type.APIKEY.equals(type)) {
+
+				Map<String, String> commonApiKey = Maps.newHashMap();
+				commonApiKey.put("text", securityScheme.getName());
+				commonApiKey.put("type", "string");
+
+				if (SecurityScheme.In.HEADER.equals(securityScheme.getIn())) {
+					headersChildren.add(commonApiKey);
+
+				} else if (SecurityScheme.In.QUERY.equals(securityScheme.getIn())) {
+					queryChildren.add(commonApiKey);
+				}
+			}
+
+			if (SecurityScheme.Type.HTTP.equals(type)) {
+				List<Object> basicAuth = com.google.common.collect.Lists.newArrayList();
+
+				Map<String, String> inputVar = Maps.newHashMap();
+				inputVar.put("text", "username");
+				inputVar.put("type", "string");
+				basicAuth.add(inputVar);
+
+				inputVar = Maps.newHashMap();
+				inputVar.put("text", "password");
+				inputVar.put("type", "string");
+				basicAuth.add(inputVar);
+
+				Map<String, Object> inputAuthVar = Maps.newHashMap();
+				inputAuthVar.put("text", "basicAuth");
+				inputAuthVar.put("type", "document");
+				inputAuthVar.put("children", basicAuth);
+				inputs.add(inputAuthVar);
+
+				Map<String, Object> authRequest =
+						createInvokeStep(flowSteps,"service","packages/Wrapper/Authorization/Basic", "Basic Auth");
+
+				createPreInvokeMapping(authRequest, "copy", "document/string", "/basicAuth/username", "string","/username");
+				createPreInvokeMapping(authRequest, "copy", "document/string", "/basicAuth/password", "string","/password");
+
+				createPostInvokeMapping(authRequest, "copy", "string", "/Authorization", "document/string", "/requestHeaders/Authorization");
+			}
+
+			if (SecurityScheme.Type.OAUTH2.equals(type)) {
+				Map<String, String> commonAccessToken = Maps.newHashMap();
+				commonAccessToken.put("text", "access_token");
+				commonAccessToken.put("type", "string");
+				inputs.add(commonAccessToken);
+				createVariables(intiMapStep, "requestHeaders/Authorization",  "Bearer #{access_token}" , Evaluate.EEV, "document/string");
+			}
+		}
 
 		if (!"GET".equalsIgnoreCase(method)) {
 			Map<String, Object> invokeStepToJson= createInvokeStep(flowSteps,"service","packages/middleware/pub/json/toString", "Initialize");
@@ -448,43 +519,6 @@ public class ImportSwagger {
 		if (!"GET".equalsIgnoreCase(method)) {
 			createPreInvokeMapping(invokeStepRequest, "copy", "string", "/body", "string", "/payload");
 			dropVariables(invokeStepRequest, "payload", "string");
-		}
-
-		Map<String, SecurityScheme> securitySchemes = swagger.getComponents().getSecuritySchemes();
-		for (String securitySchemesList: securitySchemes.keySet()){
-
-			SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
-			SecurityScheme.Type type = securityScheme.getType();
-
-			if (SecurityScheme.Type.APIKEY.equals(type)) {
-				Map<String, String> commonApiKey = Maps.newHashMap();
-				commonApiKey.put("text", "apiKey");
-				commonApiKey.put("type", "string");
-				inputs.add(commonApiKey);
-
-				if (SecurityScheme.In.HEADER.equals(securityScheme.getIn())) {
-					createVariables(intiMapStep, "requestHeaders/"+securityScheme.getName(),  "${apiKey}" , Evaluate.EEV, "document/string");
-				} else if (SecurityScheme.In.QUERY.equals(securityScheme.getIn())) {
-					createVariables(intiMapStep, "queryParameters/"+securityScheme.getName(),  "${apiKey}" , Evaluate.EEV, "document/string");
-				}
-			}
-			else if (SecurityScheme.Type.HTTP.equals(type)) {
-				Map<String, String> commonAccessToken = Maps.newHashMap();
-				commonAccessToken.put("text", "access_token");
-				commonAccessToken.put("type", "string");
-				inputs.add(commonAccessToken);
-				createVariables(intiMapStep, "requestHeaders/Authorization",  "Bearer ${access_token}" , Evaluate.EEV, "document/string");
-			}
-			/* else if (SecurityScheme.Type.OAUTH2.equals(type)) {
-
-				 SecurityScheme.Type type1 = securityScheme.getType();
-				 OAuthFlows flows = securityScheme.getFlows();
-				 OAuthFlow authorizationCode = flows.getAuthorizationCode();
-				 String authorizationUrl = authorizationCode.getAuthorizationUrl();
-				 String tokenUrl = authorizationCode.getTokenUrl();
-				 Scopes scopes = authorizationCode.getScopes();
-
-			 }*/
 		}
 
 		Map<String, Object> switchMapping = createSwitch(flowSteps,"switch","SWITCH", "Checking status for response");
@@ -520,7 +554,7 @@ public class ImportSwagger {
 
 		List<Object> contentTypeCases = Lists.newArrayList();
 		Content content = apiResponse.getContent();
-		if (null != content) {
+		if (null != content && false) {
 			for (Map.Entry<String, MediaType> mediaTypeEntry : apiResponse.getContent().entrySet()) {
 
 				Map<String, Object> sequenceContentTypeMapping = createCase(contentTypeCases,"CASE", "Handling " + mediaTypeEntry.getKey() + " response");
@@ -591,7 +625,7 @@ public class ImportSwagger {
 		return switchContentTypeMapping;
 	}
 
-	private static Map<String, Object> generateServerStub(Operation op, OpenAPI swagger, String servicePath) throws FileNotFoundException {
+	private static Map<String, Object> generateServerStub(Operation op, OpenAPI swagger, String servicePath,Boolean isClientRequested,String packageName,String alias , DataPipeline dataPipeline) throws FileNotFoundException {
 		if (op == null)
 			return null;
 
@@ -600,7 +634,7 @@ public class ImportSwagger {
 		if (file.exists()) {
 			flowService = new Gson().fromJson(new FileReader(file), FlowService.class);
 		} else {
-			flowService = new FlowService(op.getDescription(), op.getSummary(), Sets.newHashSet("consumers"), Sets.newHashSet("developers"));
+			flowService = new FlowService(op.getDescription(), op.getSummary(), Sets.newHashSet("consumers"), Sets.newHashSet("developers"), dataPipeline);
 		}
 
 		List<Object> inputs = flowService.getInput();
@@ -608,10 +642,13 @@ public class ImportSwagger {
 		List<Object> outputs = flowService.getOutput();
 		outputs.clear();
 
+		Map<String, Object> intiMapStep = null;
+		if (isClientRequested) {
+			intiMapStep = createMapStep(flowService.getFlowSteps(), "Resolving Parameters");
+		}
+
 		List<Object> query = getParameters(op, "query");
-
 		List<Object> headers = getParameters(op, "header");
-
 		List<Object> parameters = getParameters(op, "path");
 
 		RequestBody rb = op.getRequestBody();
@@ -620,12 +657,118 @@ public class ImportSwagger {
 		ApiResponses apiResponses = op.getResponses();
 		addResponses(outputs, apiResponses, swagger);
 
-		if (headers.size() > 0)
-			inputs.add(createDocument("*requestHeaders", headers, ""));
+		Map<String, Object> inputHeaders = createDocument("*requestHeaders", headers, "");
+
 		if (parameters.size() > 0)
 			inputs.add(createDocument("*pathParameters", parameters, ""));
 		if (query.size() > 0)
 			inputs.addAll(query);
+
+		inputs.add(inputHeaders);
+
+		if (isClientRequested) {
+			String str = "packages/" + packageName + "/client" + ServiceUtils.normalizeApiPath(alias) + "/" + op.getOperationId().replaceFirst("//", "/");
+			Map<String, Object>  invokeClient = createInvokeStep(flowService.getFlowSteps(), "flow",
+					str, "Invoking Client");
+
+			if (swagger.getPaths() != null) {
+				for (Map.Entry<String, PathItem> pathEntry : swagger.getPaths().entrySet()) {
+					PathItem pathItem = pathEntry.getValue();
+					for (Operation operation : pathItem.readOperations()) {
+						if (op.getParameters() != null) {
+							for (Parameter parameter : op.getParameters()) {
+								if ("query".equalsIgnoreCase(parameter.getIn())) {
+									createPreInvokeMapping(invokeClient, "copy", "string", "/" + parameter.getName(), "document", "/queryParameters/" + parameter.getName());
+								}
+							}
+						}
+					}
+				}
+			}
+
+			createPreInvokeMapping(invokeClient, "copy", "document", "/*payload", "document", "/payload");
+			createPreInvokeMapping(invokeClient, "copy", "document", "/*pathParameters", "document", "/pathParameters   ");
+
+			createPostInvokeMapping(invokeClient, "copy", "string", "/rawResponse", "string", "/rawResponse");
+			createPostInvokeMapping(invokeClient, "copy", "string", "/statusCode", "string", "/statusCode");
+
+			Set<Entry<String, ApiResponse>> apiRespSet = apiResponses.entrySet();
+			for (Entry<String, ApiResponse> entry : apiRespSet) {
+				String code = entry.getKey();
+				createVariables(intiMapStep, "basePath", "/*" + code, Evaluate.EEV, "string");
+				createPostInvokeMapping(invokeClient, "copy", "document", "/*" + code, "document", "/*" + code);
+			}
+
+			Map<String, SecurityScheme> securitySchemes =
+					null == swagger.getComponents().getSecuritySchemes() ? Maps.newHashMap() : swagger.getComponents().getSecuritySchemes();
+			for (String securitySchemesList : securitySchemes.keySet()) {
+
+				SecurityScheme securityScheme = securitySchemes.get(securitySchemesList);
+				SecurityScheme.Type type = securityScheme.getType();
+
+				if (SecurityScheme.Type.APIKEY.equals(type)) {
+					Map<String, String> commonApiKey = Maps.newHashMap();
+					commonApiKey.put("text", securityScheme.getName());
+					commonApiKey.put("type", "string");
+
+					if (SecurityScheme.In.HEADER.equals(securityScheme.getIn())) {
+						if (null == inputHeaders.get("children")) {
+							inputHeaders.put("children", Lists.newArrayList(commonApiKey));
+						} else {
+							List<Object> children = (List<Object>)inputHeaders.get("children");
+							children.add(commonApiKey);
+						}
+
+						createPreInvokeMapping(invokeClient, "copy", "document/string", "/*requestHeaders/" + securityScheme.getName(), "document/string", "/requestHeaders/" + securityScheme.getName());
+
+					} else if (SecurityScheme.In.QUERY.equals(securityScheme.getIn())) {
+						inputs.add(commonApiKey);
+
+						createPreInvokeMapping(invokeClient, "copy", "string", "/" + securityScheme.getName(), "document/string", "/queryParameters/" + securityScheme.getName());
+					}
+				}
+
+				if (SecurityScheme.Type.HTTP.equals(type)) {
+					Map<String, String> username = Maps.newHashMap();
+					username.put("text", "username");
+					username.put("type", "string");
+					inputs.add(username);
+
+					Map<String, String> password = Maps.newHashMap();
+					password.put("text", "password");
+					password.put("type", "string");
+					inputs.add(password);
+
+					createPreInvokeMapping(invokeClient, "copy", "string", "/username", "document/string", "/basicAuth/username");
+					createPreInvokeMapping(invokeClient, "copy", "string", "/password", "document/string", "/basicAuth/password");
+
+				}
+
+				if (SecurityScheme.Type.OAUTH2.equals(type)) {
+					Map<String, String> username = Maps.newHashMap();
+					username.put("text", "access_token");
+					username.put("type", "string");
+					inputs.add(username);
+					createPreInvokeMapping(invokeClient, "copy", "string", "/access_token", "string", "/access_token");
+				}
+			}
+
+			Map<String, Object> invokeStepToJson = createInvokeStep(flowService.getFlowSteps(), "service", "packages/middleware/pub/json/fromJson",
+					"Converting raw Json to JSON Object");
+
+			createPreInvokeMapping(invokeStepToJson, "copy", "string", "/rawResponse", "string", "/jsonString");
+			createPostInvokeMapping(invokeStepToJson, "copy", "document", "/output", "document", "/output");
+
+			Map<String, String> commonOutputRawResponse = Maps.newHashMap();
+			commonOutputRawResponse.put("text", "rawResponse");
+			commonOutputRawResponse.put("type", "string");
+			outputs.add(commonOutputRawResponse);
+
+			Map<String, String> commonOutputStatusCode = Maps.newHashMap();
+			commonOutputStatusCode.put("text", "statusCode");
+			commonOutputStatusCode.put("type", "string");
+			outputs.add(commonOutputStatusCode);
+		}
 		return flowService.getFlow();
 	}
 
@@ -1033,6 +1176,9 @@ public class ImportSwagger {
 		return document;
 	}
 	public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
+		if (true) {
+			return ;
+		}
 		String flowJavaTemplatePath= MiddlewareServer.getConfigFolderPath()+"flowJava.template";
 		String className=file.getName().replace(".flow", "");
 		String fullCode="";
