@@ -2,6 +2,7 @@ package com.eka.middleware.service;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,7 +21,12 @@ import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
+import com.eka.middleware.adapter.SQL;
 import com.eka.middleware.pooling.DBCPDataSource;
+import com.eka.middleware.pub.util.graphql.generator.DBSchemaGenerator;
+import com.eka.middleware.pub.util.graphql.generator.FileUtil;
+import com.eka.middleware.pub.util.graphql.generator.GraphQLSchemaUtil;
+import graphql.schema.GraphQLSchema;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Level;
@@ -830,6 +836,17 @@ public class DataPipeline {
 		String connectionPropFile=pPath + JDBC;
 		DBCPDataSource.removeConnection(connectionPropFile);
 		java.nio.file.Files.write(path, dataPipeline.getBody());
+
+		try {
+			Connection myCon = SQL.getConnection(JDBC.replace("packages", "").replace(".jdbc", ""), dataPipeline);
+			GraphQLSchema schema = DBSchemaGenerator.generateSchema(myCon);
+			String schemaString = GraphQLSchemaUtil.convertToString(schema);
+			File connectionFile = new File(connectionPropFile);
+			String graphQLLocation = connectionFile.getParent() + "/" + (connectionFile.getName().replaceAll(".jdbc", ".graphql"));
+			FileUtil.writeToFile(graphQLLocation, schemaString);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void saveProperties(String path,byte[] data) {

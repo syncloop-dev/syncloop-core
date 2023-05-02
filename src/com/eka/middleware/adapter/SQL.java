@@ -10,7 +10,10 @@ import java.util.Map;
 import java.util.Properties;
 
 import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.pub.util.graphql.generator.DBSchemaGenerator;
+import com.eka.middleware.pub.util.graphql.generator.GraphQLSchemaUtil;
 import com.eka.middleware.service.*;
+import graphql.schema.GraphQLSchema;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -227,6 +230,7 @@ public class SQL {
             //myCon=DriverManager.getConnection(connectionUrl);
             myCon = DBCPDataSource.getConnection(connectionPropFile, connectionUrl, null, null, pooling, timeOt, ccl, driverObj, driver);
         }
+
         return myCon;
     }
 
