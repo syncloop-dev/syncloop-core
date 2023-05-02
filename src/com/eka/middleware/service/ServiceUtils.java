@@ -38,6 +38,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.json.JsonObject;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -148,18 +149,21 @@ public class ServiceUtils {
 	}
 
 	public static final String toJson(Map<String, Object> map) throws Exception {
+		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writeValueAsString(map);
 		return json;
 	}
 
 	public static final String toPrettyJson(Map<String, Object> map) throws Exception {
+		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
 		return json;
 	}
 
 	public static final String objectToJson(Object object) throws Exception {
+		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writeValueAsString(object);
 		return json;
@@ -1268,6 +1272,7 @@ public class ServiceUtils {
 		String requestJson="";
 		String responseJson="";
 		Date dateTimeStmp=null;
+		dp.put("*currentResourceFQN",fqn);
 		String stopRecursiveLogging=dp.getString("stopRecursiveLogging");
 		if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
 			logRequest = dp.getMyConfig("logRequest");
