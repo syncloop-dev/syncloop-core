@@ -40,7 +40,7 @@ public class JWT {
 
             Deque<String> stringDeque = exchange.getQueryParameters().get("expiration_time");
             String expirationTimeStr = (null == stringDeque) ? null : stringDeque.pop();
-            int expirationTime = 8;
+            int expirationTime = 720;
             if (StringUtils.isNotBlank(expirationTimeStr)) {
                 expirationTime = Integer.parseInt(expirationTimeStr);
             }
