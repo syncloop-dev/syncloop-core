@@ -19,8 +19,8 @@ import com.eka.middleware.heap.CacheManager;//-----reset fix
 
 public final class #className {
 
-	private static long timeout=0;//-----reset fix
-	private static int resetServiceInMS=5000;//-----reset fix
+	private static Long timeout=0l;//-----reset fix
+	private static Integer resetServiceInMS=5000;//-----reset fix
 	static final String syncBlock=new String("sync");
 	private static JsonObject mainflowJsonObject=null;
 	public static final void main(DataPipeline dataPipeline) throws SnippetException{
@@ -30,22 +30,12 @@ public final class #className {
 		Long nanoSec=System.nanoTime();
 		passThroughData.put("nanoSec", nanoSec);
 	    passThroughData.put("startTime", startTime);
-
-	    Map<String, Object> chache=CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());//-----reset fix
-		Boolean resetEnabled=(Boolean)chache.get("ekamw.promote.runtime.service.reload");//-----reset fix
-		if(timeout<System.currentTimeMillis() && (resetEnabled==null || resetEnabled==true))//-----reset fix
-			timeout=0;//-----reset fix
+		passThroughData.put("flowRef", "#flowRef");
+		passThroughData.put("timeout", timeout);
+		passThroughData.put("resetServiceInMS", resetServiceInMS);
 		try{
-		  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
-		  String flowRef = location+"#flowRef";
-		  if(mainflowJsonObject==null || timeout==0){ //-----reset fix
-			timeout=System.currentTimeMillis()+resetServiceInMS;  //-----reset fix
-			mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
-	      }
-
-		  ServiceUtils.beforeServiceExecution(dataPipeline,fqn,mainflowJsonObject,passThroughData);
-
-		  FlowResolver.execute(dataPipeline,mainflowJsonObject);
+		  ServiceUtils.beforeServiceExecution(dataPipeline,fqn,passThroughData);
+		  mainflowJsonObject = (JsonObject) passThroughData.get("mainflowJsonObject");
 		}catch(Throwable e) {
 			dataPipeline.clear();
 			dataPipeline.put("error", e.getMessage());
