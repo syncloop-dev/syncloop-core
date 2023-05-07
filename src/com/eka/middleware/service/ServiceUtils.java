@@ -36,8 +36,12 @@ import java.util.zip.*;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import javax.json.Json;
 import javax.json.JsonObject;
 
+import com.eka.middleware.flow.FlowResolver;
+import com.eka.middleware.heap.CacheManager;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -148,18 +152,21 @@ public class ServiceUtils {
 	}
 
 	public static final String toJson(Map<String, Object> map) throws Exception {
+		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writeValueAsString(map);
 		return json;
 	}
 
 	public static final String toPrettyJson(Map<String, Object> map) throws Exception {
+		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
 		return json;
 	}
 
 	public static final String objectToJson(Object object) throws Exception {
+		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		String json = om.writeValueAsString(object);
 		return json;
@@ -1262,21 +1269,74 @@ public class ServiceUtils {
 		return destFile;
 	}
 
-	public static Map<String, Object> beforeServiceExecution(DataPipeline dp, String fqn, JsonObject mainflowJsonObject, Map<String, Object> passThroughData) throws Exception{
+	public static void beforeServiceExecution(DataPipeline dp, String fqn, Map<String, Object> passThroughData)
+			throws Exception {
 		String logRequest = null;
 		String logResponse = null;
-		String requestJson="";
-		String responseJson="";
-		Date dateTimeStmp=null;
-		String stopRecursiveLogging=dp.getString("stopRecursiveLogging");
-		if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
+		String requestJson = "";
+		String responseJson = "";
+		Date dateTimeStmp = null;
+		Set<String> keys = passThroughData.keySet();
+		dp.put("*currentResourceFQN", fqn);
+		String gqlEnabled = (String) dp.getMyProperties().get("GraphQL");
+
+		JsonObject mainflowJsonObject = (JsonObject) passThroughData.get("mainflowJsonObject");
+
+		Long timeout = (Long) passThroughData.get("timeout");
+		Integer resetServiceInMS = (Integer) passThroughData.get("resetServiceInMS");
+		String gql = null;
+		Object rootObject = null;
+		Map<String, Object> gqlData = new HashMap<>();
+
+		if (resetServiceInMS != null) {
+
+			String flowRef = (String) passThroughData.get("flowRef");
+			mainflowJsonObject = configureServiceStartup(dp, timeout, mainflowJsonObject, resetServiceInMS,
+					flowRef);
+			passThroughData.put("mainflowJsonObject", mainflowJsonObject);
+
+			if (Boolean.valueOf(gqlEnabled)) {
+				gql = dp.getAsString("*payload/query");
+				// Setting up the graphQL introspection request
+
+				if (StringUtils.isNotBlank(gql)) {
+					dp.drop("*payload");
+					gql = gql.replaceAll("\\\\s+", " ").replaceAll("\\\\r|\\\\n", "").trim();
+					gqlData.put("gQuery", gql);
+					gqlData.put("fqn", fqn);
+
+					String[] gqlTokens = gql.split(" ");
+					String rootName = gqlTokens[1];
+
+					gqlData.put("rootName", rootName);
+
+					if (rootName.toLowerCase().equals("introspectionquery")) {
+						dp.put("*gqlData", gqlData);
+						dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
+						rootObject = dp.get("*multiPart");
+						if (rootObject != null)
+							dp.put("*multiPart", rootObject);
+						else {
+							dp.put(rootName, dp.get("executionResult/errors"));
+						}
+						return;
+					}
+					gqlTokens = gql.split(Pattern.quote("{"));
+					if (gqlTokens.length > 1 && gqlTokens[1] != null)
+						rootName = gqlTokens[1].trim();
+					gqlData.put("rootName", rootName);
+				}
+			}
+		}
+		String stopRecursiveLogging = dp.getString("stopRecursiveLogging");
+		if (stopRecursiveLogging == null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")) {
 			logRequest = dp.getMyConfig("logRequest");
 			logResponse = dp.getMyConfig("logResponse");
-			requestJson="";
-			responseJson="";
-			if("true".equalsIgnoreCase(logRequest))
-				requestJson=dp.toJson();
-			dateTimeStmp=new Date();
+			requestJson = "";
+			responseJson = "";
+			if ("true".equalsIgnoreCase(logRequest))
+				requestJson = dp.toJson();
+			dateTimeStmp = new Date();
 		}
 		passThroughData.put("stopRecursiveLogging", stopRecursiveLogging);
 		passThroughData.put("logRequest", logRequest);
@@ -1284,37 +1344,60 @@ public class ServiceUtils {
 		passThroughData.put("requestJson", requestJson);
 		passThroughData.put("responseJson", responseJson);
 		passThroughData.put("dateTimeStmp", dateTimeStmp);
-		return passThroughData;
+
+		// Calling the service
+		if (resetServiceInMS != null)
+			FlowResolver.execute(dp, mainflowJsonObject);
+
+		if (StringUtils.isNotBlank(gql)) {
+			dp.put("*gqlData", gqlData);
+			Map<String, Object> data = new HashMap<>();
+			String rootName = (String) gqlData.get("rootName");
+			rootObject = dp.get(rootName);
+			data.put(rootName, rootObject);
+			gqlData.put("data", data);
+			dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
+			// dp.drop("*gqlData");
+			rootObject = dp.getValueByPointer("executionResult/rootObject");
+			if (rootObject != null)
+				dp.put(rootName, rootObject);
+			Object errors = dp.getValueByPointer("executionResult/errors");
+			if (errors != null)
+				dp.put(rootName, errors);
+			dp.drop("executionResult");
+			dp.drop("*gqlData");
+		}
 	}
 
-	public static void afterServiceExecution(DataPipeline dp,String fqn,Map<String, Object> passThroughData) throws Exception {
-		Long nanoSec=(Long)passThroughData.get("nanoSec");
-		String logRequest = (String)passThroughData.get("logRequest");
-		String logResponse = (String)passThroughData.get("logResponse");
-		String requestJson=(String)passThroughData.get("requestJson");
-		String responseJson=(String)passThroughData.get("responseJson");
-		Date dateTimeStmp=(Date)passThroughData.get("dateTimeStmp");
-		Long startTime=(Long)passThroughData.get("startTime");
-		String stopRecursiveLogging=(String)passThroughData.get("stopRecursiveLogging");
-		if(stopRecursiveLogging==null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")){
-			if("true".equalsIgnoreCase(logResponse))
-				responseJson=dp.toJson();
-			long endTime=System.currentTimeMillis();
-			Map<String,String> auditLog=new HashMap();
-			auditLog.put("correlationId",dp.getCorrelationId());
-			auditLog.put("sessionId",dp.getSessionId());
-			auditLog.put("dateTimeStmp",dateTimeStmp+"");
-			auditLog.put("duration",(endTime-startTime)+"");
+	public static void afterServiceExecution(DataPipeline dp, String fqn, Map<String, Object> passThroughData)
+			throws Exception {
+		Long nanoSec = (Long) passThroughData.get("nanoSec");
+		String logRequest = (String) passThroughData.get("logRequest");
+		String logResponse = (String) passThroughData.get("logResponse");
+		String requestJson = (String) passThroughData.get("requestJson");
+		String responseJson = (String) passThroughData.get("responseJson");
+		Date dateTimeStmp = (Date) passThroughData.get("dateTimeStmp");
+		Long startTime = (Long) passThroughData.get("startTime");
+		String stopRecursiveLogging = (String) passThroughData.get("stopRecursiveLogging");
+		if (stopRecursiveLogging == null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")) {
+			if ("true".equalsIgnoreCase(logResponse))
+				responseJson = dp.toJson();
+			long endTime = System.currentTimeMillis();
+			Map<String, String> auditLog = new HashMap();
+			auditLog.put("correlationId", dp.getCorrelationId());
+			auditLog.put("sessionId", dp.getSessionId());
+			auditLog.put("dateTimeStmp", dateTimeStmp + "");
+			auditLog.put("duration", (endTime - startTime) + "");
 			if (null == dp.getString("error")) {
-				auditLog.put("error","");
+				auditLog.put("error", "");
 			} else {
-				auditLog.put("error",dp.getString("error"));
+				auditLog.put("error", dp.getString("error"));
 			}
 
-			auditLog.put("fqn",fqn);
-			auditLog.put("request",requestJson);
-			auditLog.put("response",responseJson);
-			auditLog.put("nanoInstance",nanoSec+"");
+			auditLog.put("fqn", fqn);
+			auditLog.put("request", requestJson);
+			auditLog.put("response", responseJson);
+			auditLog.put("nanoInstance", nanoSec + "");
 
 			try {
 				auditLog.put("hostName", InetAddress.getLocalHost().getHostName());
@@ -1328,15 +1411,30 @@ public class ServiceUtils {
 			auditLog.put("userId", dp.getCurrentUserProfile().getId());
 			auditLog.put("urlPath", dp.getUrlPath());
 
-			Map<String,Object> asyncInputDoc=new HashMap();
-			asyncInputDoc.put("auditLog",auditLog);
-			asyncInputDoc.put("stopRecursiveLogging","true");
-			dp.put("asyncInputDoc",asyncInputDoc);
+			Map<String, Object> asyncInputDoc = new HashMap();
+			asyncInputDoc.put("auditLog", auditLog);
+			asyncInputDoc.put("stopRecursiveLogging", "true");
+			dp.put("asyncInputDoc", asyncInputDoc);
 			dp.applyAsync("packages.middleware.pub.service.auditLogging");
 			dp.drop("asyncInputDoc");
 			dp.drop("asyncOutputDoc");
-			if(dp.rp.isExchangeInitialized())
+			if (dp.rp.isExchangeInitialized())
 				dp.rp.getExchange().getResponseHeaders().put(new HttpString("CORRELATION-ID"), dp.getCorrelationId());
 		}
+	}
+
+	private static JsonObject configureServiceStartup(DataPipeline dataPipeline, Long timeout,
+													  JsonObject mainflowJsonObject, Integer resetServiceInMS, String flowRef) throws Exception {
+		Map<String, Object> chache = CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());// -----reset fix
+		Boolean resetEnabled = (Boolean) chache.get("ekamw.promote.runtime.service.reload");// -----reset fix
+		if (timeout < System.currentTimeMillis() && (resetEnabled == null || resetEnabled == true))// -----reset fix
+			timeout = 0l;// -----reset fix
+		String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
+		flowRef = location + flowRef;
+		if (mainflowJsonObject == null || timeout == 0l) { // -----reset fix
+			timeout = System.currentTimeMillis() + resetServiceInMS; // -----reset fix
+			mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+		}
+		return mainflowJsonObject;
 	}
 }
