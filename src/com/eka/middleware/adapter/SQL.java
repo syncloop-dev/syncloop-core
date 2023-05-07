@@ -1,22 +1,15 @@
 package com.eka.middleware.adapter;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
 import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.service.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-import com.eka.middleware.pooling.DBCPDataSource;
+import java.io.File;
+import java.io.FileInputStream;
+import java.sql.*;
+import java.util.*;
 
 public class SQL {
     //public static Logger LOGGER = LogManager.getLogger(SQL.class);
@@ -227,6 +220,7 @@ public class SQL {
             //myCon=DriverManager.getConnection(connectionUrl);
             myCon = DBCPDataSource.getConnection(connectionPropFile, connectionUrl, null, null, pooling, timeOt, ccl, driverObj, driver);
         }
+
         return myCon;
     }
 

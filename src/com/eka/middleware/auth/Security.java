@@ -44,7 +44,7 @@ public class Security {
 	public static final String defaultWelcomePage = defaultLoginPage;//"/files/gui/middleware/pub/server/ui/workspace/web/dashboard.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
 	public static final String defaultWorkspacePage = "/files/gui/middleware/pub/server/ui/workspace/web/dashboard.html";//"/files/gui/middleware/pub/server/ui/welcome/index.html";
 	public static final String defaultLoginPage_NonTenant = "/files/gui/middleware/pub/server/ui/welcome/onboarding/signin.html";
-	public static final String defaultLoginAction = "/execute/packages.middleware.pub.security.BasicLoginHandler.main";
+	public static final String defaultLoginAction = "/packages.middleware.pub.security.BasicLoginHandler.main";
 	private static final Set<String> paths = new HashSet<String>();
 	private static final Set<String> publicPaths = new HashSet<String>();
 	private static Map<String, List<String>> publicPrefixPathsMap = new ConcurrentHashMap();
