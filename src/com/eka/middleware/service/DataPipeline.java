@@ -1,52 +1,29 @@
 package com.eka.middleware.service;
 
-import java.io.*;
-import java.nio.file.Path;
-import java.sql.Connection;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-//import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.regex.Pattern;
-
-import javax.json.JsonArray;
-
-import com.eka.middleware.adapter.SQL;
-import com.eka.middleware.pooling.DBCPDataSource;
-import com.eka.middleware.pub.util.graphql.generator.DBSchemaGenerator;
-import com.eka.middleware.pub.util.graphql.generator.FileUtil;
-import com.eka.middleware.pub.util.graphql.generator.GraphQLSchemaUtil;
-import graphql.schema.GraphQLSchema;
-import org.apache.commons.io.Charsets;
-import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.pac4j.core.profile.UserProfile;
-
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
-import com.eka.middleware.flow.Switch;
 import com.eka.middleware.heap.HashMap;
+import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
-import com.eka.middleware.template.Tenant;
-
 import io.undertow.server.HttpServerExchange;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.pac4j.core.profile.UserProfile;
+
+import javax.json.JsonArray;
+import java.io.*;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.regex.Pattern;
 
 public class DataPipeline {
 	private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
@@ -836,18 +813,9 @@ public class DataPipeline {
 		String connectionPropFile=pPath + JDBC;
 		DBCPDataSource.removeConnection(connectionPropFile);
 		java.nio.file.Files.write(path, dataPipeline.getBody());
-
-		try {
-			Connection myCon = SQL.getConnection(JDBC.replace("packages", "").replace(".jdbc", ""), dataPipeline);
-			GraphQLSchema schema = DBSchemaGenerator.generateSchema(myCon);
-			String schemaString = GraphQLSchemaUtil.convertToString(schema);
-			File connectionFile = new File(connectionPropFile);
-			String graphQLLocation = connectionFile.getParent() + "/" + (connectionFile.getName().replaceAll(".jdbc", ".graphql"));
-			FileUtil.writeToFile(graphQLLocation, schemaString);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
+
+
 
 	public void saveProperties(String path,byte[] data) {
 		Properties props=new Properties();
