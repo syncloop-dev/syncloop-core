@@ -103,7 +103,7 @@ public class ServiceManager {
 		if (cls == null || (lastChangedTimeSaved==null || (lastChangedTimeSaved < lastChangedTime && (resetEnabled==null || resetEnabled))))
 			synchronized (obj) {
 				lastChangedTimeSaved = lastModified.get(classID);
-				if (lastChangedTimeSaved==null || lastChangedTimeSaved < lastChangedTime) {
+				if (null == cls || lastChangedTimeSaved==null || lastChangedTimeSaved < lastChangedTime) {
 					try {
 						ScriptEngineContextManager.clear();
 						cls = compileJava(fqn, dataPipeLine);
