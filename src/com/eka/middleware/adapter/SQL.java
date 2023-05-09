@@ -178,7 +178,7 @@ public class SQL {
         Properties jdbcProperties = new Properties();
         String pPath = PropertyManager.getPackagePath(dp.rp.getTenant());
         String connectionPropFile = pPath + "packages" + jdbcConnection + ".jdbc";
-        dp.log("connectionPropFile:\n" + connectionPropFile, Level.DEBUG);
+        dp.log("connectionPropFile: " + connectionPropFile, Level.DEBUG);
         //LOGGER.debug("connectionPropFile:\n"+connectionPropFile);
         jdbcProperties.load(new FileInputStream(new File(connectionPropFile)));
 
@@ -186,7 +186,7 @@ public class SQL {
         connectionUrl = FlowUtils.placeXPathInternalVariables(connectionUrl, dp);
         //connectionUrl = connectionUrl.replace("#{PackageConfig}", dp.getMyPackageConfigPath());
         //LOGGER.debug("connectionUrl:\n"+connectionUrl);
-        dp.log("connectionPropFile:\n" + connectionPropFile, Level.DEBUG);
+        dp.log("connectionPropFile: " + connectionPropFile, Level.DEBUG);
         String driver = jdbcProperties.getProperty("driver");
         String username = jdbcProperties.getProperty("username");
         String password = jdbcProperties.getProperty("password");

@@ -958,7 +958,7 @@ public class ServiceUtils {
 		String uuid = UUID.randomUUID().toString();
 		final RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant), uuid, uuid, null,
 				"packages.middleware.pub.server.core.service.main",
-				"/execute/packages.middleware.pub.server.core.service.main");
+				"/packages.middleware.pub.server.core.service.main");
 		LOGGER.trace("RP created for " + tenant);
 		LOGGER.trace("Executing startup servies for " + tenant);
 		rp.dataPipeLine.applyAsync("packages.middleware.pub.server.core.service");
@@ -1279,7 +1279,8 @@ public class ServiceUtils {
 		Set<String> keys = passThroughData.keySet();
 		dp.put("*currentResourceFQN", fqn);
 		String gqlEnabled = (String) dp.getMyProperties().get("GraphQL");
-
+		String GraphQLDBC=(String) dp.getMyProperties().get("GraphQL.DBC");
+		String GraphQLSchema=(String) dp.getMyProperties().get("GraphQL.Schema");
 		JsonObject mainflowJsonObject = (JsonObject) passThroughData.get("mainflowJsonObject");
 
 		Long timeout = (Long) passThroughData.get("timeout");
@@ -1304,7 +1305,10 @@ public class ServiceUtils {
 					gql = gql.replaceAll("\\\\s+", " ").replaceAll("\\\\r|\\\\n", "").trim();
 					gqlData.put("gQuery", gql);
 					gqlData.put("fqn", fqn);
-
+					if(StringUtils.isNotBlank(GraphQLSchema))
+						gqlData.put("schema", GraphQLSchema);
+					if(StringUtils.isNotBlank(GraphQLDBC))
+						gqlData.put("connection", GraphQLDBC);
 					String[] gqlTokens = gql.split(" ");
 					String rootName = gqlTokens[1];
 
@@ -1349,7 +1353,7 @@ public class ServiceUtils {
 		if (resetServiceInMS != null)
 			FlowResolver.execute(dp, mainflowJsonObject);
 
-		if (StringUtils.isNotBlank(gql)) {
+		if (StringUtils.isNotBlank(gql) && StringUtils.isBlank(GraphQLDBC)) {
 			dp.put("*gqlData", gqlData);
 			Map<String, Object> data = new HashMap<>();
 			String rootName = (String) gqlData.get("rootName");
