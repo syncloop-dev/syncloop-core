@@ -40,10 +40,7 @@ public class DataPipeline {
 	private int recursiveDepth;
 	private final int allowedRecursionDepth=100;
 
-	private final ThreadPoolExecutor executor;
-
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
-		executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
 		recursiveDepth=0;
 		rp = runtimePipeline;
 		this.resource = resource+"@"+recursiveDepth;
@@ -674,7 +671,7 @@ public class DataPipeline {
 			throw new SnippetException(this, uuidAsync, e);
 		}
 		final String currResrc=currentResource;
-		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
+		final Future<Map<String, Object>> futureMap = rp.getExecutor().submit(() -> {
 			RuntimePipeline rpRef=null;
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,
