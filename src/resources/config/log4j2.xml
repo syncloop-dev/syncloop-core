@@ -27,7 +27,7 @@
 
         <Async name="Async">
             <AppenderRef ref="myAppender" level="info" />
-			<AppenderRef ref="console" level="info" />
+			<!--<AppenderRef ref="console" level="info" />-->
 			<AppenderRef ref="ServerFile"  level="info"/>
         </Async>
     </Appenders>
