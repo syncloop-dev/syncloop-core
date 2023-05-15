@@ -204,7 +204,7 @@ public static void main(String[] args) {
 		//addPublicPrefixPath("/files/gui/middleware/pub/server/ui/icons/", Tenant.getTenant(tenantName));
 		//addPublicPrefixPath("/files/gui/middleware/pub/server/ui/assets/", Tenant.getTenant(tenantName));
 		//addPublicPrefixPath("/files/gui/middleware/pub/server/ui/javascript/middleware.js", Tenant.getTenant(tenantName));
-		addPublicPrefixPath("/execute/packages.middleware.pub.security.OIDCLogin.", Tenant.getTenant(tenantName));
+		addPublicPrefixPath("/packages.middleware.pub.security.OIDCLogin.", Tenant.getTenant(tenantName));
 		addPublicPrefixPath("/public", Tenant.getTenant(tenantName));
 		
 		if (Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {

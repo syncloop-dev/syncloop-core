@@ -5,11 +5,11 @@
             <PatternLayout
                 pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
         </Console>
-		<File name="ServerFile" fileName="eka/logs/server.log">
+		<!--<File name="ServerFile" fileName="eka/logs/server.log">
 		  <PatternLayout>
 			<Pattern>%d %p %c{1.} [%t] ${ctx:name} %m%n</Pattern>
 		  </PatternLayout>
-        </File>
+        </File>-->
         <Routing name="myAppender">
             <Routes pattern="${ctx:name}-${ctx:service}">
 			    <Route ref="console" key="${ctx:name}-${ctx:service}"/>
@@ -27,8 +27,18 @@
 
         <Async name="Async">
             <AppenderRef ref="myAppender" level="info" />
-			<AppenderRef ref="console" level="info" />
-			<AppenderRef ref="ServerFile"  level="info"/>
+			<!--<AppenderRef ref="console" level="info" />-->
+			<!--<AppenderRef ref="ServerFile"  level="info"/>-->
+
+            <RollingFile name="rollingFile" fileName="eka/logs/server.log"
+                         filePattern="eka/logs/server-%d{yyyy-MM-dd}.log">
+                <PatternLayout pattern="%d %p %c{1.} [%t] ${ctx:name} %m%n" />
+                <Policies>
+                    <SizeBasedTriggeringPolicy size="10 KB" />
+                </Policies>
+                <DefaultRolloverStrategy max="5" />
+            </RollingFile>
+
         </Async>
     </Appenders>
     <Loggers>

@@ -98,7 +98,7 @@ public class MiddlewareServer {
 					profile.put("groups", groups);
 					profile.put("forceCreateUser", true);
 					authAcc.setProfile(profile);
-					UserProfileManager.addUser(authAcc);
+					//UserProfileManager.addUser(authAcc);
 					ServiceUtils.initNewTenant("default", authAcc);
 				} else {
 					LOGGER.info("Starting default tenant......................");
@@ -303,9 +303,9 @@ public class MiddlewareServer {
 		 */
 		private static void bootBuild() throws Exception {
 
-			String distributionName = "eka-distribution-v1.4.3.zip";
+			String distributionName = "eka-distribution-v1.4.5.zip";
 			if (Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-				distributionName = "eka-distribution-community-v1.4.3.zip";
+				distributionName = "eka-distribution-community-v1.4.5.zip";
 			}
 
 			File eka = new File("./eka/version");

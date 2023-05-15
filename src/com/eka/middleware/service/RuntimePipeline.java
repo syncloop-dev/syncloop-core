@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
@@ -41,7 +43,13 @@ public class RuntimePipeline {
 	private String user=null;
 	private Date createDate=null;
 	public final Map<String, Object> payload = new ConcurrentHashMap<String, Object>();
-	
+
+	private final ThreadPoolExecutor executor;
+
+	public ThreadPoolExecutor getExecutor() {
+		return executor;
+	}
+
 	public boolean isExchangeInitialized() {
 		if(exchange==null)
 			return false;
@@ -99,8 +107,8 @@ public class RuntimePipeline {
 	public RuntimePipeline(Tenant tenant, String requestId, String correlationId, final HttpServerExchange exchange, String resource,
 						   String urlPath) {
 		//Securitycont
-		
-		
+
+		executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
 		this.tenant=tenant;
 		currentThread = Thread.currentThread();
 		sessionId = requestId;
@@ -201,7 +209,7 @@ public class RuntimePipeline {
 		rtp.setDestroyed(true);
 		pipelines.get(sessionId).payload.clear();
 		pipelines.remove(sessionId);
-
+		executor.shutdown();
 	}
 
 	public static void destroy(String sessionId) {

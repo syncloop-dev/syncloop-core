@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Pattern;
 
 public class DataPipeline {
@@ -38,6 +39,7 @@ public class DataPipeline {
 	private final String urlPath;
 	private int recursiveDepth;
 	private final int allowedRecursionDepth=100;
+
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
 		recursiveDepth=0;
 		rp = runtimePipeline;
@@ -630,7 +632,6 @@ public class DataPipeline {
 		final String uuidAsync = UUID.randomUUID().toString();
 		metaData.put("batchId", uuidAsync);
 		metaData.put("status", "Active");
-		ExecutorService executor = Executors.newSingleThreadExecutor();
 		
 		try {
 			if(transformers!=null) {
@@ -670,7 +671,7 @@ public class DataPipeline {
 			throw new SnippetException(this, uuidAsync, e);
 		}
 		final String currResrc=currentResource;
-		final Future<Map<String, Object>> futureMap = executor.submit(() -> {
+		final Future<Map<String, Object>> futureMap = rp.getExecutor().submit(() -> {
 			RuntimePipeline rpRef=null;
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,

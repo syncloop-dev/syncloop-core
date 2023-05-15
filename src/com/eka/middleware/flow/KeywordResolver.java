@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.PropertyManager;
 
 import java.util.UUID;
 
@@ -29,6 +30,8 @@ public class KeywordResolver {
                 }
             case "PackageConfig":
                 return dataPipeline.getMyPackageConfigPath();
+            case "*TenantPackagePath":
+                return PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             default:
                 return "null";
         }
