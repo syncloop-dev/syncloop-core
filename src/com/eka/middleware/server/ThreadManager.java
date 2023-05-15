@@ -89,7 +89,7 @@ public class ThreadManager {
 
 				account.getAuthProfile().put("tenant", tenantName);
 				List<String> groups = new ArrayList<String>();
-				groups.add("administrators");
+//				groups.add("administrators");
 				groups.add("guest");
 				account.getAuthProfile().put("groups", groups);
 				if(!ServiceUtils.isApiCall(exchange))
@@ -157,7 +157,7 @@ public class ThreadManager {
 					boolean isAllowed = false;
 					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account, requestPath, method);
 
-					if (!isAllowed && "default".equals(account.getAuthProfile().get("tenant"))) {
+					if (!isAllowed && "default".equals(account.getAuthProfile().get("tenant")) && !account.getUserId().equalsIgnoreCase("anonymous")) {
 						exchange.getResponseHeaders().clear();
 						exchange.setStatusCode(StatusCodes.FOUND);
 						String newUserPath = Security.gerDefaultNewUserPath(tenantName);
