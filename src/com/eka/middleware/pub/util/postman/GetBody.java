@@ -31,7 +31,10 @@ public class GetBody {
 
     public static List getJstreeFromSchema(NodeProperties nodeProperties) {
         Map<String, NodeProperties> datapipeline = nodeProperties.properties;
+        System.err.println("before");
         Object[] data = toJson(datapipeline);
+        System.err.println("after");
+
         Object jsonJstreeObj = data[0];
         Object jsonObj = data[1];
         return ((List)jsonJstreeObj);
@@ -39,14 +42,13 @@ public class GetBody {
 
 
     private static Object[] toJson(Map<String, NodeProperties> jsonSchemaObjs) {
+
         List<Node> jsonJstreeObj = new ArrayList<>();
         Map<String, Object> jsonObj = new HashMap<>();
-
         jsonSchemaObjs.entrySet().forEach(jsonSchemaObj -> {
             NodeProperties propVal = jsonSchemaObj.getValue();
             String propName = jsonSchemaObj.getKey();
             Node jjtOBJ = new Node();
-
             jjtOBJ.text = jsonSchemaObj.getKey();
             jjtOBJ.children = new ArrayList<>();
 
@@ -57,12 +59,20 @@ public class GetBody {
                 jsonObj.put(propName, jsonOA[1]);
             } else if (propVal.type.equalsIgnoreCase("array")) {
                 jjtOBJ.type = "documentList";
-                if (null != propVal.items && (propVal.items.type.equalsIgnoreCase("object") || propVal.items.type.equalsIgnoreCase("array"))) {
+                if (propVal.items != null && (propVal.items.type.equalsIgnoreCase("object") || propVal.items.type.equalsIgnoreCase("array"))) {
                     Object[] jsonOA = toJson(propVal.items.properties);
-                    jjtOBJ.children = (List<Node>)jsonOA[0];
+                    jjtOBJ.children = (List<Node>) jsonOA[0];
                     jsonObj.put(propName, jsonOA[1]);
+                } else if (propVal.items != null && propVal.items.type.equalsIgnoreCase("string")) {
+                    jjtOBJ.type = "stringList";
+                } else if (propVal.items != null && propVal.items.type.equalsIgnoreCase("number")) {
+                    jjtOBJ.type = "numberList";
+                } else if (propVal.items != null && propVal.items.type.equalsIgnoreCase("boolean")) {
+                    jjtOBJ.type = "booleanList";
                 }
-            } else { // pending to add condition when its value array
+            }
+
+            else {
                 jjtOBJ.type = propVal.type;
                 if (propVal.type == "array") {
                     jsonObj.put(propName, new ArrayList<>());
