@@ -72,7 +72,8 @@ public class ImportPostman {
                 list.addAll(createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(),dataPipeline));
             } else {
                 String method = postmanItems.getRequest().getMethod();
- }
+                list.add(generateClientLib(folder, servicePath, packageName, postmanItems, method, Evaluate.EEV,dataPipeline));
+            }
         }
         return list;
     }

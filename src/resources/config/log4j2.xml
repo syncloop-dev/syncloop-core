@@ -1,25 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO">
     <Appenders>
-	    <Console name="console" target="SYSTEM_OUT">
-            <PatternLayout
-                pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
         </Console>
-		<!--<File name="ServerFile" fileName="eka/logs/server.log">
-		  <PatternLayout>
-			<Pattern>%d %p %c{1.} [%t] ${ctx:name} %m%n</Pattern>
-		  </PatternLayout>
+        <!--<File name="ServerFile" fileName="eka/logs/server.log">
+          <PatternLayout>
+            <Pattern>%d %p %c{1.} [%t] ${ctx:name} %m%n</Pattern>
+          </PatternLayout>
         </File>-->
         <Routing name="myAppender">
             <Routes pattern="${ctx:name}-${ctx:service}">
-			    <Route ref="console" key="${ctx:name}-${ctx:service}"/>
+                <Route ref="console" key="${ctx:name}-${ctx:service}"/>
                 <Route>
-                    <RollingFile 
-                        fileName="eka/integration/middleware/tenants/${ctx:name}/logs/${ctx:service}.log"
-                        name="myAppender-${ctx:name}-${ctx:service}"
-						filePattern="eka/integration/middleware/tenants/${ctx:name}/logs/${ctx:service}.log.%i.log.gz">
-                            <PatternLayout pattern="%d %p %c{1.} [%t] %m%n"/>
-							<CronTriggeringPolicy schedule="0 0 0 1/1 * ?"/>
+                    <RollingFile
+                            fileName="eka/integration/middleware/tenants/${ctx:name}/logs/${ctx:service}.log"
+                            name="myAppender-${ctx:name}-${ctx:service}"
+                            filePattern="eka/integration/middleware/tenants/${ctx:name}/logs/${ctx:service}.log.%i.log.gz">
+                        <PatternLayout pattern="%d %p %c{1.} [%t] %m%n"/>
+                        <CronTriggeringPolicy schedule="0 0 0 1/1 * ?"/>
                     </RollingFile>
                 </Route>
             </Routes>
@@ -27,25 +26,27 @@
 
         <Async name="Async">
             <AppenderRef ref="myAppender" level="info" />
-			<!--<AppenderRef ref="console" level="info" />-->
-			<!--<AppenderRef ref="ServerFile"  level="info"/>-->
-
-            <RollingFile name="rollingFile" fileName="eka/logs/server.log"
-                         filePattern="eka/logs/server-%d{yyyy-MM-dd}.log">
-                <PatternLayout pattern="%d %p %c{1.} [%t] ${ctx:name} %m%n" />
-                <Policies>
-                    <SizeBasedTriggeringPolicy size="10 KB" />
-                </Policies>
-                <DefaultRolloverStrategy max="5" />
-            </RollingFile>
-
+            <!--<AppenderRef ref="console" level="info" />-->
+            <!--<AppenderRef ref="ServerFile"  level="info"/>-->
         </Async>
+
+        <RollingFile name="rollingFile" fileName="eka/logs/server.log"
+                     filePattern="eka/logs/server-%d{yyyy-MM-dd-HH-mm-ss}.log">
+            <PatternLayout pattern="%d %p %c{1.} [%t] ${ctx:name} %m%n" />
+            <Policies>
+                <SizeBasedTriggeringPolicy size="25 MB" />
+                <TimeBasedTriggeringPolicy interval="1" modulate="true" />
+            </Policies>
+            <DefaultRolloverStrategy max="5" />
+        </RollingFile>
+
     </Appenders>
     <Loggers>
         <Root level="trace">
             <appender-ref ref="Async" />
+            <AppenderRef ref="myAppender" />
+            <AppenderRef ref="rollingFile" />
         </Root>
+
     </Loggers>
 </Configuration>
-
-<!--<SizeBasedTriggeringPolicy size="10M" /> -->

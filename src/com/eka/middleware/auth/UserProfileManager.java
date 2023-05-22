@@ -340,6 +340,11 @@ public class UserProfileManager implements IdentityManager {
 		Map<String, Object> jwtMap = null;
 		//String tenant = null;
 		List<String> groups = new ArrayList<String>();
+		String UUID = null;
+		String name = null;
+		String userId = null;
+		String email = null;
+		Long creationTimestamp = null;
 		try {
 			BearerAccessToken bat = (BearerAccessToken) up.getAttribute("access_token");
 			if (bat != null) {
@@ -350,13 +355,23 @@ public class UserProfileManager implements IdentityManager {
 					} catch (Exception ignored) {}
 					if(jwtMap!=null) {
 						groups = (List<String>) jwtMap.get("groups");
+						UUID = (null == up.getAttribute("UUID")) ? null : up.getAttribute("UUID").toString();
+						name = (null == up.getAttribute("name")) ? null : up.getAttribute("name").toString();
+						userId = (null == up.getAttribute("userId")) ? null : up.getAttribute("userId").toString();
+						email = (null == up.getAttribute("email")) ? null : up.getAttribute("email").toString();
+						creationTimestamp = (null == up.getAttribute("creationTimestamp")) ? null : Long.parseLong(up.getAttribute("creationTimestamp").toString());
 						tenant = (String) jwtMap.get("tenant");
 						if (groups == null)
-							groups = (List<String>) jwtMap.get("Groups");
+							groups = (List<String>) jwtMap.get("groups");
 					}
 				}
 			}else {
 				tenant=(String) up.getAttribute("tenant");
+				UUID = (null == up.getAttribute("UUID")) ? null : up.getAttribute("UUID").toString();
+				name = (null == up.getAttribute("name")) ? null : up.getAttribute("name").toString();
+				userId = (null == up.getAttribute("userId")) ? null : up.getAttribute("userId").toString();
+				email = (null == up.getAttribute("email")) ? null : up.getAttribute("email").toString();
+				creationTimestamp = (null == up.getAttribute("creationTimestamp")) ? null : Long.parseLong(up.getAttribute("creationTimestamp").toString());
 				if(up.getAttribute("groups")!=null)
 					groups = (List<String>)up.getAttribute("groups");
 			}
@@ -369,6 +384,11 @@ public class UserProfileManager implements IdentityManager {
 			groups.add("default");
 		}
 		profile.put("groups", groups);
+		profile.put("UUID", UUID);
+		profile.put("name", name);
+		profile.put("userId", userId);
+		profile.put("email", email);
+		profile.put("creationTimestamp", creationTimestamp);
 		if(tenant!=null)
 			profile.put("tenant",tenant);
 		return profile;

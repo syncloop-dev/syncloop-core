@@ -78,11 +78,11 @@ public class ThreadManager {
 				if (!Security.isPublic(pureRequestPath, tenantName)) {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or path not public. Make sure you are using right tenant name('"+tenantName+"'). Name is case sensitive. Clear your cookies retry with correct tenant name.");
 					exchange.getResponseHeaders().clear();
-					exchange.getResponseHeaders().put(Headers.STATUS, 400);
+					exchange.setStatusCode(401);
 					exchange.getResponseSender()
-							.send("Tenant Access Denied. Path access not allowed.\n" + pureRequestPath
+							.send("Tenant Access Denied. Path access not allowed." /*+ pureRequestPath
 									+ "\nPublic prefix paths:\n" + Security.getPublicPrefixPaths(tenantName)
-									+ "\nPublic exact paths:\n" + Security.getPublicExactPaths(tenantName));
+									+ "\nPublic exact paths:\n" + Security.getPublicExactPaths(tenantName)*/);
 					exchange.endExchange();
 					return;
 				}
@@ -243,6 +243,8 @@ public class ThreadManager {
 
 					ServiceManager.invokeJavaMethod(resource, rp.dataPipeLine);
 					exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Origin"), "*");// new
+					exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Methods"), "*");// new
+					exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Headers"), "*");// new
 																													// HttpString("Access-Control-Allow-Origin"),
 																													// "*");
 					exchange.getResponseHeaders().put(HttpString.tryFromString("X-Frame-Options"), "SAMEORIGIN");
