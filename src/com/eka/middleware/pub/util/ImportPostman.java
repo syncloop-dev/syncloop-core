@@ -144,8 +144,13 @@ public class ImportPostman {
             createPostInvokeMapping(invokeClient, "copy", "string", "/rawResponse", "string", "/rawResponse");
             createPostInvokeMapping(invokeClient, "copy", "string", "/statusCode", "string", "/statusCode");
 
-            if (null != postmanItems.getRequest().getAuth()) {
-                if ("basic".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            PostmanItemAuth auth  = postmanItems.getRequest().getAuth();
+            if (null != auth || null != PostmanCollection.getAuth()) {
+                if(null==auth || null != PostmanCollection.getAuth()) {
+                    auth=PostmanCollection.getAuth();
+                }
+
+                if ("basic".equalsIgnoreCase(auth.getType())) {
                     String username = null;
                     String password = null;
                     List<Basic> basicList = postmanItems.getRequest().getAuth().getBasic();
@@ -162,12 +167,12 @@ public class ImportPostman {
 
                     createPreInvokeMapping(invokeClient, "copy", "string", "/username", "document/string", "/basicAuth/username");
                     createPreInvokeMapping(invokeClient, "copy", "string", "/password", "document/string", "/basicAuth/password");
-                } else if ("bearer".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                } else if ("bearer".equalsIgnoreCase(auth.getType())) {
                     String token = postmanItems.getRequest().getAuth().getBearer().get(0).getValue();
                     createVariables(intiMapStep, "*requestHeaders/Authorization", "Bearer " + postmanToSyncloopProps(token), evaluateFrom(token, evaluateFrom), "document/string");
 
                     listOfHeaderKeys.add("Authorization");
-                } else if ("apikey".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                } else if ("apikey".equalsIgnoreCase(auth.getType())) {
                     String key = null;
                     String value = null;
                     String where = null;
@@ -209,7 +214,7 @@ public class ImportPostman {
                         createPreInvokeMapping(invokeClient, "copy", "string", "/" + key, "document/string", "/queryParameters/" + key);
 
                     }
-                } else if ("awsv4".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+                } else if ("awsv4".equalsIgnoreCase(auth.getType())) {
                     String service = null;
                     String region = null;
                     String secretKey = null;
@@ -615,8 +620,13 @@ public class ImportPostman {
             createPostInvokeMapping(invokeStepToJson, "copy", "string", "/jsonString", "string", "/body");
         }
 
-        if (null != postmanItems.getRequest().getAuth()) {
-            if ("basic".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+        PostmanItemAuth auth  = postmanItems.getRequest().getAuth();
+        if (null != auth || null != PostmanCollection.getAuth()) {
+            if(null==auth || null != PostmanCollection.getAuth()) {
+                auth=PostmanCollection.getAuth();
+            }
+
+            if ("basic".equalsIgnoreCase(auth.getType())) {
                 String username = null;
                 String password = null;
                 List<Basic> basicList = postmanItems.getRequest().getAuth().getBasic();
@@ -655,7 +665,7 @@ public class ImportPostman {
 
                 createPostInvokeMapping(invokeStepToJson1, "copy", "string", "/Authorization", "document/string", "/requestHeaders/Authorization");
 
-            } else if ("bearer".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            } else if ("bearer".equalsIgnoreCase(auth.getType())) {
                 //String token = postmanItems.getRequest().getAuth().getBearer().get(0).getValue();
                 //createVariables(intiMapStep, "requestHeaders/Authorization", "Bearer " + postmanToSyncloopProps(token), evaluateFrom(token, evaluateFrom), "document/string");
 
@@ -670,7 +680,7 @@ public class ImportPostman {
 
                 inputs.add(inputVar);
 
-            } else if ("apikey".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            } else if ("apikey".equalsIgnoreCase(auth.getType())) {
                 String key = null;
                 String value = null;
                 String where = null;
@@ -713,7 +723,7 @@ public class ImportPostman {
 
                     inputs.add(inputVar);
                 }
-            } else if ("awsv4".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            } else if ("awsv4".equalsIgnoreCase(auth.getType())) {
                 String service = null;
                 String region = null;
                 String secretKey = null;
@@ -780,7 +790,7 @@ public class ImportPostman {
                 createPreInvokeMapping(invokeStepToJson, "copy", "document", "/queryParameters", "document", "/queryParameters");
                 createPreInvokeMapping(invokeStepToJson, "copy", "document", "/requestHeaders", "document", "/headers");
                 createPostInvokeMapping(invokeStepToJson, "copy", "document", "/headers", "document", "/requestHeaders");
-            } else if ("jwt".equalsIgnoreCase(postmanItems.getRequest().getAuth().getType())) {
+            } else if ("jwt".equalsIgnoreCase(auth.getType())) {
                 String payload = null;
                 String isSecretBase64Encoded = null;
                 String secret = null;
