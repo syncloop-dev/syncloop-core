@@ -12,4 +12,14 @@ public class PostmanCollection {
 
 	private Map<String, String> info;
 	private List<PostmanItems> item;
+
+	private static PostmanItemAuth auth;
+	public static PostmanItemAuth getAuth() {
+		return auth;
+	}
+
+	public static void setAuth(PostmanItemAuth auth) {
+		PostmanCollection.auth = auth;
+	}
+
 }
