@@ -47,7 +47,8 @@ public class ImportPostman {
 
 
     }
-    public static List<String> createFlowServices(String tenantPath, String servicePath, String packageName, List<PostmanItems> item, boolean isClientRequested ,DataPipeline dataPipeline) throws Exception {
+
+    public static List<String> createFlowServices(String tenantPath, String servicePath, String packageName, List<PostmanItems> item, boolean isClientRequested, DataPipeline dataPipeline) throws Exception {
 
         ArrayList<String> list = new ArrayList<>();
 
@@ -55,29 +56,34 @@ public class ImportPostman {
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                list.addAll(createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested,dataPipeline));
+                list.addAll(createFlowServices(tenantPath, servicePath + File.separator + slug, packageName, postmanItems.getItem(), isClientRequested, dataPipeline));
             } else {
-               list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested, Evaluate.EEV,dataPipeline));
+                list.add(generateServerStub(tenantPath, servicePath, packageName, postmanItems, isClientRequested, Evaluate.EEV, dataPipeline));
             }
         }
         return list;
     }
-    public static List<String> createFlowServicesClient(String folder, String servicePath, String packageName, List<PostmanItems> item,DataPipeline dataPipeline) throws Exception {
+
+    public static List<String> createFlowServicesClient(String folder, String servicePath, String packageName, List<PostmanItems> item, DataPipeline dataPipeline) throws Exception {
 
         ArrayList<String> list = new ArrayList<String>();
 
         for (PostmanItems postmanItems : item) {
             if (postmanItems.getItem() != null && !postmanItems.getItem().isEmpty()) {
                 String slug = ServiceUtils.toServiceSlug(postmanItems.getName());
-                list.addAll(createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(),dataPipeline));
-            } else {
+                list.addAll(createFlowServicesClient(folder, servicePath + File.separator + slug, packageName, postmanItems.getItem(), dataPipeline));
+            }
+            if (postmanItems.getRequest() != null) {
                 String method = postmanItems.getRequest().getMethod();
-                list.add(generateClientLib(folder, servicePath, packageName, postmanItems, method, Evaluate.EEV,dataPipeline));
+                if (method != null) {
+                    list.add(generateClientLib(folder, servicePath, packageName, postmanItems, method, Evaluate.EEV, dataPipeline));
+                }
             }
         }
         return list;
     }
-    public static String generateServerStub(String folderPath, String servicePath, String packageName, PostmanItems postmanItems, boolean isClientRequested, Evaluate evaluateFrom,DataPipeline dataPipeline) throws Exception {
+
+    public static String generateServerStub(String folderPath, String servicePath, String packageName, PostmanItems postmanItems, boolean isClientRequested, Evaluate evaluateFrom, DataPipeline dataPipeline) throws Exception {
 
         String filePath = folderPath + File.separator + "packages" + File.separator + packageName
                 + File.separator + "server" + File.separator + servicePath + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
@@ -87,7 +93,7 @@ public class ImportPostman {
         if (file.exists() && false) {
             flowService = new Gson().fromJson(new FileReader(file), FlowService.class);
         } else {
-            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"),dataPipeline);
+            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"), dataPipeline);
         }
         List<Object> inputs = flowService.getInput();
 
@@ -132,10 +138,11 @@ public class ImportPostman {
 
             Map<String, Object> invokeClient = createInvokeStep(flowService.getFlowSteps(), "flow",
                     ("packages/" + packageName + "/client/" + servicePath.replaceAll(Pattern.quote(File.separator), "/") + "/" + ServiceUtils.toServiceSlug(postmanItems.getName())).replaceAll("//", "/"), "Invoking Client");
-
-            if (null != postmanItems.getRequest().getUrl().getQuery() && !postmanItems.getRequest().getUrl().getQuery().isEmpty()) {
-                for (UrlQuery urlQuery : postmanItems.getRequest().getUrl().getQuery()) {
-                    createPreInvokeMapping(invokeClient, "copy", "string", "/" + urlQuery.getKey(), "document", "/queryParameters/" + urlQuery.getKey());
+            if (postmanItems.getRequest() != null) {
+                if (null != postmanItems.getRequest().getUrl().getQuery() && !postmanItems.getRequest().getUrl().getQuery().isEmpty()) {
+                    for (UrlQuery urlQuery : postmanItems.getRequest().getUrl().getQuery()) {
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/" + urlQuery.getKey(), "document", "/queryParameters/" + urlQuery.getKey());
+                    }
                 }
             }
 
@@ -144,108 +151,109 @@ public class ImportPostman {
             createPostInvokeMapping(invokeClient, "copy", "string", "/rawResponse", "string", "/rawResponse");
             createPostInvokeMapping(invokeClient, "copy", "string", "/statusCode", "string", "/statusCode");
 
-            PostmanItemAuth auth  = postmanItems.getRequest().getAuth();
-            if (null != auth || null != PostmanCollection.getAuth()) {
-                if(null==auth || null != PostmanCollection.getAuth()) {
-                    auth=PostmanCollection.getAuth();
-                }
+            if (postmanItems.getRequest() != null) {
+                PostmanItemAuth auth = postmanItems.getRequest().getAuth();
+                if (null != auth || null != PostmanCollection.getAuth()) {
+                    if (null == auth || null != PostmanCollection.getAuth()) {
+                        auth = PostmanCollection.getAuth();
+                    }
 
-                if ("basic".equalsIgnoreCase(auth.getType())) {
-                    String username = null;
-                    String password = null;
-                    List<Basic> basicList = postmanItems.getRequest().getAuth().getBasic();
-                    for (Basic basic : basicList) {
-                        if ("username".equalsIgnoreCase(basic.getKey())) {
-                            username = basic.getValue();
-                        } else {
-                            password = basic.getValue();
+                    if ("basic".equalsIgnoreCase(auth.getType())) {
+                        String username = null;
+                        String password = null;
+                        List<Basic> basicList = postmanItems.getRequest().getAuth().getBasic();
+                        for (Basic basic : basicList) {
+                            if ("username".equalsIgnoreCase(basic.getKey())) {
+                                username = basic.getValue();
+                            } else {
+                                password = basic.getValue();
+                            }
                         }
-                    }
 
-                    createVariables(intiMapStep, "username", postmanToSyncloopProps(username), evaluateFrom(username, evaluateFrom), "string");
-                    createVariables(intiMapStep, "password", postmanToSyncloopProps(password), evaluateFrom(password, evaluateFrom), "string");
+                        createVariables(intiMapStep, "username", postmanToSyncloopProps(username), evaluateFrom(username, evaluateFrom), "string");
+                        createVariables(intiMapStep, "password", postmanToSyncloopProps(password), evaluateFrom(password, evaluateFrom), "string");
 
-                    createPreInvokeMapping(invokeClient, "copy", "string", "/username", "document/string", "/basicAuth/username");
-                    createPreInvokeMapping(invokeClient, "copy", "string", "/password", "document/string", "/basicAuth/password");
-                } else if ("bearer".equalsIgnoreCase(auth.getType())) {
-                    String token = postmanItems.getRequest().getAuth().getBearer().get(0).getValue();
-                    createVariables(intiMapStep, "*requestHeaders/Authorization", "Bearer " + postmanToSyncloopProps(token), evaluateFrom(token, evaluateFrom), "document/string");
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/username", "document/string", "/basicAuth/username");
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/password", "document/string", "/basicAuth/password");
+                    } else if ("bearer".equalsIgnoreCase(auth.getType())) {
+                        String token = postmanItems.getRequest().getAuth().getBearer().get(0).getValue();
+                        createVariables(intiMapStep, "*requestHeaders/Authorization", "Bearer " + postmanToSyncloopProps(token), evaluateFrom(token, evaluateFrom), "document/string");
 
-                    listOfHeaderKeys.add("Authorization");
-                } else if ("apikey".equalsIgnoreCase(auth.getType())) {
-                    String key = null;
-                    String value = null;
-                    String where = null;
-                    List<ApiKey> apiKeyList = postmanItems.getRequest().getAuth().getApikey();
+                        listOfHeaderKeys.add("Authorization");
+                    } else if ("apikey".equalsIgnoreCase(auth.getType())) {
+                        String key = null;
+                        String value = null;
+                        String where = null;
+                        List<ApiKey> apiKeyList = postmanItems.getRequest().getAuth().getApikey();
 
-                    for (ApiKey apiKey : apiKeyList) {
-                        if ("key".equalsIgnoreCase(apiKey.getKey())) {
-                            key = apiKey.getValue();
-                        } else if ("value".equalsIgnoreCase(apiKey.getKey())) {
-                            value = apiKey.getValue();
-                        } else if ("in".equalsIgnoreCase(apiKey.getKey())) {
-                            where = apiKey.getValue();
+                        for (ApiKey apiKey : apiKeyList) {
+                            if ("key".equalsIgnoreCase(apiKey.getKey())) {
+                                key = apiKey.getValue();
+                            } else if ("value".equalsIgnoreCase(apiKey.getKey())) {
+                                value = apiKey.getValue();
+                            } else if ("in".equalsIgnoreCase(apiKey.getKey())) {
+                                where = apiKey.getValue();
+                            }
                         }
-                    }
-                    if ("header".equalsIgnoreCase(where)) {
-                        createVariables(intiMapStep, "*requestHeaders/" + key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "document/string");
+                        if ("header".equalsIgnoreCase(where)) {
+                            createVariables(intiMapStep, "*requestHeaders/" + key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "document/string");
 
-                        Map<String, String> requestHeadersKey = Maps.newHashMap();
-                        requestHeadersKey.put("text", key);
-                        requestHeadersKey.put("type", "string");
+                            Map<String, String> requestHeadersKey = Maps.newHashMap();
+                            requestHeadersKey.put("text", key);
+                            requestHeadersKey.put("type", "string");
 
-                        Map<String, Object> inputVar = Maps.newHashMap();
-                        inputVar.put("text", "*requestHeaders");
-                        inputVar.put("type", "document");
-                        inputVar.put("children", Lists.newArrayList(requestHeadersKey));
+                            Map<String, Object> inputVar = Maps.newHashMap();
+                            inputVar.put("text", "*requestHeaders");
+                            inputVar.put("type", "document");
+                            inputVar.put("children", Lists.newArrayList(requestHeadersKey));
 
-                        inputs.add(inputVar);
+                            inputs.add(inputVar);
 
-                        createPreInvokeMapping(invokeClient, "copy", "document/string", "/*requestHeaders/" + key, "document/string", "/requestHeaders/" + key);
+                            createPreInvokeMapping(invokeClient, "copy", "document/string", "/*requestHeaders/" + key, "document/string", "/requestHeaders/" + key);
 
-                    } else if ("query".equalsIgnoreCase(where)) {
-                        createVariables(intiMapStep, key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "string");
+                        } else if ("query".equalsIgnoreCase(where)) {
+                            createVariables(intiMapStep, key, postmanToSyncloopProps(value), evaluateFrom(value, evaluateFrom), "string");
 
-                        Map<String, Object> inputVar = Maps.newHashMap();
-                        inputVar.put("text", key);
-                        inputVar.put("type", "string");
-                        inputs.add(inputVar);
+                            Map<String, Object> inputVar = Maps.newHashMap();
+                            inputVar.put("text", key);
+                            inputVar.put("type", "string");
+                            inputs.add(inputVar);
 
-                        createPreInvokeMapping(invokeClient, "copy", "string", "/" + key, "document/string", "/queryParameters/" + key);
+                            createPreInvokeMapping(invokeClient, "copy", "string", "/" + key, "document/string", "/queryParameters/" + key);
 
-                    }
-                } else if ("awsv4".equalsIgnoreCase(auth.getType())) {
-                    String service = null;
-                    String region = null;
-                    String secretKey = null;
-                    String accessKey = null;
-
-                    List<AwsSignature> signatureList = postmanItems.getRequest().getAuth().getAwsv4();
-                    for (AwsSignature aws : signatureList) {
-                        if ("service".equalsIgnoreCase(aws.getKey())) {
-                            service = aws.getValue();
-                        } else if ("region".equalsIgnoreCase(aws.getKey())) {
-                            region = aws.getValue();
-                        } else if ("secretKey".equalsIgnoreCase(aws.getKey())) {
-                            secretKey = aws.getValue();
-                        } else if ("accessKey".equalsIgnoreCase(aws.getKey())) {
-                            accessKey = aws.getValue();
                         }
+                    } else if ("awsv4".equalsIgnoreCase(auth.getType())) {
+                        String service = null;
+                        String region = null;
+                        String secretKey = null;
+                        String accessKey = null;
+
+                        List<AwsSignature> signatureList = postmanItems.getRequest().getAuth().getAwsv4();
+                        for (AwsSignature aws : signatureList) {
+                            if ("service".equalsIgnoreCase(aws.getKey())) {
+                                service = aws.getValue();
+                            } else if ("region".equalsIgnoreCase(aws.getKey())) {
+                                region = aws.getValue();
+                            } else if ("secretKey".equalsIgnoreCase(aws.getKey())) {
+                                secretKey = aws.getValue();
+                            } else if ("accessKey".equalsIgnoreCase(aws.getKey())) {
+                                accessKey = aws.getValue();
+                            }
+                        }
+                        createVariables(intiMapStep, "service", postmanToSyncloopProps(service), evaluateFrom(service, evaluateFrom), "string");
+                        createVariables(intiMapStep, "region", postmanToSyncloopProps(region), evaluateFrom(region, evaluateFrom), "string");
+                        createVariables(intiMapStep, "secretKey", postmanToSyncloopProps(secretKey), evaluateFrom(secretKey, evaluateFrom), "string");
+                        createVariables(intiMapStep, "accessKey", postmanToSyncloopProps(accessKey), evaluateFrom(accessKey, evaluateFrom), "string");
+
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/service", "document/string", "/awsAuth/service");
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/region", "document/string", "/awsAuth/region");
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/secretKey", "document/string", "/awsAuth/secretKey");
+                        createPreInvokeMapping(invokeClient, "copy", "string", "/accessKey", "document/string", "/awsAuth/accessKey");
+
+
                     }
-                    createVariables(intiMapStep, "service", postmanToSyncloopProps(service), evaluateFrom(service, evaluateFrom), "string");
-                    createVariables(intiMapStep, "region", postmanToSyncloopProps(region), evaluateFrom(region, evaluateFrom), "string");
-                    createVariables(intiMapStep, "secretKey", postmanToSyncloopProps(secretKey), evaluateFrom(secretKey, evaluateFrom), "string");
-                    createVariables(intiMapStep, "accessKey", postmanToSyncloopProps(accessKey), evaluateFrom(accessKey, evaluateFrom), "string");
-
-                    createPreInvokeMapping(invokeClient, "copy", "string", "/service", "document/string", "/awsAuth/service");
-                    createPreInvokeMapping(invokeClient, "copy", "string", "/region", "document/string", "/awsAuth/region");
-                    createPreInvokeMapping(invokeClient, "copy", "string", "/secretKey", "document/string", "/awsAuth/secretKey");
-                    createPreInvokeMapping(invokeClient, "copy", "string", "/accessKey", "document/string", "/awsAuth/accessKey");
-
-
                 }
             }
-
             for (String headerKey : listOfHeaderKeys) {
                 createPreInvokeMapping(invokeClient, "copy", "document/string", "/*requestHeaders/" + headerKey,
                         "document/string", "/requestHeaders/" + headerKey);
@@ -266,7 +274,7 @@ public class ImportPostman {
 
         String json = new Gson().toJson(flowService.getFlow());
         saveFlow(filePath, json);
-        generateJavaClass(file,servicePath,dataPipeline);
+        generateJavaClass(file, servicePath, dataPipeline);
 
         return filePath;
     }
@@ -564,7 +572,7 @@ public class ImportPostman {
         }
     }
 
-    private static String generateClientLib(String folder, String servicePath, String packageName, PostmanItems postmanItems, String method, Evaluate evaluateFrom,DataPipeline dataPipeline) throws Exception {
+    private static String generateClientLib(String folder, String servicePath, String packageName, PostmanItems postmanItems, String method, Evaluate evaluateFrom, DataPipeline dataPipeline) throws Exception {
 
         String filePath = folder + File.separator + "packages" + File.separator + packageName
                 + File.separator + "client" + File.separator + servicePath + File.separator + ServiceUtils.toServiceSlug(postmanItems.getName()) + ".flow";
@@ -574,7 +582,7 @@ public class ImportPostman {
         if (file.exists() && false) {
             flowService = new Gson().fromJson(new FileReader(file), FlowService.class);
         } else {
-            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"),dataPipeline);
+            flowService = new FlowService("", "", Sets.newHashSet("consumers"), Sets.newHashSet("developers"), dataPipeline);
         }
         List<Object> inputs = flowService.getInput();
         List<Object> outputs = flowService.getOutput();
@@ -609,7 +617,7 @@ public class ImportPostman {
         }
 
         createVariables(intiMapStep, "method", method, null, "string");
-       // createVariables(intiMapStep, "url", "#{basePath}" + postmanToSyncloopProps(updatedAlias, "pathParameters"), Evaluate.EEV, "string");
+        // createVariables(intiMapStep, "url", "#{basePath}" + postmanToSyncloopProps(updatedAlias, "pathParameters"), Evaluate.EEV, "string");
         createVariables(intiMapStep, "url", "#{basePath}" + updatedAlias.replaceAll(Pattern.quote("{"), "#{pathParameters/").replaceAll("(#+)", "#"), Evaluate.EEV, "string");
         dropVariables(intiMapStep, "basePath", "string");
         dropVariables(intiMapStep, "pathParameters", "document");
@@ -620,10 +628,10 @@ public class ImportPostman {
             createPostInvokeMapping(invokeStepToJson, "copy", "string", "/jsonString", "string", "/body");
         }
 
-        PostmanItemAuth auth  = postmanItems.getRequest().getAuth();
+        PostmanItemAuth auth = postmanItems.getRequest().getAuth();
         if (null != auth || null != PostmanCollection.getAuth()) {
-            if(null==auth || null != PostmanCollection.getAuth()) {
-                auth=PostmanCollection.getAuth();
+            if (null == auth || null != PostmanCollection.getAuth()) {
+                auth = PostmanCollection.getAuth();
             }
 
             if ("basic".equalsIgnoreCase(auth.getType())) {
@@ -929,7 +937,7 @@ public class ImportPostman {
         JSONObject jsonObject = new JSONObject(map);
         String updatedJson = jsonObject.toString();
         saveFlow(filePath, updatedJson);
-        generateJavaClass(file,servicePath,dataPipeline);
+        generateJavaClass(file, servicePath, dataPipeline);
         return filePath;
     }
 
@@ -1018,19 +1026,19 @@ public class ImportPostman {
     }
 
 
-    public static void generateJavaClass(File file,String flowRef, DataPipeline dataPipeline)throws Exception {
-        String flowJavaTemplatePath=MiddlewareServer.getConfigFolderPath()+"flowJava.template";
+    public static void generateJavaClass(File file, String flowRef, DataPipeline dataPipeline) throws Exception {
+        String flowJavaTemplatePath = MiddlewareServer.getConfigFolderPath() + "flowJava.template";
         //String flowJavaTemplatePath = file+"";
 
         //System.out.println("flowJavaTemplatePath: "+flowJavaTemplatePath);
-        String className=file.getName().replace(".flow", "");
+        String className = file.getName().replace(".flow", "");
         //URL url = new URL(flowJavaTemplatePath);
-        String fullCode="";
-        String pkg=flowRef.replace("/"+file.getName(),"").replace("/",".");
+        String fullCode = "";
+        String pkg = flowRef.replace("/" + file.getName(), "").replace("/", ".");
         List<String> lines = FileUtils.readLines(new File(flowJavaTemplatePath), "UTF-8");
-        for (String line: lines) {
-            String codeLine=(line.replace("#flowRef",flowRef).replace("#package",pkg).replace("#className",className));
-            fullCode+=codeLine+"\n";
+        for (String line : lines) {
+            String codeLine = (line.replace("#flowRef", flowRef).replace("#package", pkg).replace("#className", className));
+            fullCode += codeLine + "\n";
             //dataPipeline.log("\n");
             //dataPipeline.log(codeLine);
         }
@@ -1041,8 +1049,8 @@ public class ImportPostman {
         //String fullCode="";//pkg+"\n"+imports+"\n"+classDef+"\n"+mainDef+"\n"+mainFunc+"\n"+mainDefClose+"\n"+classDefClose;
         //System.out.println(fullCode);
         //System.out.println(className+".service");
-        String javaFilePath=file.getAbsolutePath().replace(className+".flow", className+".java");
-        File javaFile=new File(javaFilePath);
+        String javaFilePath = file.getAbsolutePath().replace(className + ".flow", className + ".java");
+        File javaFile = new File(javaFilePath);
         if (!javaFile.exists()) {
             javaFile.createNewFile();
         }
@@ -1050,9 +1058,9 @@ public class ImportPostman {
         fos.write(fullCode.getBytes());
         fos.flush();
         fos.close();
-        String fqn=pkg.replace("package ", "").replace(";","")+"."+className+".main";
+        String fqn = pkg.replace("package ", "").replace(";", "") + "." + className + ".main";
 
-        dataPipeline.log("fqn: "+fqn);
-       // ServiceUtils.compileJavaCode(fqn,dataPipeline);
+        dataPipeline.log("fqn: " + fqn);
+        // ServiceUtils.compileJavaCode(fqn,dataPipeline);
     }
 }
