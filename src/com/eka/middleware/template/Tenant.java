@@ -125,7 +125,7 @@ public class Tenant {
         if (serviceName == null)
             serviceName = name;
         Logger logger = getLogger(serviceName);
-        logger.error(TENANT_MARKER, msg);
+        logger.debug(TENANT_MARKER, msg);
         clearContext();
     }
 

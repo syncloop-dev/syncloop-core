@@ -13,6 +13,8 @@ import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -954,7 +956,14 @@ public class DataPipeline {
 		try {
 			HttpServerExchange httpServerExchange = rp.getExchange();
 			if (null != httpServerExchange) {
-				return httpServerExchange.getHostAndPort();
+
+				HeaderValues headerValues = httpServerExchange.getRequestHeaders().get("X-Forwarded-For");
+
+				if (null != headerValues) {
+					return new StringTokenizer(headerValues.get(0), ",").nextToken().trim();
+				}
+
+				return httpServerExchange.getSourceAddress().getAddress().toString();
 			}
 		} catch (SnippetException e) {
 			ServiceUtils.printException(this,"Exchange not initialized..", e);
