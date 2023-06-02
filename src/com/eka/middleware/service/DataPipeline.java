@@ -1,5 +1,6 @@
 package com.eka.middleware.service;
 
+import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
@@ -10,11 +11,17 @@ import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.template.Tenant;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.core.profile.UserProfile;
+import org.pac4j.core.util.Pac4jConstants;
 
 import javax.json.JsonArray;
 import java.io.*;
@@ -949,7 +956,14 @@ public class DataPipeline {
 		try {
 			HttpServerExchange httpServerExchange = rp.getExchange();
 			if (null != httpServerExchange) {
-				return httpServerExchange.getHostAndPort();
+
+				HeaderValues headerValues = httpServerExchange.getRequestHeaders().get("X-Forwarded-For");
+
+				if (null != headerValues) {
+					return new StringTokenizer(headerValues.get(0), ",").nextToken().trim();
+				}
+
+				return httpServerExchange.getSourceAddress().getAddress().toString();
 			}
 		} catch (SnippetException e) {
 			ServiceUtils.printException(this,"Exchange not initialized..", e);
@@ -970,5 +984,45 @@ public class DataPipeline {
 			ServiceUtils.printException(this,"Exchange not initialized..", e);
 		}
 		return "http://localhost";
+	}
+
+	public String generateWithUUID(String UUID, int expiresAfterHours, String email, String userId, String name, List<String> groups) throws Exception {
+		if(StringUtils.isBlank(UUID) || UUID.length()>255)
+			throw new Exception("UUID must not be null and should be less than 255 length");
+		if(expiresAfterHours<1);
+		expiresAfterHours=720;
+		String JWT="";
+		AuthAccount authacc=getCurrentRuntimeAccount();
+		Tenant tenant = rp.getTenant();
+		final var profile = new CommonProfile();
+		if (null == groups || groups.isEmpty()) {
+			throw new Exception("Groups can not be empty!");
+		}
+		if (StringUtils.isBlank(email)) {
+			email = UUID;
+		}
+		if (StringUtils.isBlank(userId)) {
+			userId = UUID;
+		}
+		if (StringUtils.isBlank(UUID)) {
+			name = UUID;
+		}
+
+
+		profile.setId(email);
+		profile.addAttribute(Pac4jConstants.USERNAME, userId);
+		profile.addAttribute("tenant", tenant.getName());
+		profile.addAttribute("groups", groups);
+		profile.addAttribute("name", name);
+		profile.addAttribute("email", email);
+		profile.addAttribute("UUID", UUID);
+		profile.addAttribute("creation_timestamp", new Date().getTime());
+
+		Date expiryDate = new Date();
+		expiryDate = ServiceUtils.addHoursToDate(expiryDate, expiresAfterHours);
+		tenant.jwtGenerator.setExpirationTime(expiryDate);
+		String token = tenant.jwtGenerator.generate(profile);
+		JWT=ServiceUtils.encrypt(token, tenant.getName());
+		return JWT;
 	}
 }

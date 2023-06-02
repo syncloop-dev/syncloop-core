@@ -3,6 +3,7 @@ package com.eka.middleware.auth.pac4j;
 import java.util.Date;
 import java.util.List;
 
+import io.undertow.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.pac4j.core.client.Client;
@@ -31,12 +32,6 @@ import io.undertow.security.idm.Account;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.StatusCodes;
 
 public class AuthHandlers {
 
@@ -44,6 +39,9 @@ public class AuthHandlers {
 
 	public static HttpHandler indexHandler() {
 		return exchange -> {
+			if (handlerCORSRequest(exchange)) {
+				return ;
+			}
 			ThreadManager.processRequest(exchange);
 		};
 	}
@@ -92,9 +90,28 @@ public class AuthHandlers {
 			exchange.endExchange();
 		}
 	};
+
+	public static boolean handlerCORSRequest(final HttpServerExchange exchange) {
+		if (exchange.getRequestMethod().equals(Methods.OPTIONS)
+				&& exchange.getRequestHeaders().contains("Access-Control-Request-Method")) {
+			exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Origin"), "*");// new
+			exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Methods"), "*");// new
+			exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Headers"), "*");// new
+			exchange.setStatusCode(200);
+			exchange.endExchange();
+			return true;
+		}
+
+		return false;
+	}
 	
 	public static HttpHandler mainHandler = new HttpHandler() {
 		public void handleRequest(final HttpServerExchange exchange) throws Exception {
+
+			if (handlerCORSRequest(exchange)) {
+				return ;
+			}
+
 			final SecurityContext context = exchange.getSecurityContext();
 			//AuthAccount acc=(AuthAccount) context.getAuthenticatedAccount();
 			List<UserProfile> profiles = getProfiles(exchange);

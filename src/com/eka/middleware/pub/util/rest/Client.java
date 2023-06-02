@@ -2,6 +2,7 @@ package com.eka.middleware.pub.util.rest;
 
 import com.eka.middleware.pub.util.auth.aws.AWS4SignerForChunkedUpload;
 import com.google.common.collect.Maps;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.net.ssl.HostnameVerifier;
@@ -175,7 +176,14 @@ public class Client {
 											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, Map<String, Object> settings, boolean sslValidation) throws Exception {
 		HttpRequest.Builder builder = HttpRequest.newBuilder();
 
-		String queries = StringUtils.join(queryParameters.entrySet().parallelStream().map(m -> String.format("%s=%s", m.getKey(), m.getValue())).collect(Collectors.toSet()), "&");
+		String queries = StringUtils.join(queryParameters.entrySet().parallelStream().map(m -> {
+			try {
+				return String.format("%s=%s", m.getKey(), URLEncoder.encode(m.getValue(), StandardCharsets.UTF_8.toString()));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return m.getValue();
+		}).collect(Collectors.toSet()), "&");
 
 		if (StringUtils.isNotBlank(queries)) {
 			builder.uri(URI.create(url + "?" + queries));
@@ -215,7 +223,8 @@ public class Client {
 		} else if (StringUtils.isNotBlank(payload)) {
 			bodyPublisher = HttpRequest.BodyPublishers.ofString(payload);
 		} else if (null != inputStream) {
-			bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(() -> inputStream);
+			bodyPublisher = HttpRequest.BodyPublishers.ofByteArray(IOUtils.toByteArray(inputStream));
+			//bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(() -> inputStream);
 		}
 
 		builder.method(method, bodyPublisher);
