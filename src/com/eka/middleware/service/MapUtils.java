@@ -24,7 +24,7 @@ public class MapUtils {
 		String[] tokenize = pointer.split("/");
 		for (String key : tokenize) {
 			isNumeric = NumberUtils.isCreatable(key);
-			if (obj != null && !isNumeric)
+			if ((obj instanceof Map) && !isNumeric)
 				map = (Map<String, Object>) obj;
 			else if (isNumeric && (obj instanceof List || obj instanceof ArrayList))
 				arrayList = (List<Object>) obj;
