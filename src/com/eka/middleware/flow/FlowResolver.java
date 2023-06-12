@@ -13,7 +13,10 @@ import com.eka.middleware.template.SystemException;
 
 public class FlowResolver {
 public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws SnippetException{
-	JsonValue flowJsonValue = mainflowJsonObject.getValue("/latest/flow");
+	JsonValue flowJsonValue = mainflowJsonObject.getJsonObject("latest").containsKey("api") ? mainflowJsonObject.getValue("/latest/api") : null;
+	if (null == flowJsonValue || flowJsonValue.asJsonArray().isEmpty()) {
+		flowJsonValue = mainflowJsonObject.getValue("/latest/flow");
+	}
 	JsonValue JsonInputValue=mainflowJsonObject.get("latest").asJsonObject().get("input");
 	JsonValue JsonOutputValue=mainflowJsonObject.get("latest").asJsonObject().get("output");
 	Boolean validationRequired=mainflowJsonObject.getBoolean("enableServiceDocumentValidation");

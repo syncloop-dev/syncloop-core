@@ -303,9 +303,9 @@ public class MiddlewareServer {
 		 */
 		private static void bootBuild() throws Exception {
 
-			String distributionName = "eka-distribution-v1.4.5.zip";
+			String distributionName = "eka-distribution-v1.4.6.zip";
 			if (Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-				distributionName = "eka-distribution-community-v1.4.5.zip";
+				distributionName = "eka-distribution-community-v1.4.6.zip";
 			}
 
 			File eka = new File("./eka/version");
