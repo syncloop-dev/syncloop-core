@@ -31,6 +31,7 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				tcfBlock.process(dp);
 			break;
 			case "sequence":
+			case "group":
 				Scope scope=new Scope(jsonValue.asJsonObject());
 				scope.process(dp);
 			break;
@@ -39,18 +40,22 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				swich.process(dp);
 			break;
 			case "loop":
+			case "forEach":
 				Loop loop=new Loop(jsonValue.asJsonObject());
 				loop.process(dp);
 			break;
 			case "repeat":
+			case "redo":
 				Repeat repeat=new Repeat(jsonValue.asJsonObject());
 				repeat.process(dp);
 			break;
 			case "invoke":
+			case "service":
 				Invoke invoke=new Invoke(jsonValue.asJsonObject());
 				invoke.process(dp);
 			break;
 			case "map":
+			case "transformer":
 				Transformer transformer=new Transformer(jsonValue.asJsonObject());
 				transformer.process(dp);
 			break;		
