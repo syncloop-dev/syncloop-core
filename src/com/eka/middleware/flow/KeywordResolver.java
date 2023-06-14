@@ -36,7 +36,7 @@ public class KeywordResolver {
             case "*TenantPackagePath":
                 return PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             default:
-                String strVal = ServiceUtils.getServerProperty(expressionKey.replace(Pattern.quote("*"), ""));
+                String strVal = ServiceUtils.getServerProperty(expressionKey.substring(1));
                 if (StringUtils.isBlank(strVal)) {
                     return "null";
                 }
