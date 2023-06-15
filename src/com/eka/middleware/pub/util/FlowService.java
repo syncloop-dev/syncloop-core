@@ -45,7 +45,7 @@ public class FlowService {
     }
 
     public List<Object> getFlowSteps() {
-        return latest.getFlow();
+        return latest.getApi();
     }
 
 

@@ -106,7 +106,7 @@ public class Scope {
 					}
 				break;
 				case "invoke":
-					Invoke invoke=new Invoke(jsonValue.asJsonObject());
+					Api invoke=new Api(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						invoke.process(dp);
 					}else { 
@@ -146,10 +146,10 @@ public class Scope {
 	public void setTcfBlocks(List<TCFBlock> tcfBlocks) {
 		this.tcfBlocks = tcfBlocks;
 	}
-	public List<Invoke> getInvokes() {
+	public List<Api> getInvokes() {
 		return invokes;
 	}
-	public void setInvokes(List<Invoke> invokes) {
+	public void setInvokes(List<Api> invokes) {
 		this.invokes = invokes;
 	}
 	public List<Repeat> getRepeats() {
@@ -196,7 +196,7 @@ public class Scope {
 	}
 	private List<Scope> scopes;
 	private List<TCFBlock> tcfBlocks;
-	private List<Invoke> invokes;
+	private List<Api> invokes;
 	private List<Repeat> repeats;
 	private List<Loop> loops;
 	private List<Transformer> transformers;	
