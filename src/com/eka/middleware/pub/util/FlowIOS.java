@@ -12,6 +12,6 @@ public class FlowIOS {
 
     private final List<Object> input = new ArrayList();
     private final List<Object> output = new ArrayList();
-    private final List<Object> flow = new ArrayList();
+    private final List<Object> api = new ArrayList();
     final private String lockedByUser = null;
 }

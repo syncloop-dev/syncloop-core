@@ -8,7 +8,7 @@ import javax.json.JsonObject;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.template.SnippetException;
 
-public class Invoke {
+public class Api {
 	private boolean disabled=false;
 	private boolean sync=true;
 	private String fqn;
@@ -26,7 +26,7 @@ public class Invoke {
 	private String snapshot=null;
 	private String snapCondition=null;
 
-	public Invoke(JsonObject jo) {
+	public Api(JsonObject jo) {
 		invoke=jo;
 		data=invoke.get("data").asJsonObject();
 		condition=data.getString("condition",null);

@@ -164,7 +164,7 @@ public class Loop {
 					repeat.process(dp);
 					break;
 				case "invoke":
-					Invoke invoke = new Invoke(jsonValue.asJsonObject());
+					Api invoke = new Api(jsonValue.asJsonObject());
 					invoke.process(dp);
 					break;
 				case "map":

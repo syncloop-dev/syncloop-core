@@ -15,7 +15,7 @@ import com.eka.middleware.template.SnippetException;
 public class Repeat {
 	private List<Scope> scopes;
 	private List<TCFBlock> tcfBlocks;
-	private List<Invoke> invokes;
+	private List<Api> invokes;
 	private List<Repeat> repeats;
 	private List<Loop> loops;
 	private List<Transformer> transformers;
@@ -197,7 +197,7 @@ public class Repeat {
 				}
 				break;
 			case "invoke":
-				Invoke invoke = new Invoke(jsonValue.asJsonObject());
+				Api invoke = new Api(jsonValue.asJsonObject());
 				if (!evaluateCondition) {
 					invoke.process(dp);
 				} else {
@@ -236,11 +236,11 @@ public class Repeat {
 		this.tcfBlocks = tcfBlocks;
 	}
 
-	public List<Invoke> getInvokes() {
+	public List<Api> getInvokes() {
 		return invokes;
 	}
 
-	public void setInvokes(List<Invoke> invokes) {
+	public void setInvokes(List<Api> invokes) {
 		this.invokes = invokes;
 	}
 
