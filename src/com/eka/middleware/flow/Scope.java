@@ -106,13 +106,13 @@ public class Scope {
 					}
 				break;
 				case "invoke":
-					Api invoke=new Api(jsonValue.asJsonObject());
+					Api api=new Api(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
-						invoke.process(dp);
+						api.process(dp);
 					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(invoke.getCondition(),dp);
+						boolean canExecute =FlowUtils.evaluateCondition(api.getCondition(),dp);
 						if(canExecute)
-							invoke.process(dp);
+							api.process(dp);
 					}
 				break;
 				case "map":
