@@ -51,8 +51,8 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 			break;
 			case "invoke":
 			case "service":
-				Api invoke=new Api(jsonValue.asJsonObject());
-				invoke.process(dp);
+				Api api=new Api(jsonValue.asJsonObject());
+				api.process(dp);
 			break;
 			case "map":
 			case "transformer":

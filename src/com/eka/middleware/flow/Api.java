@@ -15,7 +15,7 @@ public class Api {
 	private Transformer transformer;
 	private String condition;
 	private String label;
-	private JsonObject invoke;
+	private JsonObject api;
 	private boolean evaluateCondition;
 	private String comment;
 	private JsonArray transformers;
@@ -27,8 +27,8 @@ public class Api {
 	private String snapCondition=null;
 
 	public Api(JsonObject jo) {
-		invoke=jo;
-		data=invoke.get("data").asJsonObject();
+		api=jo;
+		data=api.get("data").asJsonObject();
 		condition=data.getString("condition",null);
 		String status=data.getString("status",null);
 		disabled="disabled".equals(status);
@@ -75,7 +75,7 @@ public class Api {
 		//FlowUtils.setValue(createList, dp);
 		if(transformers!=null)
 			FlowUtils.mapBefore(transformers, dp);
-		String serviceFqn=invoke.getString("text",null);
+		String serviceFqn=api.getString("text",null);
 		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
 			if("async".equals(requestMethod))
 				dp.applyAsync(serviceFqn.trim()+".main",transformers);
