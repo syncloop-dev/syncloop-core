@@ -128,29 +128,7 @@ public class AutoUpdate {
         zipOut.close();
         fos.flush();
         fos.close();
-        //dataPipeline.log(fileToZip.getAbsolutePath());
-        //FileUtils.deleteDirectory(fileToZip);
     }
-
-
-
-   /* public static File downloadFile(String url) throws IOException {
-        URL fileUrl = new URL(url);
-        String fileName = getFileNameFromUrl(url);
-
-        File downloadedFile = new File(fileName);
-        if (downloadedFile.exists()) {
-            System.out.println("File already exists: " + fileName);
-            return downloadedFile;
-        }
-
-        try (InputStream in = fileUrl.openStream()) {
-            Files.copy(in, downloadedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("File downloaded successfully: " + fileName);
-        }
-
-        return downloadedFile;
-    }*/
 
     private static String getFileNameFromUrl(String url) {
         String[] parts = url.split("/");
