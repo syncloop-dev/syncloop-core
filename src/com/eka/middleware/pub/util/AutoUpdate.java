@@ -6,16 +6,17 @@ import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.IOUtils;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
@@ -28,12 +29,8 @@ public class AutoUpdate {
     public static final void main(DataPipeline dataPipeline) throws SnippetException {
         try {
             String url = dataPipeline.getAsString("url");
-            downloadFile(url, dataPipeline);
-
-
-
-        } catch (
-                Exception e) {
+            updateTenant(url, dataPipeline);
+        } catch (Exception e) {
             dataPipeline.clear();
             dataPipeline.put("error", e.getMessage());
             dataPipeline.setResponseStatus(500);
@@ -138,31 +135,20 @@ public class AutoUpdate {
         fos.close();
     }
 
-    private static String getFileNameFromUrl(String url) {
-        String[] parts = url.split("/");
-        return parts[parts.length - 1];
-    }
-
-
-    public static String downloadFile(String url, DataPipeline dataPipeline) throws Exception {
-        URL fileUrl = new URL(url);
-        String fileName = getFileNameFromUrl(url);
+    public static String updateTenant(String version, DataPipeline dataPipeline) throws Exception {
+        String fileName = String.format("eka-distribution-tenant-v%s.zip", version);
+        URL url = new URL(String.format("https://eka-distribution.s3.us-west-1.amazonaws.com/%s", fileName));
 
         String downloadLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/import/";
-
 
         System.out.println("package path: " + PropertyManager.getPackagePath(dataPipeline.rp.getTenant()));
         System.err.println("downloadLocation: " + downloadLocation);
 
 
         File downloadedFile = new File(downloadLocation + fileName);
-        if (downloadedFile.exists()) {
-            System.out.println("File already exists: " + fileName);
-        } else {
-            try (InputStream in = fileUrl.openStream()) {
-                Files.copy(in, downloadedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                System.out.println("File downloaded successfully: " + fileName);
-            }
+        try (InputStream in = url.openStream()) {
+            Files.copy(in, downloadedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("File downloaded successfully: " + fileName);
         }
 
         // Call the other methods in the class
@@ -186,30 +172,14 @@ public class AutoUpdate {
     }
 
     public static String readJsonFromUrl(String urlString) throws IOException {
-        StringBuilder jsonContent = new StringBuilder();
-
-        URL url = new URL(urlString);
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-        connection.setRequestMethod("GET");
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        try { String line;
-            while ((line = reader.readLine()) != null) {
-                jsonContent.append(line);
-            }
-            reader.close(); } catch (Throwable throwable) { try { reader.close(); }
-        catch (Throwable throwable1) { throwable.addSuppressed(throwable1); }
-            throw throwable; }
-        if (jsonContent.toString().trim().isEmpty()) {
-            throw new IOException("Empty JSON content");
-        }
-
-        return jsonContent.toString();
+        try {
+            return IOUtils.toString(new URI(urlString), StandardCharsets.UTF_8);
+        } catch (URISyntaxException e) {}
+        return null;
     }
 
-
     private static String readJsonFromFile(String filePath) throws IOException {
-        return new String(Files.readAllBytes(Paths.get(filePath, new String[0])));
+        return new String(Files.readAllBytes(Paths.get(filePath)));
     }
 
 
@@ -251,38 +221,25 @@ public class AutoUpdate {
     }
 
 
-    public static String checkAndUpdateURL(String filePath, String url) throws IOException {
-        String filePathVersion = jsonValueFetch(filePath, "latest.version_number");
+    public static String checkForUpdate(DataPipeline dataPipeline) throws IOException {
+
+        String url = "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
+        String filePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/tenant-update.json";
+
+        String filePathVersion = "0";
+
+        File file = new File(filePath);
+
+        if (file.exists()) {
+            filePathVersion = jsonValueFetch(filePath, "latest.version_number");
+        }
         String urlVersion = jsonValueFetch(url, "latest.version_number");
-        boolean forceUpdate = Boolean.parseBoolean(jsonValueFetch(url, "updatation.force_update"));
-        String downloadableUrl = null;
 
-
-        if (urlVersion != null && filePathVersion != null && compareVersions(urlVersion, filePathVersion) > 0.0F) {
-            String newVersionNumber = jsonValueFetch(url, "latest.version");
-            if (newVersionNumber != null) {
-                downloadableUrl = updateVersionInURL(newVersionNumber);
-            }
-
-            if (forceUpdate) {
-                downloadableUrl = updateVersionInURL(newVersionNumber);
-            }
+        if (Integer.parseInt(urlVersion) > Integer.parseInt(filePathVersion)) {
+            return jsonValueFetch(url, "latest.version");
         }
 
-        return downloadableUrl;
-    }
-
-
-    private static float compareVersions(String version1, String version2) throws IOException {
-        float v1 = Float.parseFloat(version1);
-        float v2 = Float.parseFloat(version2);
-
-        if (v1 < v2)
-            return -1.0F;
-        if (v1 > v2) {
-            return 1.0F;
-        }
-        return 0.0F;
+        return null;
     }
 
 
