@@ -4,11 +4,19 @@ import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -136,7 +144,7 @@ public class AutoUpdate {
     }
 
 
-    public static void downloadFile(String url, DataPipeline dataPipeline) throws Exception {
+    public static String downloadFile(String url, DataPipeline dataPipeline) throws Exception {
         URL fileUrl = new URL(url);
         String fileName = getFileNameFromUrl(url);
 
@@ -173,6 +181,146 @@ public class AutoUpdate {
         createRestorePoint(fileName, dataPipeline);
 
         dataPipeline.put("status", "Saved");
+        return PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/import/" + fileName;
+
+    }
+
+    public static String readJsonFromUrl(String urlString) throws IOException {
+        StringBuilder jsonContent = new StringBuilder();
+
+        URL url = new URL(urlString);
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.setRequestMethod("GET");
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        try { String line;
+            while ((line = reader.readLine()) != null) {
+                jsonContent.append(line);
+            }
+            reader.close(); } catch (Throwable throwable) { try { reader.close(); }
+        catch (Throwable throwable1) { throwable.addSuppressed(throwable1); }
+            throw throwable; }
+        if (jsonContent.toString().trim().isEmpty()) {
+            throw new IOException("Empty JSON content");
+        }
+
+        return jsonContent.toString();
+    }
+
+
+    private static String readJsonFromFile(String filePath) throws IOException {
+        return new String(Files.readAllBytes(Paths.get(filePath, new String[0])));
+    }
+
+
+    public static String jsonValueFetch(String location, String variableName) throws IOException {
+        String jsonString;
+        if (isUrl(location)) {
+            jsonString = readJsonFromUrl(location);
+        } else {
+            jsonString = readJsonFromFile(location);
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(jsonString);
+        return findValueByVariableName(root, variableName);
+    }
+
+    private static String findValueByVariableName(JsonNode node, String variableName) {
+        String[] searchKeys = variableName.split("\\.");
+
+        JsonNode currentNode = node;
+        for (String key : searchKeys) {
+            currentNode = currentNode.get(key);
+            if (currentNode == null) {
+                return null;
+            }
+        }
+
+        return currentNode.asText();
+    }
+
+
+    private static boolean isUrl(String location) {
+        try {
+            (new URL(location)).toURI();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+
+    public static String checkAndUpdateURL(String filePath, String url) throws IOException {
+        String filePathVersion = jsonValueFetch(filePath, "latest.version_number");
+        String urlVersion = jsonValueFetch(url, "latest.version_number");
+        boolean forceUpdate = Boolean.parseBoolean(jsonValueFetch(url, "updatation.force_update"));
+        String downloadableUrl = null;
+
+
+        if (urlVersion != null && filePathVersion != null && compareVersions(urlVersion, filePathVersion) > 0.0F) {
+            String newVersionNumber = jsonValueFetch(url, "latest.version");
+            if (newVersionNumber != null) {
+                downloadableUrl = updateVersionInURL(newVersionNumber);
+            }
+
+            if (forceUpdate) {
+                downloadableUrl = updateVersionInURL(newVersionNumber);
+            }
+        }
+
+        return downloadableUrl;
+    }
+
+
+    private static float compareVersions(String version1, String version2) throws IOException {
+        float v1 = Float.parseFloat(version1);
+        float v2 = Float.parseFloat(version2);
+
+        if (v1 < v2)
+            return -1.0F;
+        if (v1 > v2) {
+            return 1.0F;
+        }
+        return 0.0F;
+    }
+
+
+    private static String updateVersionInURL(String newVersion) {
+        return String.format("https://eka-distribution.s3.us-west-1.amazonaws.com/eka-distribution-tenant-v%s.zip", newVersion);
+    }
+
+    private static String calculateFileChecksum(String filePath) throws Exception {
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+
+        try (InputStream inputStream = new FileInputStream(filePath)) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                md.update(buffer, 0, bytesRead);
+            }
+        }
+
+        byte[] digest = md.digest();
+
+        StringBuilder checksumBuilder = new StringBuilder();
+        for (byte b : digest) {
+            checksumBuilder.append(String.format("%02x", b));
+        }
+
+        return checksumBuilder.toString();
+    }
+
+
+    private static String getDigestFromUrl(String url) throws IOException {
+        return jsonValueFetch(url, "latest.digest");
+    }
+
+
+    public static Boolean compareDigest(String filePath, String url) throws Exception {
+        String urlDigest = getDigestFromUrl(url);
+        String fileDigest = calculateFileChecksum(filePath);
+        return Objects.equals(urlDigest, fileDigest);
     }
 
 }
