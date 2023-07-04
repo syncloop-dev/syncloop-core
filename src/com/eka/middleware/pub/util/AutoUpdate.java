@@ -6,6 +6,9 @@ import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.shaded.gson.Gson;
+import com.nimbusds.jose.shaded.gson.GsonBuilder;
+import net.minidev.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
@@ -135,7 +138,7 @@ public class AutoUpdate {
         fos.close();
     }
 
-    public static String updateTenant(String version, DataPipeline dataPipeline) throws Exception {
+    public static void updateTenant(String version, DataPipeline dataPipeline) throws Exception {
         String fileName = String.format("eka-distribution-tenant-v%s.zip", version);
         URL url = new URL(String.format("https://eka-distribution.s3.us-west-1.amazonaws.com/%s", fileName));
 
@@ -151,23 +154,40 @@ public class AutoUpdate {
             System.out.println("File downloaded successfully: " + fileName);
         }
 
-        // Call the other methods in the class
-        String packagePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
-        String buildsDirPath = packagePath + "builds/import/";
+        String filePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/import/" + fileName;
 
-        // Unzip and deploy
-        String location = buildsDirPath + fileName;
-        unzip(location, packagePath, dataPipeline);
+        Boolean checkDigest = compareDigest(filePath, returnTenantUpdateUrl());
+        if (checkDigest){
+            // Call the other methods in the class
+            String packagePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
+            String buildsDirPath = packagePath + "builds/import/";
 
-        // Import URL aliases
-        String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
-        boolean importSuccessful = importURLAliases(urlAliasFilePath, dataPipeline);
+            // Unzip and deploy
+            String location = buildsDirPath + fileName;
+            unzip(location, packagePath, dataPipeline);
 
-        // Create restore point
-        createRestorePoint(fileName, dataPipeline);
+            // Import URL aliases
+            String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
+            boolean importSuccessful = importURLAliases(urlAliasFilePath, dataPipeline);
 
-        dataPipeline.put("status", "Saved");
-        return PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/import/" + fileName;
+            // Create restore point
+            createRestorePoint(fileName, dataPipeline);
+
+            String jsonContent = readJsonFromUrl(returnTenantUpdateUrl());
+            String extractedJsonString = extractJsonPart(jsonContent, "latest");
+            String tenantUpdateFileLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/tenant-update.json";
+
+            try {
+                writeJsonToFile(extractedJsonString, tenantUpdateFileLocation);
+                System.out.println("Extraction complete. tenant-update file updated");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            dataPipeline.put("status", "Saved");
+        }else{
+            dataPipeline.put("status", "Not Saved");
+        }
 
     }
 
@@ -221,9 +241,9 @@ public class AutoUpdate {
     }
 
 
-    public static String checkForUpdate(DataPipeline dataPipeline) throws IOException {
+    public static String checkForUpdate(DataPipeline dataPipeline) throws Exception {
 
-        String url = "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
+        String url = returnTenantUpdateUrl();
         String filePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/tenant-update.json";
 
         String filePathVersion = "0";
@@ -242,10 +262,6 @@ public class AutoUpdate {
         return null;
     }
 
-
-    private static String updateVersionInURL(String newVersion) {
-        return String.format("https://eka-distribution.s3.us-west-1.amazonaws.com/eka-distribution-tenant-v%s.zip", newVersion);
-    }
 
     private static String calculateFileChecksum(String filePath) throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -279,5 +295,31 @@ public class AutoUpdate {
         String fileDigest = calculateFileChecksum(filePath);
         return Objects.equals(urlDigest, fileDigest);
     }
+
+    private static String extractJsonPart(String jsonString, String partName) {
+        int startIndex = jsonString.indexOf("\"" + partName + "\":");
+        if (startIndex == -1) {
+            throw new IllegalArgumentException("JSON part not found: " + partName);
+        }
+
+        int endIndex = jsonString.indexOf("}", startIndex);
+        if (endIndex == -1) {
+            throw new IllegalArgumentException("Invalid JSON structure");
+        }
+
+        return "{\n" + jsonString.substring(startIndex, endIndex + 1) + "\n}";
+    }
+
+    private static void writeJsonToFile(String jsonString, String filePath) throws IOException {
+        try (FileWriter fileWriter = new FileWriter(filePath)) {
+            fileWriter.write(jsonString);
+        }
+    }
+
+
+    public static String returnTenantUpdateUrl() throws Exception{
+        return "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
+    }
+
 
 }
