@@ -10,6 +10,7 @@ import com.nimbusds.jose.shaded.gson.Gson;
 import com.nimbusds.jose.shaded.gson.GsonBuilder;
 import net.minidev.json.JSONObject;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.net.URI;
@@ -157,7 +158,7 @@ public class AutoUpdate {
         String filePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/import/" + fileName;
 
         Boolean checkDigest = compareDigest(filePath, returnTenantUpdateUrl());
-        if (checkDigest){
+        if (checkDigest) {
             // Call the other methods in the class
             String packagePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             String buildsDirPath = packagePath + "builds/import/";
@@ -184,9 +185,9 @@ public class AutoUpdate {
                 e.printStackTrace();
             }
 
-            dataPipeline.put("status", "Saved");
+            dataPipeline.put("status", true);
         }else{
-            dataPipeline.put("status", "Not Saved");
+            dataPipeline.put("status", false);
         }
 
     }
@@ -293,7 +294,7 @@ public class AutoUpdate {
     public static Boolean compareDigest(String filePath, String url) throws Exception {
         String urlDigest = getDigestFromUrl(url);
         String fileDigest = calculateFileChecksum(filePath);
-        return Objects.equals(urlDigest, fileDigest);
+        return StringUtils.equals(urlDigest, fileDigest);
     }
 
     private static String extractJsonPart(String jsonString, String partName) {
