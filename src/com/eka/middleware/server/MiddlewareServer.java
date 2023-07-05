@@ -46,12 +46,16 @@ import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 
 public class MiddlewareServer {
+
 	public static Logger LOGGER = LogManager.getLogger(MiddlewareServer.class);
 	private static String local_IP = "localhost";
 	// public static String JWT_MASALA="17a0dab4-991c-47b6-91c6-109e640a817f";
 	private static Map<String, Long> lastModifiedMap = new ConcurrentHashMap<String, Long>();
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
+
+	public static final String BUILD_NAME = "vSL_330_Phase_1";
+	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
 
 	public static void main(final String[] args) throws SystemException {
 
@@ -298,14 +302,15 @@ public class MiddlewareServer {
 	}
 
 	private static class BootBuild {
+
 		/**
 		 *
 		 */
 		private static void bootBuild() throws Exception {
 
-			String distributionName = "eka-distribution-vSL_330_Phase_1.zip";
+			String distributionName = "eka-distribution-v" + BUILD_NAME + ".zip";
 			if (Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-				distributionName = "eka-distribution-community-vSL_330_Phase_1.zip";
+				distributionName = "eka-distribution-community-v" + BUILD_NAME + ".zip";
 			}
 
 			File eka = new File("./eka/version");
