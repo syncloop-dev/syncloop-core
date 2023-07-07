@@ -166,16 +166,6 @@ public class Tenant {
         return name;
     }
 
-//	public static void main(String[] args) throws Exception{
-//		LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
-//		URL url = new File("D:\\git\\ekamw-distributions\\resources\\config\\log4j2.xml").toURL();
-//		// this will force a reconfiguration
-//		context.setConfigLocation(url.toURI());
-//		Marker tm = MarkerManager.getMarker("TENANT");
-//        Logger log = LogManager.getLogger();
-//        ThreadContext.put("name", "default");
-//        ThreadContext.put("service", "test");
-//        log.info(tm, "Hey here's some info log from main!");
-//    }
+
 
 }

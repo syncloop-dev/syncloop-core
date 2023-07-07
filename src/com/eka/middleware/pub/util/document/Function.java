@@ -248,10 +248,5 @@ public class Function {
 		ZonedDateTime startDateTime = date.atStartOfDay(ZoneId.systemDefault());
 		return startDateTime;
 	}
-	
-	public static void main(String[] args) {
-		DateTimeFormatter dateformatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");// "yyyy-MM-dd HH:mm:ss z");
-		getZonedDateTime("2000-01-01", dateformatter);
-		//System.out.println();
-	}
+
 }
