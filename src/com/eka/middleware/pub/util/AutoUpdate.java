@@ -314,9 +314,14 @@ public class AutoUpdate {
     }
 
 
-    public static String returnTenantUpdateUrl() throws Exception{
-        return "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
-    }
+    public static String returnTenantUpdateUrl() throws Exception {
 
+        boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
+
+        if (IS_COMMUNITY_VERSION)
+            return "https://eka-distribution.s3.us-west-1.amazonaws.com/community-tenant-update.json";
+        else
+            return "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
+    }
 
 }
