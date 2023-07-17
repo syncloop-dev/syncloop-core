@@ -321,7 +321,7 @@ public class MiddlewareServer {
 					LOGGER.info("Found Build.");
 				} else {
 					LOGGER.info("Build Downloading...");
-					InputStream in = new URL("https://eka-distribution.s3.us-west-1.amazonaws.com/" + distributionName)
+					InputStream in = new URL(Build.DISTRIBUTION_REPO + distributionName)
 							.openStream();
 					Files.copy(in, Paths.get(distributionName), StandardCopyOption.REPLACE_EXISTING);
 					LOGGER.info("Build Download Completed.");

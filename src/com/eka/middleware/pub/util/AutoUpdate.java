@@ -1,10 +1,10 @@
 package com.eka.middleware.pub.util;
 
+import com.eka.middleware.server.Build;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
-import com.eka.middleware.template.SnippetException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
@@ -132,7 +132,7 @@ public class AutoUpdate {
              fileName = String.format("eka-distribution-v%s.zip", version);
 
 
-        URL url = new URL(String.format("https://eka-distribution.s3.us-west-1.amazonaws.com/%s", fileName));
+        URL url = new URL(String.format(Build.DISTRIBUTION_REPO + "%s", fileName));
 
         String downloadLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/import/";
 
@@ -315,9 +315,9 @@ public class AutoUpdate {
 
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
 
-            return "https://eka-distribution.s3.us-west-1.amazonaws.com/community-tenant-update.json";
+            return Build.DISTRIBUTION_REPO + "community-tenant-update.json";
         else
-            return "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
+            return Build.DISTRIBUTION_REPO + "tenant-update.json";
     }
 
 }
