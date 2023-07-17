@@ -140,9 +140,7 @@ public class AutoUpdate {
 
         String fileName=null;
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
-
-             fileName = String.format("eka-distribution-community-v%s.zip", version);
-
+             fileName = String.format("eka-distribution-community-tenant-v%s.zip", version);
         else
              fileName = String.format("eka-distribution-v%s.zip", version);
 
@@ -324,6 +322,7 @@ public class AutoUpdate {
             fileWriter.write(jsonString);
         }
     }
+
 
     public static String returnTenantUpdateUrl() throws Exception {
 
