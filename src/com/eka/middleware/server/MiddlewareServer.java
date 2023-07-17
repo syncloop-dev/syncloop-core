@@ -54,7 +54,7 @@ public class MiddlewareServer {
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
 
-	public static final String BUILD_NAME = "vSL_330_Phase_1";
+	public static final String BUILD_NAME = "vSL_330_Phase_2";
 	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
 
 	public static void main(final String[] args) throws SystemException {
@@ -308,9 +308,9 @@ public class MiddlewareServer {
 		 */
 		private static void bootBuild() throws Exception {
 
-			String distributionName = "eka-distribution-v" + BUILD_NAME + ".zip";
+			String distributionName = "eka-distribution-" + BUILD_NAME + ".zip";
 			if (Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"))) {
-				distributionName = "eka-distribution-community-v" + BUILD_NAME + ".zip";
+				distributionName = "eka-distribution-community-" + BUILD_NAME + ".zip";
 			}
 
 			File eka = new File("./eka/version");

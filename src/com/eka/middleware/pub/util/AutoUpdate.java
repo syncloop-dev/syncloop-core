@@ -26,19 +26,6 @@ import java.util.zip.ZipOutputStream;
 
 public class AutoUpdate {
 
-    public static final void main(DataPipeline dataPipeline) throws SnippetException {
-        try {
-            String url = dataPipeline.getAsString("url");
-            updateTenant(url, dataPipeline);
-        } catch (Exception e) {
-            dataPipeline.clear();
-            dataPipeline.put("error", e.getMessage());
-            dataPipeline.setResponseStatus(500);
-            dataPipeline.put("status", "Not Modified");
-            new SnippetException(dataPipeline, "Failed while saving file", new Exception(e));
-        }
-
-    }
     private static boolean importURLAliases(String UrlAliasFilepath, DataPipeline dp) throws Exception{
         Boolean importSuccessful=true;
         Properties prop=new Properties();
