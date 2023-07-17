@@ -1,5 +1,6 @@
 package com.eka.middleware.pub.util;
 
+import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
@@ -123,7 +124,14 @@ public class AutoUpdate {
     }
 
     public static void updateTenant(String version, DataPipeline dataPipeline) throws Exception {
-        String fileName = String.format("eka-distribution-tenant-v%s.zip", version);
+
+        String fileName=null;
+        if (MiddlewareServer.IS_COMMUNITY_VERSION)
+             fileName = String.format("eka-distribution-community-tenant-v%s.zip", version);
+        else
+             fileName = String.format("eka-distribution-v%s.zip", version);
+
+
         URL url = new URL(String.format("https://eka-distribution.s3.us-west-1.amazonaws.com/%s", fileName));
 
         String downloadLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/import/";
@@ -133,15 +141,17 @@ public class AutoUpdate {
 
 
         File downloadedFile = new File(downloadLocation + fileName);
+
         try (InputStream in = url.openStream()) {
             Files.copy(in, downloadedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("File downloaded successfully: " + fileName);
         }
 
         String filePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/import/" + fileName;
-
         Boolean checkDigest = compareDigest(filePath, returnTenantUpdateUrl());
+
+
         if (checkDigest) {
+
             // Call the other methods in the class
             String packagePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             String buildsDirPath = packagePath + "builds/import/";
@@ -154,6 +164,7 @@ public class AutoUpdate {
             String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
             boolean importSuccessful = importURLAliases(urlAliasFilePath, dataPipeline);
 
+
             // Create restore point
             createRestorePoint(fileName, dataPipeline);
 
@@ -163,11 +174,9 @@ public class AutoUpdate {
 
             try {
                 writeJsonToFile(extractedJsonString, tenantUpdateFileLocation);
-                System.out.println("Extraction complete. tenant-update file updated");
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
             dataPipeline.put("status", true);
         }else{
             dataPipeline.put("status", false);
@@ -277,6 +286,7 @@ public class AutoUpdate {
     public static Boolean compareDigest(String filePath, String url) throws Exception {
         String urlDigest = getDigestFromUrl(url);
         String fileDigest = calculateFileChecksum(filePath);
+
         return StringUtils.equals(urlDigest, fileDigest);
     }
 
@@ -301,9 +311,13 @@ public class AutoUpdate {
     }
 
 
-    public static String returnTenantUpdateUrl() throws Exception{
-        return "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
-    }
+    public static String returnTenantUpdateUrl() throws Exception {
 
+        if (MiddlewareServer.IS_COMMUNITY_VERSION)
+
+            return "https://eka-distribution.s3.us-west-1.amazonaws.com/community-tenant-update.json";
+        else
+            return "https://eka-distribution.s3.us-west-1.amazonaws.com/tenant-update.json";
+    }
 
 }
