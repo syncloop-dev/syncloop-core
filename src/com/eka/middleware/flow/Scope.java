@@ -66,6 +66,7 @@ public class Scope {
 					}
 				break;
 				case "sequence":
+				case "group":
 					Scope scope=new Scope(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						scope.process(dp);
@@ -86,6 +87,7 @@ public class Scope {
 					}
 				break;
 				case "loop":
+				case "forEach":
 					Loop loop=new Loop(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						loop.process(dp);
@@ -96,6 +98,7 @@ public class Scope {
 					}
 				break;
 				case "repeat":
+				case "redo":
 					Repeat repeat=new Repeat(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						repeat.process(dp);
@@ -106,6 +109,7 @@ public class Scope {
 					}
 				break;
 				case "invoke":
+				case "service":
 					Api api=new Api(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						api.process(dp);
@@ -116,6 +120,7 @@ public class Scope {
 					}
 				break;
 				case "map":
+				case "transformer":
 					Transformer transformer=new Transformer(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						transformer.process(dp);
