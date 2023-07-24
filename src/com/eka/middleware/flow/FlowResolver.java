@@ -40,7 +40,7 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				swich.process(dp);
 			break;
 			case "loop":
-			case "forEach":
+			case "foreach":
 				Loop loop=new Loop(jsonValue.asJsonObject());
 				loop.process(dp);
 			break;

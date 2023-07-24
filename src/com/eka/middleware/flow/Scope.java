@@ -87,7 +87,7 @@ public class Scope {
 					}
 				break;
 				case "loop":
-				case "forEach":
+				case "foreach":
 					Loop loop=new Loop(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						loop.process(dp);
