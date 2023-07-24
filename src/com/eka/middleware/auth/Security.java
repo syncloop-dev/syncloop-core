@@ -108,10 +108,6 @@ public class Security {
 			ServiceUtils.printException("Failed while generating keypair for '"+tenantName+"'", e);
 		}
 	}
-public static void main(String[] args) {
-	generateKeyPair("default");
-	
-}
 	private static PrivateKey getPrivateKey(byte[] key) throws Exception {
 		//X509EncodedKeySpec privateKeySpec = new X509EncodedKeySpec(key, "RSA");
 		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(key);
