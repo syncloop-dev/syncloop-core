@@ -38,7 +38,7 @@ public class Repeat {
 		condition = data.getString("condition", null);
 		String status = data.getString("status", null);
 		disabled = "disabled".equals(status);
-		String rt = data.getString("repeat", "0");
+		String rt = data.getString("redo", "0");
 		if(rt.startsWith("#{")) {
 			rt=FlowUtils.extractExpressions(rt)[0];
 		}
