@@ -880,6 +880,10 @@ public class DataPipeline {
 		log(msg, null);
 	}
 
+	public void keyLog(String key, String value) {
+		rp.keyLogger.add(key, value);
+	}
+
 	public void log(String msg, Level level) {
 		if (level == null)
 			level = Level.INFO;

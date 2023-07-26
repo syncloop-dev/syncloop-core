@@ -8,7 +8,7 @@ import java.util.Map;
 public class LogMetaHolder {
 
     private Map<String, Object> MAP;
-    StopWatch stopWatch;
+    private StopWatch stopWatch;
 
     public LogMetaHolder() {
         MAP = Maps.newHashMap();
