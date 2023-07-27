@@ -54,7 +54,7 @@ public class MiddlewareServer {
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
 
-	public static final String BUILD_NAME = "vSL_330_Phase_2";
+	public static final String BUILD_NAME = "vSL_330_Phase_3";
 	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
 
 	public static void main(final String[] args) throws SystemException {
