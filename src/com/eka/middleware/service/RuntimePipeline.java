@@ -5,7 +5,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -16,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import com.eka.middleware.logging.KeyLogger;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
@@ -23,7 +23,6 @@ import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
-import com.mongodb.diagnostics.logging.Logger;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
@@ -103,6 +102,7 @@ public class RuntimePipeline {
 	public String getSessionID() {
 		return sessionId;
 	}
+	protected final KeyLogger keyLogger;
 
 	public RuntimePipeline(Tenant tenant, String requestId, String correlationId, final HttpServerExchange exchange, String resource,
 						   String urlPath) {
@@ -123,6 +123,7 @@ public class RuntimePipeline {
 			setUser("System");
 		}
 		dataPipeLine = new DataPipeline(this, resource, urlPath);
+		keyLogger = new KeyLogger(dataPipeLine);
 	}
 
 	public UserProfile getCurrentLoggedInUserProfile() throws SnippetException {
@@ -209,6 +210,7 @@ public class RuntimePipeline {
 		rtp.setDestroyed(true);
 		pipelines.get(sessionId).payload.clear();
 		pipelines.remove(sessionId);
+		keyLogger.finish();
 		executor.shutdown();
 	}
 
