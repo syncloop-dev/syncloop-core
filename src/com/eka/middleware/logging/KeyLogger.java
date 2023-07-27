@@ -1,21 +1,18 @@
 package com.eka.middleware.logging;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-
 import com.eka.middleware.service.DataPipeline;
-import org.apache.commons.lang.StringUtils;
+import com.google.common.collect.Maps;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-import com.google.common.collect.Maps;
 import org.springframework.util.StopWatch;
 
-@Component
-@Scope("singleton")
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
 public class KeyLogger {
 
 	private static final Logger keyLogger = LogManager.getLogger("KeyLogger");
