@@ -129,7 +129,7 @@ public class AutoUpdate {
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
              fileName = String.format("eka-distribution-community-tenant-v%s.zip", version);
         else
-             fileName = String.format("eka-distribution-v%s.zip", version);
+             fileName = String.format("eka-distribution-tenant-v%s.zip", version);
 
 
         URL url = new URL(String.format(Build.DISTRIBUTION_REPO + "%s", fileName));
