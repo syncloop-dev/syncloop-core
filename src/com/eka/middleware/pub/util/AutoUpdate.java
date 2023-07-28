@@ -135,7 +135,7 @@ public class AutoUpdate {
         URL url = new URL(String.format(Build.DISTRIBUTION_REPO + "%s", fileName));
 
         String downloadLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/import/";
-
+        createFoldersIfNotExist(downloadLocation);   
         System.out.println("package path: " + PropertyManager.getPackagePath(dataPipeline.rp.getTenant()));
         System.err.println("downloadLocation: " + downloadLocation);
 
@@ -183,7 +183,15 @@ public class AutoUpdate {
         }
 
     }
+    public static void createFoldersIfNotExist(String path) {
+        File folder = new File(path);
 
+        if (!folder.exists()) {
+            if (folder.mkdirs()) {
+                //System.out.println("Folders created successfully.");
+            }
+        }
+    }
     public static String readJsonFromUrl(String urlString) throws IOException {
         try {
             return IOUtils.toString(new URI(urlString), StandardCharsets.UTF_8);
