@@ -66,6 +66,7 @@ public class Scope {
 					}
 				break;
 				case "sequence":
+				case "group":
 					Scope scope=new Scope(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						scope.process(dp);
@@ -86,6 +87,7 @@ public class Scope {
 					}
 				break;
 				case "loop":
+				case "foreach":
 					Loop loop=new Loop(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						loop.process(dp);
@@ -96,6 +98,7 @@ public class Scope {
 					}
 				break;
 				case "repeat":
+				case "redo":
 					Repeat repeat=new Repeat(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						repeat.process(dp);
@@ -106,16 +109,18 @@ public class Scope {
 					}
 				break;
 				case "invoke":
-					Invoke invoke=new Invoke(jsonValue.asJsonObject());
+				case "service":
+					Api api=new Api(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
-						invoke.process(dp);
+						api.process(dp);
 					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(invoke.getCondition(),dp);
+						boolean canExecute =FlowUtils.evaluateCondition(api.getCondition(),dp);
 						if(canExecute)
-							invoke.process(dp);
+							api.process(dp);
 					}
 				break;
 				case "map":
+				case "transformer":
 					Transformer transformer=new Transformer(jsonValue.asJsonObject());
 					if(!evaluateCondition) {
 						transformer.process(dp);
@@ -146,10 +151,10 @@ public class Scope {
 	public void setTcfBlocks(List<TCFBlock> tcfBlocks) {
 		this.tcfBlocks = tcfBlocks;
 	}
-	public List<Invoke> getInvokes() {
+	public List<Api> getInvokes() {
 		return invokes;
 	}
-	public void setInvokes(List<Invoke> invokes) {
+	public void setInvokes(List<Api> invokes) {
 		this.invokes = invokes;
 	}
 	public List<Repeat> getRepeats() {
@@ -196,7 +201,7 @@ public class Scope {
 	}
 	private List<Scope> scopes;
 	private List<TCFBlock> tcfBlocks;
-	private List<Invoke> invokes;
+	private List<Api> invokes;
 	private List<Repeat> repeats;
 	private List<Loop> loops;
 	private List<Transformer> transformers;	

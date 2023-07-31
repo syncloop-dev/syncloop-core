@@ -15,7 +15,7 @@ import com.eka.middleware.template.SnippetException;
 public class Repeat {
 	private List<Scope> scopes;
 	private List<TCFBlock> tcfBlocks;
-	private List<Invoke> invokes;
+	private List<Api> invokes;
 	private List<Repeat> repeats;
 	private List<Loop> loops;
 	private List<Transformer> transformers;
@@ -38,7 +38,7 @@ public class Repeat {
 		condition = data.getString("condition", null);
 		String status = data.getString("status", null);
 		disabled = "disabled".equals(status);
-		String rt = data.getString("repeat", "0");
+		String rt = data.getString("redo", "0");
 		if(rt.startsWith("#{")) {
 			rt=FlowUtils.extractExpressions(rt)[0];
 		}
@@ -157,6 +157,7 @@ public class Repeat {
 				}
 				break;
 			case "sequence":
+				case "group":
 				Scope scope = new Scope(jsonValue.asJsonObject());
 				if (!evaluateCondition) {
 					scope.process(dp);
@@ -177,6 +178,7 @@ public class Repeat {
 				}
 				break;
 			case "loop":
+				case "foreach":
 				Loop loop = new Loop(jsonValue.asJsonObject());
 				if (!evaluateCondition) {
 					loop.process(dp);
@@ -187,6 +189,7 @@ public class Repeat {
 				}
 				break;
 			case "repeat":
+				case "redo":
 				Repeat repeat = new Repeat(jsonValue.asJsonObject());
 				if (!evaluateCondition) {
 					repeat.process(dp);
@@ -197,7 +200,8 @@ public class Repeat {
 				}
 				break;
 			case "invoke":
-				Invoke invoke = new Invoke(jsonValue.asJsonObject());
+				case "service":
+				Api invoke = new Api(jsonValue.asJsonObject());
 				if (!evaluateCondition) {
 					invoke.process(dp);
 				} else {
@@ -207,6 +211,7 @@ public class Repeat {
 				}
 				break;
 			case "map":
+				case "transformer":
 				Transformer transformer = new Transformer(jsonValue.asJsonObject());
 				if (!evaluateCondition) {
 					transformer.process(dp);
@@ -236,11 +241,11 @@ public class Repeat {
 		this.tcfBlocks = tcfBlocks;
 	}
 
-	public List<Invoke> getInvokes() {
+	public List<Api> getInvokes() {
 		return invokes;
 	}
 
-	public void setInvokes(List<Invoke> invokes) {
+	public void setInvokes(List<Api> invokes) {
 		this.invokes = invokes;
 	}
 

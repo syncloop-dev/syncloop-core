@@ -134,9 +134,8 @@ public class FlowUtils {
             }
         } catch (Exception e) {
             StringBuffer sb = new StringBuffer();
-            sb.append(jsonValueLogger.toString());
-            sb.append(jsonOpLogger.toString());
-            sb.append(jsonValueLogger.toString());
+            sb.append(jsonValueLogger + "");
+            sb.append(jsonOpLogger + "");
             throw new SnippetException(dp, "Error while applying transformers.\n" + sb.toString(), e);
         }
     }

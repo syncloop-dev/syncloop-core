@@ -50,8 +50,13 @@ public static boolean isConsumerAllowed(String resource, AuthAccount authAccount
 			if(!file.exists()) {
 				path=(packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".flow");
 				file=new File(path);
-				if(!file.exists())
-					file=null;
+				if(!file.exists()) {
+					path=(packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".api");
+					file=new File(path);
+					if (!file.exists()) {
+						file = null;
+					}
+				}
 			}
 		}
 		if(file!=null) {

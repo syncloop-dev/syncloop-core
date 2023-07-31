@@ -2,8 +2,11 @@ package com.eka.middleware.flow;
 
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
+import com.eka.middleware.service.ServiceUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public class KeywordResolver {
 
@@ -33,7 +36,11 @@ public class KeywordResolver {
             case "*TenantPackagePath":
                 return PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             default:
-                return "null";
+                String strVal = ServiceUtils.getServerProperty(expressionKey.substring(1));
+                if (StringUtils.isBlank(strVal)) {
+                    return "null";
+                }
+                return strVal;
         }
     }
 }

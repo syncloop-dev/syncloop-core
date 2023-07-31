@@ -8,14 +8,14 @@ import javax.json.JsonObject;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.template.SnippetException;
 
-public class Invoke {
+public class Api {
 	private boolean disabled=false;
 	private boolean sync=true;
 	private String fqn;
 	private Transformer transformer;
 	private String condition;
 	private String label;
-	private JsonObject invoke;
+	private JsonObject api;
 	private boolean evaluateCondition;
 	private String comment;
 	private JsonArray transformers;
@@ -26,9 +26,9 @@ public class Invoke {
 	private String snapshot=null;
 	private String snapCondition=null;
 
-	public Invoke(JsonObject jo) {
-		invoke=jo;
-		data=invoke.get("data").asJsonObject();
+	public Api(JsonObject jo) {
+		api=jo;
+		data=api.get("data").asJsonObject();
 		condition=data.getString("condition",null);
 		String status=data.getString("status",null);
 		disabled="disabled".equals(status);
@@ -75,7 +75,7 @@ public class Invoke {
 		//FlowUtils.setValue(createList, dp);
 		if(transformers!=null)
 			FlowUtils.mapBefore(transformers, dp);
-		String serviceFqn=invoke.getString("text",null);
+		String serviceFqn=api.getString("text",null);
 		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
 			if("async".equals(requestMethod))
 				dp.applyAsync(serviceFqn.trim()+".main",transformers);

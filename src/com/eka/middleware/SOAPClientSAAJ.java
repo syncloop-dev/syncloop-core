@@ -22,41 +22,6 @@ import jakarta.xml.soap.SOAPPart;
 public class SOAPClientSAAJ {
 
     // SAAJ - SOAP Client Testing
-    public static void main(String args[]) {
-    	Duration syncPeriod = Duration.ofSeconds(5);
-		//CronScheduler cron = CronScheduler.create(syncPeriod);
-		
-    	File dir=new File("");
-    	File files[]= dir.listFiles();
-    	for (File file : files) {
-			if(file.isDirectory()) {
-				
-			}else if(file.getName().toLowerCase().endsWith(".flow")) {
-				String path=file.getAbsolutePath();
-				file.toURI().toString();
-			}
-		}
-    	
-        /*
-            The example below requests from the Web Service at:
-             https://www.w3schools.com/xml/tempconvert.asmx?op=CelsiusToFahrenheit
-
-
-            To call other WS, change the parameters below, which are:
-             - the SOAP Endpoint URL (that is, where the service is responding from)
-             - the SOAP Action
-
-            Also change the contents of the method createSoapEnvelope() in this class. It constructs
-             the inner part of the SOAP envelope that is actually sent.
-        
-         */
-    	String soapEndpointUrl = "https://www.swi-prolog.org/pack/file_details/wsdl/examples/country.wsdl";
-        String soapAction = "GetCountries";
-    	//String soapEndpointUrl = "https://www.w3schools.com/xml/tempconvert.asmx";
-        //String soapAction = "https://www.w3schools.com/xml/CelsiusToFahrenheit";
-
-        callSoapWebService(soapEndpointUrl, soapAction);
-    }
 
     private static void createSoapEnvelope(SOAPMessage soapMessage) throws SOAPException {
         SOAPPart soapPart = soapMessage.getSOAPPart();

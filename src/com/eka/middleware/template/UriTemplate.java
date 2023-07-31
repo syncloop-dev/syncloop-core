@@ -61,25 +61,4 @@ public class UriTemplate {
 		return result;
 	}
 
-	public static void main(String[] args) throws Exception {
-		// UriTemplate template = new UriTemplate("http://feeling");
-		//
-		// if (template.toString().equalsIgnoreCase("http://feeling")) {
-		// System.out.println("Yes, we have a match.");
-		// } else {
-		// Map results = template.match("http://feeling");
-		// System.out.println("Result size: " + results.size());
-		//
-		// }
-
-		//TEST
-		UriTemplate template1 = new UriTemplate("/middleware/packages/{packageName}/reloa");
-		Map results1 = template1.matcher("/middleware/packages/com.github.test/reload");
-		System.out.println("Result size: " + results1.size());
-		System.out.println("Results: " + results1);
-
-//		System.out.println("Done");
-		InetAddress localhost = InetAddress.getLocalHost();
-		//System.out.println("System IP Address : " + (localhost.getHostAddress()).trim());
-	}
 }

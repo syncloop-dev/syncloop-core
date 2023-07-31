@@ -88,6 +88,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Sessions;
 import io.undertow.util.StatusCodes;
+import org.springframework.util.AntPathMatcher;
 
 public class ServiceUtils {
 	// private static final Properties serverProperties = new Properties();
@@ -566,14 +567,27 @@ public class ServiceUtils {
 
 	public static final String registerURLAlias(String fqn, String alias, DataPipeline dp) throws Exception {
 
-		// Map<String, Object> pathParams = new HashMap<String, Object>();
-		// pathParams.put("pathParameters", "");
 		String aliasTenantName = dp.rp.getTenant().getName();
-		// alias=aliasTenantName+alias;
 		String existingFQN = getPathService(alias, null, dp.rp.getTenant());
 
-		// String existingFQN=urlMappings.getProperty(alias);
+		if (!isAliasValid(alias)) {
+			return "Failed to save. The provided alias is incorrect.";
+		}
+
+		AntPathMatcher antPathMatcher = new AntPathMatcher();
+		if(antPathMatcher.match(alias.replace("GET","").replace("POST","").replace("PUT"," ").replace("PATCH"," "),"/restrictUrl")){
+			return "Invalid alias. Alias cannot start /{}";
+		}
+
 		Properties urlMappings = getUrlAliasMapping(dp.rp.getTenant());
+
+		for (Object key : urlMappings.keySet()) {
+			String mappedAlias = key.toString();
+			if (antPathMatcher.match(mappedAlias, alias)){
+				return "Failed to save. It already exists.";
+			}
+		}
+
 		String msg = "Saved";
 		if (existingFQN == null || existingFQN.equalsIgnoreCase(fqn)) {
 			Set<Object> sset = urlMappings.keySet();
@@ -582,18 +596,30 @@ public class ServiceUtils {
 					urlMappings.remove(setKey);
 			}
 			urlMappings.setProperty(alias, fqn);
+			FileOutputStream fos = new FileOutputStream(new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
+			urlMappings.store(fos, "");
+			fos.flush();
+			fos.close();
 		} else {
-			msg = "Failed to save. The alias conflicted with the existing FQN(" + existingFQN + ").";
+			msg = "Failed to save. The alias conflicts with the existing FQN (" + existingFQN + ").";
 			return msg;
 		}
-		// URL url = new URL(MiddlewareServer.getConfigFolderPath() +
-		// "URLAliasMapping.properties");
-		FileOutputStream fos = new FileOutputStream(
-				new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
-		urlMappings.store(fos, "");// save(fos, "");
-		fos.flush();
-		fos.close();
+
 		return msg;
+	}
+
+	private static boolean isAliasValid(String alias) {
+		if (alias.contains("?")) {
+			return false; // Alias contains a query parameter
+		}
+
+		// Exclude aliases with invalid characters
+		String invalidCharacters = ".*[^a-zA-Z0-9_.\\-/{}]+.*";
+		if (alias.matches(invalidCharacters)) {
+			return false; // Alias contains special characters
+		}
+
+		return true;
 	}
 
 	private static final void streamResponseFile(final RuntimePipeline rp, final MultiPart mp) throws SnippetException {

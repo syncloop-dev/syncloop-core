@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.pac4j.core.authorization.authorizer.RequireAnyRoleAuthorizer;
@@ -201,7 +202,14 @@ public class AuthConfigFactory implements ConfigFactory {
 			return Optional.of(profile);
 
 		});
-		String basePath=(String)props.get("basePath");
+
+		String basePath = ServiceUtils.getServerProperty("middleware.host.name");
+		if (StringUtils.isBlank(basePath)) {
+			basePath=(String)props.get("basePath");
+		} else {
+			basePath = StringUtils.stripEnd(basePath, "/");
+		}
+
 		String loginHandlerAPI=(String)props.get("loginHandlerAPI");
 		//final Clients clients = new Clients();//oidcClient);// ,headerClient);
 		String reDirectURI=basePath+"/callback/tenant/"+tenantName+loginHandlerAPI;

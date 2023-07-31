@@ -1,6 +1,5 @@
 package com.eka.middleware.service;
 
-import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
@@ -13,7 +12,6 @@ import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
@@ -27,10 +25,7 @@ import javax.json.JsonArray;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Pattern;
 
 public class DataPipeline {
@@ -883,6 +878,10 @@ public class DataPipeline {
 
 	public void log(String msg) {
 		log(msg, null);
+	}
+
+	public void keyLog(String key, String value) {
+		rp.keyLogger.add(key, value);
 	}
 
 	public void log(String msg, Level level) {

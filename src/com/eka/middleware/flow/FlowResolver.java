@@ -13,7 +13,10 @@ import com.eka.middleware.template.SystemException;
 
 public class FlowResolver {
 public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws SnippetException{
-	JsonValue flowJsonValue = mainflowJsonObject.getValue("/latest/flow");
+	JsonValue flowJsonValue = mainflowJsonObject.getJsonObject("latest").containsKey("api") ? mainflowJsonObject.getValue("/latest/api") : null;
+	if (null == flowJsonValue || flowJsonValue.asJsonArray().isEmpty()) {
+		flowJsonValue = mainflowJsonObject.getValue("/latest/flow");
+	}
 	JsonValue JsonInputValue=mainflowJsonObject.get("latest").asJsonObject().get("input");
 	JsonValue JsonOutputValue=mainflowJsonObject.get("latest").asJsonObject().get("output");
 	Boolean validationRequired=mainflowJsonObject.getBoolean("enableServiceDocumentValidation");
@@ -28,6 +31,7 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				tcfBlock.process(dp);
 			break;
 			case "sequence":
+			case "group":
 				Scope scope=new Scope(jsonValue.asJsonObject());
 				scope.process(dp);
 			break;
@@ -36,18 +40,22 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				swich.process(dp);
 			break;
 			case "loop":
+			case "foreach":
 				Loop loop=new Loop(jsonValue.asJsonObject());
 				loop.process(dp);
 			break;
 			case "repeat":
+			case "redo":
 				Repeat repeat=new Repeat(jsonValue.asJsonObject());
 				repeat.process(dp);
 			break;
 			case "invoke":
-				Invoke invoke=new Invoke(jsonValue.asJsonObject());
-				invoke.process(dp);
+			case "service":
+				Api api=new Api(jsonValue.asJsonObject());
+				api.process(dp);
 			break;
 			case "map":
+			case "transformer":
 				Transformer transformer=new Transformer(jsonValue.asJsonObject());
 				transformer.process(dp);
 			break;		
