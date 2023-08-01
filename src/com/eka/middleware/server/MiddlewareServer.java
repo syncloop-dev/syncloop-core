@@ -131,6 +131,7 @@ public class MiddlewareServer {
 					}
 				}
 
+				ApplicationShutdownHook.getCurrentProcess();
 				Runtime.getRuntime().addShutdownHook(new Thread(new ApplicationShutdownHook()));
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);
