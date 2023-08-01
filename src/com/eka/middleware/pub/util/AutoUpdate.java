@@ -264,7 +264,7 @@ public class AutoUpdate {
     }
 
 
-    private static String calculateFileChecksum(String filePath) throws Exception {
+    public static String calculateFileChecksum(String filePath) throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
 
         try (InputStream inputStream = new FileInputStream(filePath)) {

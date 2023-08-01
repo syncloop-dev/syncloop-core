@@ -2,7 +2,6 @@ package com.eka.middleware.server;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -15,8 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -69,6 +66,8 @@ public class MiddlewareServer {
 		} else {
 			LOGGER.info("No Container Deployment");
 		}
+
+		ApplicationShutdownHook.arg = args;
 
 		try {
 			PropertyManager.initConfig(args);
@@ -131,6 +130,8 @@ public class MiddlewareServer {
 						Thread.sleep(2000);
 					}
 				}
+
+				Runtime.getRuntime().addShutdownHook(new Thread(new ApplicationShutdownHook()));
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);
 			}
