@@ -13,15 +13,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-public class KeyLogger {
+public class AppLogger {
 
-	private static final Logger keyLogger = LogManager.getLogger("KeyLogger");
+	private static final Logger appLogger = LogManager.getLogger("AppLogger");
 
 	private static final ThreadLocal<LogMetaHolder> CONTEXT = new ThreadLocal<>();
 
 	private boolean isLoggable = false;
 
-	public KeyLogger(DataPipeline dataPipeline) {
+	public AppLogger(DataPipeline dataPipeline) {
 		Map<String, Object> requestLogMap = getDefaultAttributes(dataPipeline);
 		LogMetaHolder logMetaHolder = new LogMetaHolder();
 		logMetaHolder.startTracking();
@@ -78,7 +78,7 @@ public class KeyLogger {
 			StopWatch stopWatch = CONTEXT.get().stopTracking();
 			add("TT", stopWatch.getLastTaskTimeMillis());
 
-			keyLogger.info(getFormattedLog());
+			appLogger.info(getFormattedLog());
 
 			clear();
 		} catch (Exception e) {
@@ -109,13 +109,13 @@ public class KeyLogger {
 	public static void main(String[] args) {
 		Configurator.initialize(null, "/Users/divyansh/Desktop/Syncloop/Local_CodeBase/ekamw-distributions-main/resources/config/log4j2.xml");
 
-		KeyLogger keyLoggerInstance = new KeyLogger(null);
+		AppLogger appLoggerInstance = new AppLogger(null);
 
-		keyLoggerInstance.add("key1", "value1");
-		keyLoggerInstance.add("key2", "value2");
-		keyLoggerInstance.add("key3", "value3");
+		appLoggerInstance.add("key1", "value1");
+		appLoggerInstance.add("key2", "value2");
+		appLoggerInstance.add("key3", "value3");
 
-		keyLoggerInstance.finish();
+		appLoggerInstance.finish();
 
 	}
 
