@@ -27,7 +27,7 @@ import java.util.zip.ZipOutputStream;
 
 public class AutoUpdate {
 
-    private static boolean importURLAliases(String UrlAliasFilepath, DataPipeline dp) throws Exception{
+    public static boolean importURLAliases(String UrlAliasFilepath, DataPipeline dp) throws Exception{
         Boolean importSuccessful=true;
         Properties prop=new Properties();
         File file=new File(UrlAliasFilepath);
@@ -63,7 +63,7 @@ public class AutoUpdate {
         return importSuccessful;
     }
 
-    private static void unzip(String zipFilePath, String destDir,DataPipeline dp) throws Exception{
+    public static void unzip(String zipFilePath, String destDir, DataPipeline dp) throws Exception{
         File dir = new File(destDir);
         String unZippedFolderPath=null;
         // create output directory if it doesn't exist
@@ -106,7 +106,7 @@ public class AutoUpdate {
         fis.close();
     }
 
-    private static void createRestorePoint(String buildName, DataPipeline dataPipeline) throws Exception{
+    public static void createRestorePoint(String buildName, DataPipeline dataPipeline) throws Exception{
         String packagePath=PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
         String bkpDirPath=packagePath+"builds/backup/";
         File dir=new File(bkpDirPath);
