@@ -12,6 +12,7 @@ public class ApplicationShutdownHook implements Runnable {
     public static String[] arg;
 
     private static ProcessHandle lastProcess;
+    private static long pid;
 
     @Override
     public void run() {
@@ -26,10 +27,12 @@ public class ApplicationShutdownHook implements Runnable {
                 System.setProperty("CORE_DEPLOYMENT", System.getProperty("CORE_DEPLOYMENT"));
                 System.setProperty("com.sun.jndi.ldap.object.disableEndpointIdentification", System.getProperty("com.sun.jndi.ldap.object.disableEndpointIdentification"));
 
-                while (lastProcess.isAlive()) {}
+                System.out.println("Restarting WAITING...");
+                Runtime.getRuntime().exec("taskkill /F /PID " + pid);
+                System.out.println("Restarting...");
 
-                MiddlewareServer.main(arg);
-            } catch (SystemException e) {
+                //MiddlewareServer.main(arg);
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
@@ -42,13 +45,17 @@ public class ApplicationShutdownHook implements Runnable {
         }
 
         EXIT_CODE = 1;
+        System.out.println("Shutting down...");
+        System.out.println("Undertow going down...");
+//        MiddlewareServer.server.stop();
+        System.out.println("Undertow down...");
         System.exit(EXIT_CODE);
     }
 
     public static void getCurrentProcess() {
         RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
         String processName = runtimeMXBean.getName();
-        long pid = Long.parseLong(processName.split("@")[0]);
+        pid = Long.parseLong(processName.split("@")[0]);
         ProcessHandle processHandle = ProcessHandle.of(pid).get();
         lastProcess = processHandle;
     }
