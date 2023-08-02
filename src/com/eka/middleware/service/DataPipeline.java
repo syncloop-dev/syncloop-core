@@ -880,8 +880,13 @@ public class DataPipeline {
 		log(msg, null);
 	}
 
+	@Deprecated
 	public void keyLog(String key, String value) {
-		rp.keyLogger.add(key, value);
+		rp.appLogger.add(key, value);
+	}
+
+	public void appLog(String key, String value) {
+		rp.appLogger.add(key, value);
 	}
 
 	public void log(String msg, Level level) {
