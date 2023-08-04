@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -343,12 +344,7 @@ public class AutoUpdate {
                 updateStatus(uniqueId, "Error" , dataPipeline);
             }
         };
-        Thread thread = new Thread(task);
-        thread.start();
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+
+        MultiTaskExecutor.execute(task);
     }
 }

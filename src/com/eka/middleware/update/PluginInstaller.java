@@ -1,6 +1,7 @@
 package com.eka.middleware.update;
 
 import com.eka.middleware.pub.util.AutoUpdate;
+import com.eka.middleware.pub.util.MultiTaskExecutor;
 import com.eka.middleware.server.Build;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
@@ -184,13 +185,6 @@ public class PluginInstaller {
                 updateStatus(pluginId, "Error" , dataPipeline);
             }
         };
-        Thread thread = new Thread(task);
-        thread.start();
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+        MultiTaskExecutor.execute(task);
     }
 }
