@@ -34,6 +34,12 @@ public class SQL {
                     outputDocList.addAll(docList);
             }
         } else {
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
+            if (placeholders != null) {
+                for (String placeholder : placeholders) {
+                    sqlCode = sqlCode.replace("{" + placeholder + "}", "null");
+                }
+            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -93,21 +99,22 @@ public class SQL {
                 PreparedStatement myStmt = myCon.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
                 if (myStmt.executeUpdate() > 0) {
                     ResultSet keys = myStmt.getGeneratedKeys();
-
-                    System.out.println("s-1 " + keys);
                     if (keys.next()) {
                         ids += keys.getObject(1) + ",";
-                        System.out.println("s-2 " + ids);
                     }
                     else {
-                        System.out.println("s-3");
                         ids += "null,";
                     }
                 }
-
                // rows += myStmt.executeUpdate();
             }
         } else {
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
+            if (placeholders != null) {
+                for (String placeholder : placeholders) {
+                    sqlCode = sqlCode.replace("{" + placeholder + "}", "null");
+                }
+            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -141,6 +148,12 @@ public class SQL {
                 isSuccessful = myStmt.execute();
             }
         } else {
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
+            if (placeholders != null) {
+                for (String placeholder : placeholders) {
+                    sqlCode = sqlCode.replace("{" + placeholder + "}", "null");
+                }
+            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
