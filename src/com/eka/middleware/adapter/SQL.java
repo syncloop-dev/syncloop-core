@@ -37,7 +37,8 @@ public class SQL {
             String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
             if (placeholders != null) {
                 for (String placeholder : placeholders) {
-                    sqlCode = sqlCode.replace("{" + placeholder + "}", "null");
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
                 }
             }
             if (logQuery)
@@ -69,11 +70,11 @@ public class SQL {
                 rows += myStmt.executeUpdate();
             }
         } else {
-            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
             if (placeholders != null) {
                 for (String placeholder : placeholders) {
-                    sqlCode = sqlCode.replace("{" + placeholder + "}", "null");
-                    System.out.println("sqlCode " + sqlCode);
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
                 }
             }
             if (logQuery)
@@ -112,7 +113,8 @@ public class SQL {
             String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
             if (placeholders != null) {
                 for (String placeholder : placeholders) {
-                    sqlCode = sqlCode.replace("{" + placeholder + "}", "null");
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
                 }
             }
             if (logQuery)
@@ -151,7 +153,8 @@ public class SQL {
             String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
             if (placeholders != null) {
                 for (String placeholder : placeholders) {
-                    sqlCode = sqlCode.replace("{" + placeholder + "}", "null");
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
                 }
             }
             if (logQuery)
