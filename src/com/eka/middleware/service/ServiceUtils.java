@@ -618,6 +618,9 @@ public class ServiceUtils {
 		if (alias.matches(invalidCharacters)) {
 			return false; // Alias contains special characters
 		}
+		if (alias.matches(".*\\{.\\}[a-zA-Z].*")) { // Alias does not contains dynamic pattern such as Y in {X}Y
+			return false;
+		}
 
 		return true;
 	}
