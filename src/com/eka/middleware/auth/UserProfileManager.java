@@ -2,6 +2,10 @@ package com.eka.middleware.auth;
 
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
+import com.eka.middleware.sqlite.entity.Group;
+import com.eka.middleware.sqlite.entity.User;
+import com.eka.middleware.sqlite.impl.GroupRepoImpl;
+import com.eka.middleware.sqlite.impl.UserRepoImpl;
 import com.eka.middleware.template.SystemException;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -17,53 +21,17 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class UserProfileManager implements IdentityManager {
-	private static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
+	public static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
 	private static final Set<String> tenants = new HashSet();
 	private static final Set<String> groups = new HashSet();
 	private static UserProfileManager upm = null;
 	public static Logger LOGGER = LogManager.getLogger(UserProfileManager.class);
-	
+
 	public static final Map<String, Object> getUsers() throws SystemException {
-		if (PropertyManager.hasfileChanged("profiles.json") || usersMap.size() == 0) {
-			try {
-				byte bytes[] = PropertyManager.readConfigurationFile("profiles.json");
-				if (bytes != null) {
-					String json = new String(bytes);
-					final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-					final Map<String, Object> umap = ((Map<String, Object>) map.get("users"));
-					List<String> tenantList = (List<String>) map.get("tenants");
-					if(tenantList!=null)
-						tenantList.forEach(v -> tenants.add(v));
-					List<String> groupList = (List<String>) map.get("groups");
-					if(groupList!=null)
-						groupList.forEach(v -> groups.add(v));
-					umap.forEach((k, v) -> {
-						Map<String, Object> user = (Map<String, Object>) v;
-						if (user.get("password") != null) {
-							String pass = user.get("password").toString();
-							if (pass.trim().length() == 0)
-								user.remove("password");
-							if (!pass.startsWith("[#]")) {
-								String passHash = "[#]" + ServiceUtils.generateUUID(pass + k);
-								user.put("password", passHash);
-							}
-						}
-					});
-					usersMap.clear();
-					usersMap.putAll(umap);
-					json = ServiceUtils.toPrettyJson(map);
-					PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
-					PropertyManager.hasfileChanged("profiles.json");// Called again to verify and update the new changed
-																	// file datetime.
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-				throw new SystemException("EKA_MWS_1001", e);
-			}
-		}
-		return usersMap;
+		return UserRepoImpl.getUsers();
 	}
 
 	public static List<String> getTenants() {
@@ -83,21 +51,8 @@ public class UserProfileManager implements IdentityManager {
 		return new ArrayList(tenants);
 	}
 	
-	public static List<String> getGroups() {
-		byte bytes[] = null;
-		try {
-			bytes = PropertyManager.readConfigurationFile("profiles.json");
-		} catch (SystemException e) {
-			ServiceUtils.printException("Failed while loading group list", e);
-		}
-		List<String> groupList = null;
-		if (bytes != null) {
-			String json = new String(bytes);
-			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-			groupList = (List<String>) map.get("groups");
-			groups.addAll(groupList);
-		}
-		return new ArrayList(groups);
+	public static List<String> getGroups() throws SystemException {
+		return GroupRepoImpl.getAllGroups();
 	}
 
 	public static void newTenant(String name) throws Exception {
@@ -113,34 +68,12 @@ public class UserProfileManager implements IdentityManager {
 	}
 	
 	public static void newGroup(String name) throws Exception {
-		final Map<String, Object> map = new HashMap();
-		List<String> groupList = getGroups();
-		groupList.add(name);
-		groups.add(name);
-		map.put("groups", groupList);
-		map.put("tenants", getTenants());
-		map.put("users", getUsers());
-		String json = ServiceUtils.toPrettyJson(map);
-		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+		GroupRepoImpl.addGroup(new Group(name));
 	}
-	
 	public static void removeGroup(String name) throws Exception {
-		final Map<String, Object> map = new HashMap();
-		List<String> groupList = getGroups();
-		groupList.remove(name);
-		groups.remove(name);
-		map.put("groups", groupList);
-		map.put("tenants", getTenants());
-		map.put("users", getUsers());
-		String json = ServiceUtils.toPrettyJson(map);
-		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+		GroupRepoImpl.deleteGroup(name);
 	}
 
-	/**
-	 *
-	 * @param user
-	 * @return
-	 */
 	public static boolean isUserExist(String user) throws SystemException {
 		final Map<String, Object> map = new HashMap();
 		final Map<String, Object> umap = getUsers();
@@ -157,6 +90,7 @@ public class UserProfileManager implements IdentityManager {
 			}
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
+
 			if (account.getUserId().equals("admin")) {
 				
 				Scanner in = new Scanner(System.in);
@@ -174,18 +108,28 @@ public class UserProfileManager implements IdentityManager {
 				}
 				user.put("password", pass);
 			}
-			umap.put(account.getUserId(), user);
-			map.put("users", umap);
-			map.put("tenants", getTenants());
-			String json = ServiceUtils.toPrettyJson(map);
-			PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+			UserRepoImpl.addUser(createUserFromAccount(account));
+
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1001", e);
 		}
 	}
+	private static User createUserFromAccount(AuthAccount account) {
+		Map<String, Object> profile = account.getProfile();
+		String name = profile.get("name") != null ? profile.get("name").toString() : "";
+		String password = profile.get("password") != null ? profile.get("password").toString() : "";
+		String email = profile.get("email") != null ? profile.get("email").toString() : "";
+		List<String> groupName = (List<String>) profile.get("groups");
+		List<Group> groups = groupName.stream()
+				.map(Group::new)
+				.collect(Collectors.toList());
+		String tenant = profile.get("tenant").toString();
+		return new User(password, name, groups, email, tenant, "1");
+	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
-		updateUser(account, pass, "1");
+		User userFromAccount = createUserFromAccount(account);
+		UserRepoImpl.updateUser(userFromAccount.getEmail(),userFromAccount);
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass, String status) throws SystemException {
@@ -218,17 +162,7 @@ public class UserProfileManager implements IdentityManager {
 	}
 
 	public static void removeUser(String id) throws SystemException {
-		try {
-			final Map<String, Object> map = new HashMap();
-			final Map<String, Object> umap = getUsers();
-			umap.remove(id);
-			map.put("users", umap);
-			map.put("tenants", getTenants());
-			String json = ServiceUtils.toPrettyJson(map);
-			PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
-		} catch (Exception e) {
-			throw new SystemException("EKA_MWS_1001", e);
-		}
+		UserRepoImpl.deleteUser(id);
 	}
 
 	public static UserProfileManager create() throws SystemException {

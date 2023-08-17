@@ -21,7 +21,9 @@ public class AuthAccount implements Account{
 
 	private final String userId;
 	private Map<String, Object> profile;
-	
+
+
+
 	public AuthAccount(String userId){
 		this.userId=userId;
 	}
@@ -58,6 +60,9 @@ public class AuthAccount implements Account{
 
 	public void setProfile(Map<String, Object> profile) {
 		this.profile = profile;
+	}
+	public Map<String, Object> getProfile() {
+		return profile;
 	}
 
 }
