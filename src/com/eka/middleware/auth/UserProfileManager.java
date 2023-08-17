@@ -53,6 +53,8 @@ public class UserProfileManager implements IdentityManager {
 	
 	public static List<String> getGroups() throws SystemException {
 		return GroupRepoImpl.getAllGroups();
+
+
 	}
 
 	public static void newTenant(String name) throws Exception {
