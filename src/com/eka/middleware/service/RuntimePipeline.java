@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import com.eka.middleware.logging.KeyLogger;
+import com.eka.middleware.logging.AppLogger;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
@@ -102,7 +102,7 @@ public class RuntimePipeline {
 	public String getSessionID() {
 		return sessionId;
 	}
-	protected final KeyLogger keyLogger;
+	protected final AppLogger appLogger;
 
 	public RuntimePipeline(Tenant tenant, String requestId, String correlationId, final HttpServerExchange exchange, String resource,
 						   String urlPath) {
@@ -123,7 +123,7 @@ public class RuntimePipeline {
 			setUser("System");
 		}
 		dataPipeLine = new DataPipeline(this, resource, urlPath);
-		keyLogger = new KeyLogger(dataPipeLine);
+		appLogger = new AppLogger(dataPipeLine);
 	}
 
 	public UserProfile getCurrentLoggedInUserProfile() throws SnippetException {
@@ -210,7 +210,7 @@ public class RuntimePipeline {
 		rtp.setDestroyed(true);
 		pipelines.get(sessionId).payload.clear();
 		pipelines.remove(sessionId);
-		keyLogger.finish();
+		appLogger.finish();
 		executor.shutdown();
 	}
 

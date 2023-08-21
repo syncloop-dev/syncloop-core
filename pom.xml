@@ -15,7 +15,7 @@
 		<undertow.version>2.3.0.Beta1</undertow.version>
 	</properties>
 	<build>
-		<finalName>ekamw</finalName>
+		<finalName>syncloop</finalName>
 		<sourceDirectory>src</sourceDirectory>
 		<resources>
 			<resource>

@@ -608,6 +608,35 @@ public class ServiceUtils {
 		return msg;
 	}
 
+	public static final String deleteURLAlias(String alias, DataPipeline dp) throws Exception {
+		String aliasTenantName = dp.rp.getTenant().getName();
+		String existingFQN = getPathService(alias, null, dp.rp.getTenant());
+
+		Properties urlMappings = getUrlAliasMapping(dp.rp.getTenant());
+
+		boolean aliasFound = false;
+		for (Object key : urlMappings.keySet()) {
+			String mappedAlias = key.toString();
+			if (mappedAlias.equals(alias)) {
+				urlMappings.remove(key);
+				aliasFound = true;
+				break;
+			}
+		}
+
+		if (!aliasFound) {
+			return "Alias not found. Nothing to delete.";
+		}
+
+		FileOutputStream fos = new FileOutputStream(new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
+		urlMappings.store(fos, "");
+		fos.flush();
+		fos.close();
+
+		return "Alias deleted successfully.";
+	}
+
+
 	private static boolean isAliasValid(String alias) {
 		if (alias.contains("?")) {
 			return false; // Alias contains a query parameter
@@ -617,6 +646,9 @@ public class ServiceUtils {
 		String invalidCharacters = ".*[^a-zA-Z0-9_.\\-/{}]+.*";
 		if (alias.matches(invalidCharacters)) {
 			return false; // Alias contains special characters
+		}
+		if (alias.matches(".*\\{.\\}[a-zA-Z].*")) { // Alias does not contains dynamic pattern such as Y in {X}Y
+			return false;
 		}
 
 		return true;
