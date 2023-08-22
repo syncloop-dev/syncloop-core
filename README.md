@@ -76,6 +76,7 @@ At Syncloop, dedicated developers, Architects, and Tech Leaders plan and create 
 ## Create your first API "Hello World"
 
 Right-click on **Packages** select **New Package**
+
 ![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image004.png)
 
 A create package window will be displayed
