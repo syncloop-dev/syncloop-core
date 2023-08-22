@@ -172,7 +172,7 @@ This can also be done by clicking and dragging the variable to the output parame
 
 Now Click on the **Save** Button placed at the top of the workspace window to save the service. This should be done periodically so that the work remains saved.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image025.png)
+![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image025.jpg)
 
 The Save message box will appear confirming the save operation has been done successfully.
 
