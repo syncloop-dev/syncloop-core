@@ -220,11 +220,10 @@ Now click on button and send the request to the server. Visualize the output in 
 
 The output **Hello World...!!** is clearly visible in the response window. With this, you have successfully tested your first API on the Syncloop Platform.
 
-
+--------------------
 
 ## License
 
---------------------
 
 The Syncloop Core is available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) (Apache-2.0).
 
