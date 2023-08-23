@@ -224,7 +224,8 @@ The output **Hello World...!!** is clearly visible in the response window. With 
 
 ## License
 
----------------
+--------------------
+
 The Syncloop Core is available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) (Apache-2.0).
 
 
