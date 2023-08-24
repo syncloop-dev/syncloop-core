@@ -4,10 +4,8 @@ import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import org.apache.commons.io.IOUtils;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.ObjectInputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public class License {
@@ -18,6 +16,12 @@ public class License {
         String content = IOUtils.toString(fileInputStream);
         fileInputStream.close();
 
+        LicenseFile licenseFile = validateLicense(dataPipeline, content);
+
+        return licenseFile;
+    }
+
+    private static LicenseFile validateLicense(DataPipeline dataPipeline, String content) throws IOException, ClassNotFoundException {
         byte[] obj = Base64.getDecoder().decode(content);
 
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(obj);
@@ -34,7 +38,6 @@ public class License {
         if (!dataPipeline.rp.getTenant().getName().equalsIgnoreCase(licenseFile.getTenant())) {
             throw new RuntimeException("License: Tenant is not matched.");
         }
-
         return licenseFile;
     }
 
@@ -59,6 +62,13 @@ public class License {
             return false;
         }
 
+        return true;
+    }
+
+    public static boolean updateLicenseKey(DataPipeline dataPipeline, String licenseKey) throws Exception  {
+        validateLicense(dataPipeline, licenseKey);
+        FileOutputStream fileOutputStream = new FileOutputStream(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/LICENSE.BIN");
+        IOUtils.write(licenseKey, fileOutputStream, StandardCharsets.UTF_8);
         return true;
     }
 }
