@@ -43,7 +43,10 @@ public class License {
 
     public static LicenseFile getLicenseFile(DataPipeline dataPipeline) {
         try {
-            return readLicense(dataPipeline);
+            LicenseFile licenseFile = readLicense(dataPipeline);
+            dataPipeline.put("instanceUUID", licenseFile.instanceUUID);
+            dataPipeline.put("instanceClusterUUID", licenseFile.instanceClusterUUID);
+            return licenseFile;
         } catch (Exception e) {
             return null;
         }
