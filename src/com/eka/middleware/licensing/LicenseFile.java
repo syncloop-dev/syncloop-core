@@ -9,12 +9,22 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
-@Getter @Setter
 public class LicenseFile implements Serializable {
 
+    @Getter @Setter
     private String licenseName;
 
+    @Getter @Setter
     private Date expiry;
+
+    @Setter
+    String instanceUUID;
+
+    @Setter
+    String instanceClusterUUID;
+
+    @Setter @Getter
+    private String tenant;
 
     public long daysLeftInExpiring() {
         LocalDate today = LocalDate.now();

@@ -23,6 +23,18 @@ public class License {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(obj);
         ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
         LicenseFile licenseFile = (LicenseFile) inputStream.readObject();
+
+        File instanceUUID = new File(PropertyManager.getConfigFolderPath() + "INSTANCE.UUID");
+        File instanceGroupUUID = new File(PropertyManager.getConfigFolderPath() + "INSTANCE-GROUP.UUID");
+
+        if (!IOUtils.toString(new FileInputStream(instanceUUID)).equalsIgnoreCase(licenseFile.instanceUUID)) {
+            throw new RuntimeException("License: Server ID is not matched.");
+        }
+
+        if (!dataPipeline.rp.getTenant().getName().equalsIgnoreCase(licenseFile.getTenant())) {
+            throw new RuntimeException("License: Tenant is not matched.");
+        }
+
         return licenseFile;
     }
 
@@ -43,6 +55,7 @@ public class License {
         try {
             readLicense(dataPipeline);
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
 
