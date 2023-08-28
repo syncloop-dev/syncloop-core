@@ -73,41 +73,50 @@ public class Switch {
 		Object objVal = dp.getValueByPointer(switchXpath);
 		boolean caseMatched = false;
 		if (objVal != null) {
+			 caseMatched = false;
 
 			if (objVal instanceof List) {
 				List<?> list = (List<?>) objVal;
-				for (Object listItem : list) {
-					xPathValue = listItem.toString();
 
-					caseMatched = false;
+				for (Object listItem : list) {
+					 xPathValue = listItem.toString();
 
 					for (JsonValue jsonValue : flows) {
-						String caseLabel = jsonValue.asJsonObject().get("data").asJsonObject().getString("case", null);
+						JsonObject jsonData = jsonValue.asJsonObject().get("data").asJsonObject();
+						String caseLabel = jsonData.getString("case", null);
 
-						if (caseLabel == null)
-							throw new SnippetException(dp, "Case label is a required field. It can not be left empty. Use #null for null comparison, use !null (empty is not null) or !empty (null is also considered empty).", new Exception("Exception in Switch CASE"));
+						if (caseLabel == null) {
+							throw new SnippetException(dp, "Case label is required and cannot be empty.", new Exception("Exception in Switch CASE"));
+						}
+
+						if ("#default".equals(caseLabel)) {
+							// Skip the default case during this loop
+							continue;
+						}
 
 						String xVal = caseLabel;
 
 						if (caseLabel.startsWith("#{")) {
-							dp.log("The CASE with the xPath(" + caseLabel + ") is risky. Please ensure that the xPath always exists and it must have a not null value. Otherwise, an exception will be thrown.", Level.WARN);
+							dp.log("The CASE with the xPath(" + caseLabel + ") is risky...", Level.WARN);
 							String exps[] = FlowUtils.extractExpressions(caseLabel);
 
 							if (exps.length > 0) {
 								String pointer = exps[0];
 								Object objLablVal = dp.getValueByPointer(pointer);
 
-								if (objLablVal != null)
-									xVal = objLablVal + "";
+								if (objLablVal != null) {
+									xVal = objLablVal.toString();
+								}
 							} else {
 								xVal = caseLabel;
 							}
 						}
 
-						if (xVal == null)
+						if (xVal == null) {
 							throw new SnippetException(dp, "The CASE with the xPath(" + caseLabel + ") has a null value.", new Exception("Exception in Switch CASE with reference."));
+						}
 
-						if (xPathValue != null && xPathValue.equals(xVal)) {
+						if (xPathValue.equals(xVal)) {
 							Scope scope = new Scope(jsonValue.asJsonObject());
 							scope.process(dp);
 							caseMatched = true;
@@ -120,36 +129,78 @@ public class Switch {
 					}
 				}
 			} else {
-				xPathValue = objVal.toString();
-			}
-		}
+				 xPathValue = objVal.toString();
 
-		if (!caseMatched) {
-			JsonObject defaultCase = null;
-			for (JsonValue jsonValue : flows) {
-				String caseLabel = jsonValue.asJsonObject().get("data").asJsonObject().getString("case", null);
-				if ("#default".equals(caseLabel)) {
-					defaultCase = jsonValue.asJsonObject();
-					break;
+				for (JsonValue jsonValue : flows) {
+					JsonObject jsonData = jsonValue.asJsonObject().get("data").asJsonObject();
+					String caseLabel = jsonData.getString("case", null);
+
+					if (caseLabel == null) {
+						throw new SnippetException(dp, "Case label is required and cannot be empty.", new Exception("Exception in Switch CASE"));
+					}
+
+					if ("#default".equals(caseLabel)) {
+						continue;
+					}
+
+					String xVal = caseLabel;
+					if (caseLabel.startsWith("#{")) {
+						dp.log("The CASE with the xPath(" + caseLabel + ") is risky...", Level.WARN);
+						String exps[] = FlowUtils.extractExpressions(caseLabel);
+
+						if (exps.length > 0) {
+							String pointer = exps[0];
+							Object objLablVal = dp.getValueByPointer(pointer);
+
+							if (objLablVal != null) {
+								xVal = objLablVal.toString();
+							}
+						} else {
+							xVal = caseLabel;
+						}
+					}
+
+					if (xVal == null) {
+						throw new SnippetException(dp, "The CASE with the xPath(" + caseLabel + ") has a null value.", new Exception("Exception in Switch CASE with reference."));
+					}
+
+					if (xPathValue.equals(xVal)) {
+						Scope scope = new Scope(jsonValue.asJsonObject());
+						scope.process(dp);
+						caseMatched = true;
+						break;
+					}
 				}
 			}
 
-			if (defaultCase != null) {
-				Scope scope = new Scope(defaultCase);
-				scope.process(dp);
-			}
-		}
+			if (!caseMatched) {
+				JsonObject defaultCase = null;
+				for (JsonValue jsonValue : flows) {
+					JsonObject jsonData = jsonValue.asJsonObject().get("data").asJsonObject();
+					String caseLabel = jsonData.getString("case", null);
 
-		if (canSnap) {
-			dp.snap(comment);
-			dp.drop("*snapshot");
-		} else if (snap != null) {
-			dp.put("*snapshot", snap);
+					if ("#default".equals(caseLabel)) {
+						defaultCase = jsonValue.asJsonObject();
+						break;
+					}
+				}
+
+				if (defaultCase != null) {
+					Scope scope = new Scope(defaultCase);
+					scope.process(dp);
+				}
+			}
+
+			if (canSnap) {
+				dp.snap(comment);
+				dp.drop("*snapshot");
+			} else if (snap != null) {
+				dp.put("*snapshot", snap);
+			}
 		}
 	}
 
-
-	public List<Scope> getCases() {
+		public List<Scope> getCases() {
 		return cases;
 	}
 	public void setCases(List<Scope> cases) {
