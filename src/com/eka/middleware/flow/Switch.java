@@ -90,7 +90,6 @@ public class Switch {
 						}
 
 						if ("#default".equals(caseLabel)) {
-							// Skip the default case during this loop
 							continue;
 						}
 
@@ -163,12 +162,20 @@ public class Switch {
 					if (xVal == null) {
 						throw new SnippetException(dp, "The CASE with the xPath(" + caseLabel + ") has a null value.", new Exception("Exception in Switch CASE with reference."));
 					}
-
 					if (xPathValue.equals(xVal)) {
 						Scope scope = new Scope(jsonValue.asJsonObject());
 						scope.process(dp);
 						caseMatched = true;
 						break;
+					}
+
+					if (xPathValue.equals("")) {
+							if (caseLabel == null || caseLabel.equals("#null")) {
+								Scope scope = new Scope(jsonValue.asJsonObject());
+								scope.process(dp);
+								caseMatched = true;
+								break;
+							}
 					}
 				}
 			}
