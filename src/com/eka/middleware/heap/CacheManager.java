@@ -46,4 +46,16 @@ private static final Map<String, Map<String, Object>> tenantCache= new Concurren
 
 		return services.keySet();
 	}
+
+	public static String getEmbeddedService(String key, Tenant tenant) {
+
+		Map<String, Object> cache = getCacheAsMap(tenant);
+
+		Map<String, String> services = (Map<String, String>)cache.get("embedded_service");
+		if (null == services) {
+			services = new HashMap<>();
+		}
+
+		return services.get(key);
+	}
 }

@@ -283,7 +283,26 @@ public class ServiceUtils {
 	public static final void execute(String fqn, DataPipeline dataPipeLine) throws SnippetException {
 		if (!fqn.endsWith(".main"))
 			fqn += ".main";
-		ServiceManager.invokeJavaMethod(fqn, dataPipeLine);
+		if (fqn.startsWith("packages")) {
+			ServiceManager.invokeJavaMethod(fqn, dataPipeLine);
+		} else {
+			executeEmbeddedService(dataPipeLine, CacheManager.getEmbeddedService(fqn.replaceAll("embedded.", "")
+					.replaceAll(".main", ""), dataPipeLine.rp.getTenant()));
+		}
+	}
+
+	public static final void executeEmbeddedService(DataPipeline dataPipeline, String apiServiceJson) throws SnippetException {
+		try {
+			InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
+			JsonObject mainflowJsonObject = Json.createReader(is).readObject();
+			FlowResolver.execute(dataPipeline, mainflowJsonObject);
+		} catch (Throwable e) {
+			dataPipeline.clear();
+			dataPipeline.put("error", e.getMessage());
+			dataPipeline.put("status", "Service error");
+			throw new SnippetException(dataPipeline, "Failed to execute " + dataPipeline.getCurrentResourceName(),
+					new Exception(e));
+		}
 	}
 	
 	public static final boolean isPublicFolder(String path) {

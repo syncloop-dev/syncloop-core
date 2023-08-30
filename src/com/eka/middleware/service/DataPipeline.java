@@ -5,6 +5,7 @@ import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
+import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.server.ServiceManager;
@@ -705,8 +706,13 @@ public class DataPipeline {
 				// dpAsync.put("asyncInputDoc", asyncInputDoc);
 				// ServiceUtils.execute(fqnOfFunction, dpAsync);
 				dpAsync.callingResource=currResrc;
-				ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
-				
+				//ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+				if (fqnOfFunction.startsWith("packages")) {
+					ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+				} else {
+					ServiceUtils.executeEmbeddedService(dpAsync, CacheManager.getEmbeddedService(fqnOfFunction.replaceAll("embedded.", "")
+							.replaceAll(".main", ""), dpAsync.rp.getTenant()));
+				}
 				
 				
 				Map<String, Object> asyncOut = dpAsync.getMap();
