@@ -48,6 +48,14 @@ public class ApplicationShutdownHook implements Runnable {
         System.out.println("Shutting down...");
         System.out.println("Undertow going down...");
 //        MiddlewareServer.server.stop();
+
+        if (System.getProperty("os.name").startsWith("Windows")) {
+            Runtime.getRuntime().exec("taskkill /F /PID " + pid);
+            Runtime.getRuntime().exec("windows-x64.bat");
+        } else {
+            Runtime.getRuntime().exec("sh restart-unix.sh");
+        }
+
         System.out.println("Undertow down...");
         System.exit(EXIT_CODE);
     }
