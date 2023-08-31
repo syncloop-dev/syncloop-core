@@ -51,8 +51,16 @@ public class MiddlewareServer {
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
 
-	public static final String BUILD_NAME = "vSL_330_Phase_3";
+	public static final String BUILD_NAME = "v1.4.7";
 	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
+
+	public static String allowRestrictedHeaders = System.getProperty("jdk.httpclient.allowRestrictedHeaders");
+	public static String headless = System.getProperty("java.awt.headless");
+	public static String CONTAINER_DEPLOYMENT = System.getProperty("CONTAINER_DEPLOYMENT");
+	public static String CONTAINER_ON_PRIM_DEPLOYMENT = System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT");
+	public static String COMMUNITY_DEPLOYMENT = System.getProperty("COMMUNITY_DEPLOYMENT");
+	public static String CORE_DEPLOYMENT = System.getProperty("CORE_DEPLOYMENT");
+	public static String disableEndpointIdentification = System.getProperty("com.sun.jndi.ldap.object.disableEndpointIdentification");
 
 	public static void main(final String[] args) throws SystemException {
 
@@ -62,7 +70,7 @@ public class MiddlewareServer {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			Build.download("latest");
+			//Build.download("latest");
 		} else {
 			LOGGER.info("No Container Deployment");
 		}
@@ -145,6 +153,7 @@ public class MiddlewareServer {
 				}
 
 				ApplicationShutdownHook.getCurrentProcess();
+				ApplicationShutdownHook.prepareOutputFile();
 				Runtime.getRuntime().addShutdownHook(new Thread(new ApplicationShutdownHook()));
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);

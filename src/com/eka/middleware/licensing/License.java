@@ -44,12 +44,17 @@ public class License {
     public static LicenseFile getLicenseFile(DataPipeline dataPipeline) {
         try {
             LicenseFile licenseFile = readLicense(dataPipeline);
-            dataPipeline.put("instanceUUID", licenseFile.instanceUUID);
-            dataPipeline.put("instanceClusterUUID", licenseFile.instanceClusterUUID);
             return licenseFile;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public static void instanceIds(DataPipeline dataPipeline) {
+        try {
+            dataPipeline.put("instanceUUID", IOUtils.toString(new FileInputStream(PropertyManager.getConfigFolderPath() + "INSTANCE.UUID")));
+            dataPipeline.put("instanceClusterUUID", IOUtils.toString(new FileInputStream(PropertyManager.getConfigFolderPath() + "INSTANCE-GROUP.UUID")));
+        } catch (IOException e) {}
     }
 
     public static boolean isLicenseFound(DataPipeline dataPipeline) {
