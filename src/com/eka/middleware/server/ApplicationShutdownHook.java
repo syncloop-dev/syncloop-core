@@ -30,6 +30,8 @@ public class ApplicationShutdownHook implements Runnable {
 
         if (!Boolean.parseBoolean(System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT"))) {
             throw new Exception("Restart is not allow");
+        } else if (!dataPipeline.rp.getTenant().getName().equalsIgnoreCase("default")) {
+            throw new Exception("Restart is not allow for other tenants");
         }
 
         EXIT_CODE = 1;

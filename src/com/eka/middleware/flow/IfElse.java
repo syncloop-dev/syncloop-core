@@ -1,0 +1,122 @@
+package com.eka.middleware.flow;
+
+import java.util.List;
+
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.template.SnippetException;
+
+public class IfElse {
+	private List<Scope> conditions;
+	private boolean disabled = false;
+	private String condition;
+	private String caseLabel;
+	// private String switchVariable;
+	private JsonObject ifelse;
+	// private String switchXpath;
+	private String snapshot = null;
+	private String snapCondition = null;
+	private JsonObject data = null;
+	private String comment;
+
+	public IfElse(JsonObject jo) {
+		ifelse = jo;
+		data = ifelse.get("data").asJsonObject();
+		condition = ifelse.get("data").asJsonObject().getString("condition", null);
+		String status = ifelse.get("data").asJsonObject().getString("status", null);
+		disabled = "disabled".equals(status);
+		caseLabel = ifelse.get("data").asJsonObject().getString("label", null);
+		// switchXpath=ifelse.get("data").asJsonObject().getString("switch",null);
+		snapshot = data.getString("snap", null);
+		if (snapshot != null && snapshot.equals("disabled"))
+			snapshot = null;
+		snapCondition = data.getString("snapCondition", null);
+		comment = data.getString("comment", null);
+	}
+
+	public void process(DataPipeline dp) throws SnippetException {
+		if (dp.isDestroyed())
+			throw new SnippetException(dp, "User aborted the service thread",
+					new Exception("Service runtime pipeline destroyed manually"));
+		if (disabled)
+			return;
+		String snap = dp.getString("*snapshot");
+		boolean canSnap = false;
+		if (snap != null || snapshot != null) {
+			canSnap = true;
+			// snap=snapshot;
+			if (snapshot != null && snapshot.equals("conditional") && snapCondition != null) {
+				canSnap = FlowUtils.evaluateCondition(snapCondition, dp);
+				if (canSnap)
+					dp.put("*snapshot", "enabled");
+			} else
+				dp.put("*snapshot", "enabled");
+		}
+		if (!canSnap)
+			dp.drop("*snapshot");
+		if (canSnap && snap == null) {
+			dp.snap(comment);
+		}
+		//String text = ifelse.get("data").asJsonObject().getString("text", null);
+		JsonArray flows = ifelse.getJsonArray("children");
+
+		for (JsonValue jsonValue : flows) {
+			String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
+			boolean result = false;
+
+			// ifLogic=xVal;
+			if ("#default".equals(ifLogic)) {
+				Scope scope = new Scope(jsonValue.asJsonObject());
+				scope.process(dp);
+				break;
+			} else {
+				result = FlowUtils.evaluateCondition(ifLogic, dp);
+				if (result) {
+					Scope scope = new Scope(jsonValue.asJsonObject());
+					scope.process(dp);
+					break;
+				}
+			}
+		}
+		if (canSnap) {
+			dp.snap(comment);
+			dp.drop("*snapshot");
+		} else if (snap != null)
+			dp.put("*snapshot", snap);
+	}
+
+	public List<Scope> getCases() {
+		return conditions;
+	}
+
+	public void setCases(List<Scope> cases) {
+		this.conditions = cases;
+	}
+
+	public boolean isDisabled() {
+		return disabled;
+	}
+
+	public void setDisabled(boolean disabled) {
+		this.disabled = disabled;
+	}
+
+	public String getCondition() {
+		return condition;
+	}
+
+	public void setCondition(String condition) {
+		this.condition = condition;
+	}
+
+	public String getLabel() {
+		return caseLabel;
+	}
+
+	public void setLabel(String label) {
+		this.caseLabel = label;
+	}
+}

@@ -39,6 +39,10 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				Switch swich=new Switch(jsonValue.asJsonObject());
 				swich.process(dp);
 			break;
+			case "ifelse":
+				IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+				ifElse.process(dp);
+				break;
 			case "loop":
 			case "foreach":
 				Loop loop=new Loop(jsonValue.asJsonObject());
@@ -58,7 +62,7 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 			case "transformer":
 				Transformer transformer=new Transformer(jsonValue.asJsonObject());
 				transformer.process(dp);
-			break;		
+			break;
 		}	
 	}
 	
