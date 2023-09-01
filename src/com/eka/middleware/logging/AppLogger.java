@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class AppLogger {
 
-	private static final Logger appLogger = LogManager.getLogger("AppLogger");
+	private static final Logger appLogger = LogManager.getLogger("KeyLogger");
 
 	private static final ThreadLocal<LogMetaHolder> CONTEXT = new ThreadLocal<>();
 
@@ -71,9 +71,6 @@ public class AppLogger {
 	}
 
 	public void finish() {
-		if (!isLoggable) {
-			return ;
-		}
 		try {
 			StopWatch stopWatch = CONTEXT.get().stopTracking();
 			add("TT", stopWatch.getLastTaskTimeMillis());
@@ -98,7 +95,7 @@ public class AppLogger {
 		if (CONTEXT.get() != null) {
 			StringBuilder logBuilder = new StringBuilder();
 			for (Map.Entry<String, Object> entry : CONTEXT.get().getMAP().entrySet()) {
-				logBuilder.append(entry.getKey()).append("=").append(entry.getValue()).append(" ");
+				logBuilder.append(entry.getKey()).append("=").append("\"").append(entry.getValue()).append("\"").append(" ");
 			}
 			return logBuilder.toString().trim();
 		}
