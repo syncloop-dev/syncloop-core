@@ -3,6 +3,7 @@ package com.eka.middleware.licensing;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -74,6 +75,9 @@ public class License {
     }
 
     public static boolean updateLicenseKey(DataPipeline dataPipeline, String licenseKey) throws Exception  {
+        if (StringUtils.isBlank(licenseKey)) {
+            throw new RuntimeException("License key is empty. Please add a valid key.");
+        }
         validateLicense(dataPipeline, licenseKey);
         FileOutputStream fileOutputStream = new FileOutputStream(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/LICENSE.BIN");
         IOUtils.write(licenseKey, fileOutputStream, StandardCharsets.UTF_8);
