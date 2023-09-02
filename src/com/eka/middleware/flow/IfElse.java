@@ -68,7 +68,7 @@ public class IfElse {
 			boolean result = false;
 
 			// ifLogic=xVal;
-			if ("#default".equals(ifLogic) || "#else".equals(ifLogic)) {
+			if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
 				Scope scope = new Scope(jsonValue.asJsonObject());
 				scope.process(dp);
 				break;
