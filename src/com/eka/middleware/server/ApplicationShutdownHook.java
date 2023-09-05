@@ -56,7 +56,13 @@ public class ApplicationShutdownHook implements Runnable {
 
 
     public static void prepareOutputFile() throws FileNotFoundException {
-        PrintWriter out = new PrintWriter(new FileOutputStream("/unix-restart.sh"));
+        PrintWriter out = null;
+        if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))){
+             out = new PrintWriter(new FileOutputStream("/unix-restart.sh"));
+
+        }else{
+             out = new PrintWriter(new FileOutputStream("./unix-restart.sh"));
+        }
         out.println("kill -9 " + pid);
         //out.println("sh unix-x64.sh");
 
