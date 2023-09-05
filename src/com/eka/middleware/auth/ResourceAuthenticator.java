@@ -27,6 +27,9 @@ public class ResourceAuthenticator {
 //}
 
 public static boolean isConsumerAllowed(String resource, AuthAccount authAccount,String requestPath, String method) {
+	if (requestPath.equalsIgnoreCase("GET/google/login")) {
+		return true;
+	}
 	if(authAccount==null)
 		return false;
 	String userID=authAccount.getUserId();

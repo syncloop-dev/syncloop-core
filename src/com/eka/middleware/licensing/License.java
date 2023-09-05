@@ -79,7 +79,9 @@ public class License {
             throw new RuntimeException("License key is empty. Please add a valid key.");
         }
         validateLicense(dataPipeline, licenseKey);
+        File dir = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds");
         FileOutputStream fileOutputStream = new FileOutputStream(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/LICENSE.BIN");
+        if(!dir.exists()) dir.mkdirs();
         IOUtils.write(licenseKey, fileOutputStream, StandardCharsets.UTF_8);
         return true;
     }

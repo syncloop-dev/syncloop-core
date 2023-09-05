@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class AppLogger {
 
-	private static final Logger appLogger = LogManager.getLogger("KeyLogger");
+	private static final Logger appLogger = LogManager.getLogger("AppLogger");
 
 	private static final ThreadLocal<LogMetaHolder> CONTEXT = new ThreadLocal<>();
 
@@ -72,6 +72,9 @@ public class AppLogger {
 
 	public void finish() {
 		try {
+			if (CONTEXT.get().getMAP().size() == 1) {
+				return ;
+			}
 			StopWatch stopWatch = CONTEXT.get().stopTracking();
 			add("TT", stopWatch.getLastTaskTimeMillis());
 

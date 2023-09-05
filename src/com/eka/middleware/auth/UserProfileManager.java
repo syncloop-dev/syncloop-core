@@ -15,6 +15,7 @@ import org.pac4j.core.profile.UserProfile;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -176,6 +177,7 @@ public class UserProfileManager implements IdentityManager {
 			}
 			umap.put(account.getUserId(), user);
 			map.put("users", umap);
+			map.put("created_date", LocalDateTime.now().toString());
 			map.put("tenants", getTenants());
 			String json = ServiceUtils.toPrettyJson(map);
 			PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());

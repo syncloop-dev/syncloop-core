@@ -895,6 +895,23 @@ public class DataPipeline {
 		rp.appLogger.add(key, value);
 	}
 
+	public void appLogProfile(AuthAccount acc) {
+
+		appLog("USER_ID", acc.getUserId());
+		if (acc.getUserId().contains("@")) {
+			appLog("EMAIL_ID", acc.getUserId());
+		}
+		Map<String, Object> map = acc.getAuthProfile();
+
+		if (null != map.get("email")) {
+			appLog("EMAIL_ID", map.get("email").toString());
+		}
+
+		if (null != map.get("name")) {
+			appLog("NAME", map.get("name").toString());
+		}
+	}
+
 	public void log(String msg, Level level) {
 		if (level == null)
 			level = Level.INFO;
