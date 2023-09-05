@@ -15,7 +15,10 @@ public class FlowResolver {
 public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws SnippetException{
 	JsonValue flowJsonValue = mainflowJsonObject.getJsonObject("latest").containsKey("api") ? mainflowJsonObject.getValue("/latest/api") : null;
 	if (null == flowJsonValue || flowJsonValue.asJsonArray().isEmpty()) {
-		flowJsonValue = mainflowJsonObject.getValue("/latest/flow");
+		flowJsonValue = mainflowJsonObject.getJsonObject("latest").containsKey("flow") ? mainflowJsonObject.getValue("/latest/flow") : null;
+	}
+	if (null == flowJsonValue) {
+		return ;
 	}
 	JsonValue JsonInputValue=mainflowJsonObject.get("latest").asJsonObject().get("input");
 	JsonValue JsonOutputValue=mainflowJsonObject.get("latest").asJsonObject().get("output");
