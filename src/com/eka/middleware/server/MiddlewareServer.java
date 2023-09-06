@@ -1,10 +1,8 @@
 package com.eka.middleware.server;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -13,6 +11,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.ssl.KeyManager;
@@ -20,6 +19,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -51,8 +51,16 @@ public class MiddlewareServer {
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
 
-	public static final String BUILD_NAME = "vSL_330_Phase_3";
+	public static final String BUILD_NAME = "v1.4.7";
 	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
+
+	public static String allowRestrictedHeaders = System.getProperty("jdk.httpclient.allowRestrictedHeaders");
+	public static String headless = System.getProperty("java.awt.headless");
+	public static String CONTAINER_DEPLOYMENT = System.getProperty("CONTAINER_DEPLOYMENT");
+	public static String CONTAINER_ON_PRIM_DEPLOYMENT = System.getProperty("CONTAINER_ON_PRIM_DEPLOYMENT");
+	public static String COMMUNITY_DEPLOYMENT = System.getProperty("COMMUNITY_DEPLOYMENT");
+	public static String CORE_DEPLOYMENT = System.getProperty("CORE_DEPLOYMENT");
+	public static String disableEndpointIdentification = System.getProperty("com.sun.jndi.ldap.object.disableEndpointIdentification");
 
 	public static void main(final String[] args) throws SystemException {
 
@@ -62,7 +70,7 @@ public class MiddlewareServer {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			Build.download("latest");
+			//Build.download("latest");
 		} else {
 			LOGGER.info("No Container Deployment");
 		}
@@ -78,6 +86,19 @@ public class MiddlewareServer {
 			String keyStorePassword = ServiceUtils.getServerProperty("middleware.server.keyStore.jks.password");
 
 			java.security.Security.addProvider(new BouncyCastleProvider()); // Initializing Security for secure properties.
+
+			/**
+			 * Create Server Instance Cluster/Group ID
+			 */
+			{
+				File instanceUUID = new File(getConfigFolderPath() + "INSTANCE.UUID");
+				File instanceGroupUUID = new File(getConfigFolderPath() + "INSTANCE-GROUP.UUID");
+				if (!instanceUUID.exists()) IOUtils.write(UUID.randomUUID().toString(), new FileOutputStream(instanceUUID), StandardCharsets.UTF_8);
+				if (!instanceGroupUUID.exists()) IOUtils.write(UUID.randomUUID().toString(), new FileOutputStream(instanceGroupUUID), StandardCharsets.UTF_8);
+			}
+			/**
+			 * End
+			 */
 
 			// https="8443";
 			String securePorts[] = null;
@@ -132,6 +153,7 @@ public class MiddlewareServer {
 				}
 
 				ApplicationShutdownHook.getCurrentProcess();
+				ApplicationShutdownHook.prepareOutputFile();
 				Runtime.getRuntime().addShutdownHook(new Thread(new ApplicationShutdownHook()));
 			} catch (Exception e) {
 				throw new SystemException("EKA_MWS_1008", e);

@@ -15,7 +15,10 @@ public class FlowResolver {
 public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws SnippetException{
 	JsonValue flowJsonValue = mainflowJsonObject.getJsonObject("latest").containsKey("api") ? mainflowJsonObject.getValue("/latest/api") : null;
 	if (null == flowJsonValue || flowJsonValue.asJsonArray().isEmpty()) {
-		flowJsonValue = mainflowJsonObject.getValue("/latest/flow");
+		flowJsonValue = mainflowJsonObject.getJsonObject("latest").containsKey("flow") ? mainflowJsonObject.getValue("/latest/flow") : null;
+	}
+	if (null == flowJsonValue) {
+		return ;
 	}
 	JsonValue JsonInputValue=mainflowJsonObject.get("latest").asJsonObject().get("input");
 	JsonValue JsonOutputValue=mainflowJsonObject.get("latest").asJsonObject().get("output");
@@ -39,6 +42,10 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				Switch swich=new Switch(jsonValue.asJsonObject());
 				swich.process(dp);
 			break;
+			case "ifelse":
+				IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+				ifElse.process(dp);
+				break;
 			case "loop":
 			case "foreach":
 				Loop loop=new Loop(jsonValue.asJsonObject());
@@ -58,7 +65,7 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 			case "transformer":
 				Transformer transformer=new Transformer(jsonValue.asJsonObject());
 				transformer.process(dp);
-			break;		
+			break;
 		}	
 	}
 	

@@ -25,7 +25,7 @@ public class Switch {
 	private JsonObject data=null;
 	private String comment;
 	public Switch(JsonObject jo) {
-		swich=jo;		
+		swich=jo;
 		data=swich.get("data").asJsonObject();
 		condition=swich.get("data").asJsonObject().getString("condition",null);
 		String status=swich.get("data").asJsonObject().getString("status",null);
@@ -38,7 +38,7 @@ public class Switch {
 		snapCondition=data.getString("snapCondition",null);
 		comment=data.getString("comment",null);
 	}
-	
+
 	public void process(DataPipeline dp) throws SnippetException {
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
@@ -84,14 +84,13 @@ public class Switch {
 					Object objLablVal=dp.getValueByPointer(pointer);// FlowUtils.placeXPathValue(switchXpath, dp);
 					if(objLablVal!=null)
 						xVal=objLablVal+"";
-				}else
-					xVal=caseLabel;
+				}
 			}else
 				xVal=caseLabel;
-			
+
 			if(xVal == null)
 				throw new SnippetException(dp,"The CASE with the xPath("+caseLabel+") has a null value." , new Exception("Exception in Switch CASE with reference."));
-			
+
 			caseLabel=xVal;
 			if("#null".equals(caseLabel) && xPathValue==null) {
 				Scope scope=new Scope(jsonValue.asJsonObject());
@@ -103,8 +102,7 @@ public class Switch {
 				return;
 			}else if(xPathValue!=null && caseLabel.toLowerCase().startsWith("#regex:")) {
 				caseLabel=caseLabel.substring(7);
-				String label=FlowUtils.placeXPathValue(caseLabel, dp);
-				boolean match=FlowUtils.patternMatches(xPathValue,label);
+				boolean match=FlowUtils.patternMatches(xPathValue,caseLabel);
 				if(match) {
 					Scope scope=new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
@@ -123,8 +121,8 @@ public class Switch {
 		}else if(snap!=null)
 			dp.put("*snapshot",snap);
 	}
-	
-	
+
+
 	public List<Scope> getCases() {
 		return cases;
 	}

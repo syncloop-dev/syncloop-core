@@ -86,6 +86,16 @@ public class Scope {
 							swich.process(dp);
 					}
 				break;
+				case "ifelse":
+					IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+					if(!evaluateCondition) {
+						ifElse.process(dp);
+					}else {
+						boolean canExecute =FlowUtils.evaluateCondition(ifElse.getCondition(),dp);
+						if(canExecute)
+							ifElse.process(dp);
+					}
+					break;
 				case "loop":
 				case "foreach":
 					Loop loop=new Loop(jsonValue.asJsonObject());

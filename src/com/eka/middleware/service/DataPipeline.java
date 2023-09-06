@@ -5,6 +5,7 @@ import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
+import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.server.ServiceManager;
@@ -705,8 +706,13 @@ public class DataPipeline {
 				// dpAsync.put("asyncInputDoc", asyncInputDoc);
 				// ServiceUtils.execute(fqnOfFunction, dpAsync);
 				dpAsync.callingResource=currResrc;
-				ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
-				
+				//ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+				if (fqnOfFunction.startsWith("packages")) {
+					ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+				} else {
+					ServiceUtils.executeEmbeddedService(dpAsync, CacheManager.getEmbeddedService(fqnOfFunction.replaceAll("embedded.", "")
+							.replaceAll(".main", ""), dpAsync.rp.getTenant()));
+				}
 				
 				
 				Map<String, Object> asyncOut = dpAsync.getMap();
@@ -887,6 +893,23 @@ public class DataPipeline {
 
 	public void appLog(String key, String value) {
 		rp.appLogger.add(key, value);
+	}
+
+	public void appLogProfile(AuthAccount acc) {
+
+		appLog("USER_ID", acc.getUserId());
+		if (acc.getUserId().contains("@")) {
+			appLog("EMAIL_ID", acc.getUserId());
+		}
+		Map<String, Object> map = acc.getAuthProfile();
+
+		if (null != map.get("email")) {
+			appLog("EMAIL_ID", map.get("email").toString());
+		}
+
+		if (null != map.get("name")) {
+			appLog("NAME", map.get("name").toString());
+		}
 	}
 
 	public void log(String msg, Level level) {

@@ -128,8 +128,13 @@ public class AutoUpdate {
         String fileName=null;
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
              fileName = String.format("eka-distribution-community-tenant-v%s.zip", version);
-        else
-             fileName = String.format("eka-distribution-tenant-v%s.zip", version);
+        else {
+            if (Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
+                fileName = String.format("eka-distribution-tenant-core-v%s.zip", version);
+            } else {
+                fileName = String.format("eka-distribution-tenant-v%s.zip", version);
+            }
+        }
 
 
         URL url = new URL(String.format(Build.DISTRIBUTION_REPO + "%s", fileName));
@@ -324,8 +329,13 @@ public class AutoUpdate {
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
 
             return Build.DISTRIBUTION_REPO + "community-tenant-update.json";
-        else
-            return Build.DISTRIBUTION_REPO + "tenant-update.json";
+        else {
+            if (Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
+                return Build.DISTRIBUTION_REPO + "tenant-update-core.json";
+            } else {
+                return Build.DISTRIBUTION_REPO + "tenant-update.json";
+            }
+        }
     }
 
 }
