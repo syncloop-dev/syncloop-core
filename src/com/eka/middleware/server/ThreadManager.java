@@ -306,23 +306,33 @@ public class ThreadManager {
 					String errorName = "Internal Server error";
 					String errorDetail = e.getMessage();
 
-
-					if (errorDetail.startsWith("java.lang.Exception: ")) {
-						errorDetail = errorDetail.replace("java.lang.Exception: ", "");
-					}
-
-
-					String jsonError = String.format(
-							"{\"error\": {\"requestId\": \"%s\", \"error_name\": \"%s\", \"error_detail\": \"%s\"}}",
-							requestId, errorName, errorDetail
-					);
-
 					exchange.setStatusCode(500);
 
-					exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+					String acceptHeader = exchange.getRequestHeaders().getFirst("Accept");
+					if (acceptHeader != null && acceptHeader.toLowerCase().contains("json"))  { //JSON CASE
+						exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
 
+						String jsonError = String.format(
+								"{\"error\": {\"requestId\": \"%s\", \"error_name\": \"%s\", \"error_detail\": \"%s\"}}",
+								requestId, errorName, errorDetail
+						);
 
-					exchange.getResponseSender().send(jsonError);
+						exchange.getResponseSender().send(jsonError);
+					} else { //DEFAULT XML CASE
+						exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/xml");
+
+						String xmlError = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" +
+								"<root>\n" +
+								"    <error>\n" +
+								"        <requestId>" + requestId + "</requestId>\n" +
+								"        <error_name>" + errorName + "</error_name>\n" +
+								"        <error_detail>" + errorDetail + "</error_detail>\n" +
+								"    </error>\n" +
+								"</root>";
+
+						exchange.getResponseSender().send(xmlError);
+					}
+
 					LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), requestAddress, "Error"));
 
 				} finally {
