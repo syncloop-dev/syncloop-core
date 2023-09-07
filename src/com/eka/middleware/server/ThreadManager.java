@@ -298,8 +298,31 @@ public class ThreadManager {
 						rp = null;
 					}
 				} catch (SnippetException e) {
-					exchange.getResponseSender()
+					/*exchange.getResponseSender()
 							.send("RequestId: " + rp.getSessionID() + "\nInternal Server error:-\n" + e.getMessage());
+					LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), requestAddress, "Error"));*/
+
+					String requestId = rp.getSessionID();
+					String errorName = "Internal Server error";
+					String errorDetail = e.getMessage();
+
+
+					if (errorDetail.startsWith("java.lang.Exception: ")) {
+						errorDetail = errorDetail.replace("java.lang.Exception: ", "");
+					}
+
+
+					String jsonError = String.format(
+							"{\"error\": {\"requestId\": \"%s\", \"error_name\": \"%s\", \"error_detail\": \"%s\"}}",
+							requestId, errorName, errorDetail
+					);
+
+					exchange.setStatusCode(500);
+
+					exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+
+
+					exchange.getResponseSender().send(jsonError);
 					LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), requestAddress, "Error"));
 
 				} finally {
