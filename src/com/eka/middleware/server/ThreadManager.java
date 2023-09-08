@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -306,31 +307,47 @@ public class ThreadManager {
 					String errorName = "Internal Server error";
 					String errorDetail = e.getMessage();
 
+					Map<String, Object> errorMap = Maps.newHashMap();
+					errorMap.put("request_id", requestId);
+					errorMap.put("error_name", errorName);
+					errorMap.put("error_detail", errorDetail);
+
 					exchange.setStatusCode(500);
 
 					String acceptHeader = exchange.getRequestHeaders().getFirst("Accept");
-					if (acceptHeader != null && acceptHeader.toLowerCase().contains("json"))  { //JSON CASE
-						exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-
-						String jsonError = String.format(
-								"{\"error\": {\"requestId\": \"%s\", \"error_name\": \"%s\", \"error_detail\": \"%s\"}}",
-								requestId, errorName, errorDetail
-						);
-
-						exchange.getResponseSender().send(jsonError);
-					} else { //DEFAULT XML CASE
+					if (acceptHeader != null && acceptHeader.toLowerCase().contains("xml"))  { //JSON CASE
 						exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/xml");
 
-						String xmlError = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" +
-								"<root>\n" +
-								"    <error>\n" +
-								"        <requestId>" + requestId + "</requestId>\n" +
-								"        <error_name>" + errorName + "</error_name>\n" +
-								"        <error_detail>" + errorDetail + "</error_detail>\n" +
-								"    </error>\n" +
-								"</root>";
+						String xmlError = null;
+						try {
+							xmlError = ServiceUtils.toXml(errorMap, "error");
+						} catch (Exception ex) {
+							xmlError = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" +
+									"<root>\n" +
+									"    <error>\n" +
+									"        <request_id>" + requestId + "</request_id>\n" +
+									"        <error_name>" + errorName + "</error_name>\n" +
+									"        <error_detail>" + errorDetail + "</error_detail>\n" +
+									"    </error>\n" +
+									"</root>";
+						}
 
 						exchange.getResponseSender().send(xmlError);
+					} else {
+						exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+
+						String jsonError = null;
+						try {
+							Map<String, Object> error = Maps.newHashMap();
+							error.put("error", errorMap);
+							jsonError = ServiceUtils.toJson(error);
+						} catch (Exception ex) {
+							jsonError = String.format(
+									"{\"error\": {\"request_id\": \"%s\", \"error_name\": \"%s\", \"error_detail\": \"%s\"}}",
+									requestId, errorName, errorDetail
+							);
+						}
+						exchange.getResponseSender().send(jsonError);
 					}
 
 					LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), requestAddress, "Error"));
