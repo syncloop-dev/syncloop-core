@@ -11,10 +11,11 @@ import java.sql.*;
 import java.util.*;
 
 import static com.eka.middleware.auth.UserProfileManager.isUserExist;
+import static com.eka.middleware.auth.UserProfileManager.usersMap;
 
 public class UserRepoImpl {
 
-    public static Map<String, Object> getUsers() throws SystemException {
+    public static Map<String, Object> getUsers1() throws SystemException {
         Map<String, Object> usersMap = new HashMap<>();
 
         try (Connection conn = ConnectionManager.getConnection()) {
@@ -32,7 +33,7 @@ public class UserRepoImpl {
                     String status = userResultSet.getString("status");
 
                     String tenantSql = "SELECT t.tenant_name FROM tenant t WHERE t.tenant_id = ?";
-                    String groupSql = "SELECT g.group_name FROM \"group\" g " +
+                    String groupSql = "SELECT g.name FROM \"group\" g " +
                             "JOIN user_group_mapping ug ON g.group_id = ug.group_id " +
                             "WHERE ug.user_id = ?";
 
@@ -53,8 +54,7 @@ public class UserRepoImpl {
 
                         List<String> groupNames = new ArrayList<>();
                         while (groupResultSet.next()) {
-                            String groupName = groupResultSet.getString("group_name");
-                            groupNames.add(groupName);
+                           // groupNames.add(groupName);
                         }
 
                         Map<String, Object> profile = new HashMap<>();
@@ -78,6 +78,51 @@ public class UserRepoImpl {
         return usersMap;
     }
 
+
+    public static final Map<String, Object> getUsers() throws SystemException {
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:E:/software/profile.db")) {
+            Statement statement = conn.createStatement();
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM user");
+
+            while (resultSet.next()) {
+                String passwordHash = resultSet.getString("password");
+                String name = resultSet.getString("name");
+                String groupsString = resultSet.getString("groups");
+                String email = resultSet.getString("email");
+                String tenant = resultSet.getString("tenant");
+
+                List<String> groupList = new ArrayList<>();
+                if (groupsString != null) {
+                    groupsString = groupsString.substring(1, groupsString.length() - 1);
+                    String[] groupsArray = groupsString.split(",");
+                    groupList.addAll(Arrays.asList(groupsArray));
+                }
+
+                Map<String, Object> profile = new HashMap<>();
+                profile.put("name", name);
+                profile.put("groups", groupList);
+                profile.put("email", email);
+                profile.put("tenant", tenant);
+
+                Map<String, Object> userMap = new HashMap<>();
+                userMap.put("password", passwordHash);
+                userMap.put("profile", profile);
+                userMap.put("status", "1");
+
+                usersMap.put(email, userMap);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new SystemException("EKA_MWS_1001", e);
+        }
+        return usersMap;
+    }
+
+    public static void main(String[] args) throws Exception {
+        Map<String, Object> b =  getUsers();
+        System.out.println(b);
+    }
 
     public static void addUser(User user) throws SystemException {
         try (Connection conn = ConnectionManager.getConnection()) {
@@ -148,14 +193,15 @@ public class UserRepoImpl {
         }
     }
 
-    private static void addGroupsForUser(Connection conn, int userId, List<Group> groups) throws SQLException {
-        String insertGroupSql = "INSERT INTO user_group_mapping (user_id, group_id) VALUES (?, ?)";
+    private static void addGroupsForUser(Connection conn, int userId,List<Group> groups) throws SQLException {
+        String insertGroupSql = "INSERT INTO user_group_mapping (user_id,name, group_id) VALUES (?, ?,?)";
         try (PreparedStatement insertGroupStatement = conn.prepareStatement(insertGroupSql)) {
             for (Group group : groups) {
                 int groupId = getGroupIdByName(conn, group.getGroupName());
                 if (groupId != -1) {
                     insertGroupStatement.setInt(1, userId);
-                    insertGroupStatement.setInt(2, groupId);
+                    insertGroupStatement.setString(2, group.getGroupName());
+                    insertGroupStatement.setInt(3, groupId);
                     insertGroupStatement.executeUpdate();
                 }
             }
@@ -181,7 +227,7 @@ public class UserRepoImpl {
     }
 
     private static int getGroupIdByName(Connection conn, String groupName) throws SQLException {
-        String groupIdSql = "SELECT group_id FROM \"group\" WHERE group_name = ?";
+        String groupIdSql = "SELECT group_id FROM \"group\" WHERE name = ?";
         try (PreparedStatement groupIdStatement = conn.prepareStatement(groupIdSql)) {
             groupIdStatement.setString(1, groupName);
             try (ResultSet groupIdResultSet = groupIdStatement.executeQuery()) {
