@@ -15,7 +15,7 @@ import static com.eka.middleware.auth.UserProfileManager.usersMap;
 
 public class UserRepoImpl {
 
-    public static Map<String, Object> getUsers1() throws SystemException {
+    public static Map<String, Object> getUsers() throws SystemException {
         Map<String, Object> usersMap = new HashMap<>();
 
         try (Connection conn = ConnectionManager.getConnection()) {
@@ -32,8 +32,8 @@ public class UserRepoImpl {
                     String email = userResultSet.getString("email");
                     String status = userResultSet.getString("status");
 
-                    String tenantSql = "SELECT t.tenant_name FROM tenant t WHERE t.tenant_id = ?";
-                    String groupSql = "SELECT g.name FROM \"group\" g " +
+                    String tenantSql = "SELECT t.name FROM tenant t WHERE t.tenant_id = ?";
+                    String groupSql = "SELECT g.name FROM \"groups\" g " +
                             "JOIN user_group_mapping ug ON g.group_id = ug.group_id " +
                             "WHERE ug.user_id = ?";
 
@@ -46,7 +46,7 @@ public class UserRepoImpl {
 
                         String tenantName = null;
                         if (tenantResultSet.next()) {
-                            tenantName = tenantResultSet.getString("tenant_name");
+                            tenantName = tenantResultSet.getString("name");
                         }
 
                         groupStatement.setString(1, userId);
@@ -54,7 +54,8 @@ public class UserRepoImpl {
 
                         List<String> groupNames = new ArrayList<>();
                         while (groupResultSet.next()) {
-                           // groupNames.add(groupName);
+                            String groupName = groupResultSet.getString("name");
+                            groupNames.add(groupName);
                         }
 
                         Map<String, Object> profile = new HashMap<>();
@@ -79,10 +80,10 @@ public class UserRepoImpl {
     }
 
 
-    public static final Map<String, Object> getUsers() throws SystemException {
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:E:/software/profile.db")) {
+    public static final Map<String, Object> getUsers1() throws SystemException {
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:/Users/divyansh/Desktop/Syncloop/SyncloopDB/profile")) {
             Statement statement = conn.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT * FROM user");
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM users");
 
             while (resultSet.next()) {
                 String passwordHash = resultSet.getString("password");
@@ -193,8 +194,8 @@ public class UserRepoImpl {
         }
     }
 
-    private static void addGroupsForUser(Connection conn, int userId,List<Group> groups) throws SQLException {
-        String insertGroupSql = "INSERT INTO user_group_mapping (user_id,name, group_id) VALUES (?, ?,?)";
+    private static void addGroupsForUser(Connection conn, int userId, List<Group> groups) throws SQLException {
+        String insertGroupSql = "INSERT INTO user_group_mapping (user_id, name, group_id) VALUES (?, ?, ?)";
         try (PreparedStatement insertGroupStatement = conn.prepareStatement(insertGroupSql)) {
             for (Group group : groups) {
                 int groupId = getGroupIdByName(conn, group.getGroupName());
