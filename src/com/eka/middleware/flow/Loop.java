@@ -142,6 +142,9 @@ public class Loop {
 			JsonArray flows = loop.getJsonArray("children");
 			for (JsonValue jsonValue : flows) {
 				final String type = jsonValue.asJsonObject().getString("type");
+				JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+				String status=jov.getString("status",null);
+				if(!"disabled".equals(status))
 				switch (type) {
 				case "try-catch":
 					TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());

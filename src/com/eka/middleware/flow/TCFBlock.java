@@ -77,7 +77,7 @@ public class TCFBlock {
 		try {
 			TRY.process(dp);
 		} catch (Exception e) {
-			dp.put("lastErrorDump", ServiceUtils.getExceptionMap(e));
+			dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
 			CATCH.process(dp);
 		}finally {
 			FINALLY.process(dp);

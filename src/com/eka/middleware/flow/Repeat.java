@@ -108,11 +108,11 @@ public class Repeat {
                         se = (SnippetException) e;
                     else
                         se = new SnippetException(dp, "Exception on step repeat(" + comment + ")", new Exception(e));
-                    dp.put("lastErrorDump", ServiceUtils.getExceptionMap(se));
+                    dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(se));
                     if (se.propagate)
                         throw se;
                 } else
-                    dp.put("lastErrorDump", ServiceUtils.getExceptionMap(new Exception(e)));
+                    dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(new Exception(e)));
             }
             repeatTimes--;
             if (repeatTimes == 0)
@@ -125,7 +125,7 @@ public class Repeat {
             try {
                 Thread.sleep(interval);
             } catch (Exception e) {
-                dp.put("lastErrorDump", ServiceUtils.getExceptionMap(e));
+                dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
             }
 
             if (repeatTimes < 0 && repeatOn != null)
@@ -145,7 +145,9 @@ public class Repeat {
         JsonArray flows = repeat.getJsonArray("children");
         for (JsonValue jsonValue : flows) {
             String type = jsonValue.asJsonObject().getString("type", null);
-            //System.out.println(type);
+            JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+			String status=jov.getString("status",null);
+			if(!"disabled".equals(status))
             switch (type) {
                 case "try-catch":
                     TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());

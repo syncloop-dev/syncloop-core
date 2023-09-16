@@ -53,7 +53,9 @@ public class Scope {
 		JsonArray flows= scope.getJsonArray("children");
 		for (JsonValue jsonValue : flows) {
 			String type=jsonValue.asJsonObject().getString("type",null);
-			//System.out.println(type);
+			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+			String status=jov.getString("status",null);
+			if(!"disabled".equals(status))
 			switch(type) {
 				case "try-catch":
 					TCFBlock tcfBlock=new TCFBlock(jsonValue.asJsonObject());

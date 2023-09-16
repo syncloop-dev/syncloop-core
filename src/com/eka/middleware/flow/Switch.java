@@ -73,6 +73,10 @@ public class Switch {
 		JsonObject nullCase=null;
 		for (JsonValue jsonValue : flows) {
 			String caseLabel=jsonValue.asJsonObject().get("data").asJsonObject().getString("case",null);
+			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+			String status=jov.getString("status",null);
+			if(!"disabled".equals(status))
+				continue;
 			if(caseLabel == null)
 				throw new SnippetException(dp,"Case label is a required field. It can not be left empty. Use #null for null comparision, use !null(empty is not null) or !empty(null is also considered empty)." , new Exception("Exception in Switch CASE"));
 			String xVal=null;
@@ -87,7 +91,7 @@ public class Switch {
 				}
 			}else
 				xVal=caseLabel;
-
+			
 			if(xVal == null)
 				throw new SnippetException(dp,"The CASE with the xPath("+caseLabel+") has a null value." , new Exception("Exception in Switch CASE with reference."));
 

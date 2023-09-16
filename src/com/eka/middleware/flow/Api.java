@@ -41,13 +41,12 @@ public class Api {
 		snapCondition=data.getString("snapCondition",null);
 		requestMethod=data.getString("requestMethod","sync");
 //		System.out.println(data.isNull("transformers"));
-		if(!data.isNull("transformers"))
+		if(data.containsKey("transformers") && !data.isNull("transformers"))
 			transformers=data.getJsonArray("transformers");
-		if(!data.isNull("createList"))
+		if(data.containsKey("createList") && !data.isNull("createList"))
 			createList=data.getJsonArray("createList");
-		if(!data.isNull("dropList"))
+		if(data.containsKey("dropList") && !data.isNull("dropList"))
 			dropList=data.getJsonArray("dropList");
-
 	}
 	public void process(DataPipeline dp) throws SnippetException {
 		if(dp.isDestroyed())
@@ -73,16 +72,17 @@ public class Api {
 			return;
 		//if(createList!=null)
 		//FlowUtils.setValue(createList, dp);
-		if(transformers!=null)
-			FlowUtils.mapBefore(transformers, dp);
+		//if(transformers!=null)
+		//	FlowUtils.mapBefore(transformers, dp);
 		String serviceFqn=api.getString("text",null);
 		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
 			if("async".equals(requestMethod))
 				dp.applyAsync(serviceFqn.trim()+".main",transformers);
 			else
-				dp.apply(serviceFqn.trim()+".main");
-			if(transformers!=null)
-				FlowUtils.mapAfter(transformers, dp);
+				dp.apply(serviceFqn.trim()+".main",transformers);
+			//if(transformers!=null)
+				//FlowUtils.mapAfter(transformers, dp);
+			dp.clearServicePayload();
 		}
 		if(createList!=null)
 			FlowUtils.setValue(createList, dp);
