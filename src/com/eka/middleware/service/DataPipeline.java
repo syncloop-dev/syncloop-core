@@ -241,6 +241,10 @@ public class DataPipeline {
 		//servicePayload=new HashMap<>();
 	}
 	
+	public Map<String, Object> getServicePayload() {
+		return servicePayload;
+	}
+	
 	public void putAll(Map<String, Object> value) {
 		String currentResource = getCurrentResource();
 		Map<String, Object> map = payloadStack.get(currentResource);
@@ -674,7 +678,7 @@ public class DataPipeline {
 		return futureList;
 	}
 
-	public List<Map<String, Object>> await(final int timeout_MS)  throws SnippetException {
+/*	public List<Map<String, Object>> await(final int timeout_MS)  throws SnippetException {
 		String curres=this.currentResource;
 		String callres=this.callingResource;
 		this.currentResource=this.callingResource;
@@ -723,6 +727,7 @@ public class DataPipeline {
 		this.futureList=new ArrayList<>();
 		return futureList;
 	}
+	*/
 	
 	public void applyAsync(String fqnOfMethod,final JsonArray transformers) throws SnippetException {
 		if(fqnOfMethod==null)
@@ -758,7 +763,7 @@ public class DataPipeline {
 		final String correlationID = this.getCorrelationId();
 		
 		final Map<String, Object> asyncOutputDoc = new HashMap<String, Object>();
-		final Map<String, String> metaData = new HashMap<String, String>();
+		final Map<String, Object> metaData = new HashMap<String, Object>();
 		asyncOutputDoc.put("*metaData", metaData);
 		final String uuidAsync = UUID.randomUUID().toString();
 		metaData.put("batchId", uuidAsync);
@@ -809,6 +814,9 @@ public class DataPipeline {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,
 						"");
 				rpRef=rpAsync;
+				long startTime=System.currentTimeMillis();
+				metaData.put("*start_time", new Date().toString());
+				metaData.put("*start_time_ms", System.currentTimeMillis());
 				final DataPipeline dpAsync = rpAsync.dataPipeLine;
 				String json = null;
 				if (asyncInputDoc != null && asyncInputDoc.size() > 0) {
@@ -869,7 +877,8 @@ public class DataPipeline {
 						asyncOutputDoc.put(k, v);
 				});
 				metaData.put("status", "Completed");
-				
+				metaData.put("*end_time", new Date().toString());
+				metaData.put("*total_duration_ms", (System.currentTimeMillis()-startTime)+"");
 				return asyncOutputDoc;
 			} catch (Exception e) {
 				ServiceUtils.printException(this,"Exception caused on async operation correlationID: " + correlationID
