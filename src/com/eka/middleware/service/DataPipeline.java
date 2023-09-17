@@ -735,6 +735,12 @@ public class DataPipeline {
 		fqnOfMethod = fqnOfMethod.replace("/", ".");
 		if (!fqnOfMethod.endsWith(".main"))
 			fqnOfMethod += ".main";
+		final Map cache=CacheManager.getCacheAsMap(this.rp.getTenant());
+		List<Map> asyncTaskList= (List<Map>) cache.get(rp.getSessionID());
+		if(asyncTaskList==null) {
+			asyncTaskList=new ArrayList<Map>();
+			cache.put(rp.getSessionID(), asyncTaskList);
+		}
 		final String fqnOfFunction = fqnOfMethod;		
 		String callingResource = currentResource;
 		this.callingResource=callingResource;
@@ -753,6 +759,7 @@ public class DataPipeline {
 					asyncInputDoc.put(k, v);
 			});
 		}
+		
 		payloadStack.remove(currentResource);
 		resourceStack.remove(size);
 		currentResource = callingResource;
@@ -810,6 +817,11 @@ public class DataPipeline {
 		final String currResrc=currentResource;
 		final Future<Map<String, Object>> futureMap = rp.getExecutor().submit(() -> {
 			RuntimePipeline rpRef=null;
+			final List<Map> taskList= (List<Map>) cache.get(rp.getSessionID());
+			taskList.add(metaData);
+			metaData.put("*resource", fqnOfFunction);
+			metaData.put("*initiatedBy", currResrc);
+			
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,
 						"");
@@ -845,6 +857,7 @@ public class DataPipeline {
 				dpAsync.callingResource=currResrc;
 				//ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
 				if (fqnOfFunction.startsWith("packages")) {
+					metaData.put("*sessionID", dpAsync.getSessionId());
 					ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
 				} else {
 					ServiceUtils.executeEmbeddedService(dpAsync, CacheManager.getEmbeddedService(fqnOfFunction.replaceAll("embedded.", "")
@@ -879,6 +892,7 @@ public class DataPipeline {
 				metaData.put("status", "Completed");
 				metaData.put("*end_time", new Date().toString());
 				metaData.put("*total_duration_ms", (System.currentTimeMillis()-startTime)+"");
+				
 				return asyncOutputDoc;
 			} catch (Exception e) {
 				ServiceUtils.printException(this,"Exception caused on async operation correlationID: " + correlationID
@@ -887,6 +901,9 @@ public class DataPipeline {
 				asyncOutputDoc.put("error", e.getMessage());
 				throw e;
 			} finally {
+				taskList.remove(metaData);
+				if(taskList.size()==0)
+					cache.remove(taskList);
 				asyncOutputDoc.put("*metaData", metaData);
 				rpRef.destroy();
 			}
@@ -897,6 +914,12 @@ public class DataPipeline {
 		//put("asyncOutputDoc", asyncOutputDoc);
 		asyncOutputDoc.put("*futureTransformers", transformers);
 		futureList.add(asyncOutputDoc);
+	}
+	
+	public List<Map> listAsyncRunningTasks(String sid){
+		Map cache=CacheManager.getCacheAsMap(this.rp.getTenant());
+		List tasks=(List) cache.get(sid);
+		return tasks;
 	}
 	
 	public void applyAsync(String fqnOfMethod) throws SnippetException {
