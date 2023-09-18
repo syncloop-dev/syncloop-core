@@ -48,6 +48,7 @@ public class DataPipeline {
 	private final Map<String, Object> globalPayload=new HashMap<>();
 	private boolean recordTrace;
 	//private final List<JsonArray> futureTransformers=new ArrayList<>();
+	private final Object syncObject=new Object();
 
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
 		recursiveDepth=0;
@@ -675,6 +676,8 @@ public class DataPipeline {
 		if(this.futureList!=null && this.futureList.size()>0)
 			this.futureList.forEach(map->{
 				futureList.add(map);});
+		this.futureList.clear();
+		this.futureList=new ArrayList<>();
 		return futureList;
 	}
 
@@ -737,9 +740,12 @@ public class DataPipeline {
 			fqnOfMethod += ".main";
 		final Map cache=CacheManager.getCacheAsMap(this.rp.getTenant());
 		List<Map> asyncTaskList= (List<Map>) cache.get(rp.getSessionID());
-		if(asyncTaskList==null) {
-			asyncTaskList=new ArrayList<Map>();
-			cache.put(rp.getSessionID(), asyncTaskList);
+		synchronized (syncObject) {
+			asyncTaskList= (List<Map>) cache.get(rp.getSessionID());
+			if(asyncTaskList==null) {
+				asyncTaskList=new ArrayList<Map>();
+				cache.put(rp.getSessionID(), asyncTaskList);
+			}
 		}
 		final String fqnOfFunction = fqnOfMethod;		
 		String callingResource = currentResource;
@@ -902,8 +908,10 @@ public class DataPipeline {
 				throw e;
 			} finally {
 				taskList.remove(metaData);
-				if(taskList.size()==0)
-					cache.remove(taskList);
+				synchronized (syncObject) {
+					if(taskList.size()==0)
+						cache.remove(taskList);
+				}
 				asyncOutputDoc.put("*metaData", metaData);
 				rpRef.destroy();
 			}
