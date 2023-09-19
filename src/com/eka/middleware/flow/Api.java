@@ -7,6 +7,7 @@ import javax.json.JsonObject;
 
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.template.SnippetException;
+import org.apache.commons.lang3.StringUtils;
 
 public class Api {
 	private boolean disabled=false;
@@ -75,7 +76,10 @@ public class Api {
 		//FlowUtils.setValue(createList, dp);
 		if(transformers!=null)
 			FlowUtils.mapBefore(transformers, dp);
-		String serviceFqn=api.getString("text",null);
+		String serviceFqn=data.getString("fqn", null);
+		if (StringUtils.isBlank(serviceFqn)) {
+			serviceFqn = api.getString("text",null);
+		}
 		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
 			if("async".equals(requestMethod))
 				dp.applyAsync(serviceFqn.trim()+".main",transformers);
