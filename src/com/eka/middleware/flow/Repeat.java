@@ -8,6 +8,7 @@ import javax.json.JsonValue;
 
 import com.eka.middleware.service.FlowBasicInfo;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import com.eka.middleware.service.DataPipeline;
@@ -50,7 +51,10 @@ public class Repeat implements FlowBasicInfo {
         condition = data.getString("condition", null);
         String status = data.getString("status", null);
         disabled = "disabled".equals(status);
-        String rt = data.getString("redo", "0");
+        String rt = data.getString("redo", null);
+        if (StringUtils.isBlank(rt)) {
+            rt = data.getString("repeat", "0");
+        }
         if (rt.startsWith("#{")) {
             rt = FlowUtils.extractExpressions(rt)[0];
         }
