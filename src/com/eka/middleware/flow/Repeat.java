@@ -234,6 +234,16 @@ public class Repeat {
                             transformer.process(dp);
                     }
                     break;
+                case "await":
+					Await await=new Await(jsonValue.asJsonObject());
+					if(!evaluateCondition) {
+						await.process(dp);
+					}else { 
+						boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
+						if(canExecute)
+							await.process(dp);
+					}
+				break;
             }
         }
     }

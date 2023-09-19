@@ -183,6 +183,10 @@ public class Loop {
 					Transformer transformer = new Transformer(jsonValue.asJsonObject());
 					transformer.process(dp);
 					break;
+				case "await":
+						Await await=new Await(jsonValue.asJsonObject());
+						await.process(dp);
+					break;
 				}
 			}
 			

@@ -12,6 +12,7 @@ import javax.json.JsonValue;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
+import com.fasterxml.jackson.databind.node.BooleanNode;
 
 public class Await {
 	private boolean disabled = false;
@@ -90,44 +91,50 @@ public class Await {
 		try {
 			//final DataPipeline dp=this;
 			final AtomicInteger index=new AtomicInteger(0);
-			dp.put(indexVar, index.get());
+			//dp.put(indexVar, index.get());
 			list.forEach(map->{
 				//futureList.add(map);
+				dp.clearServicePayload();
+				int indexValue=index.getAndIncrement();
+				dp.getServicePayload().put(indexVar, indexValue);
 				Map<String, Object> asyncOutputDoc=map;
 				final Map<String, Object> metaData=(Map<String, Object>) asyncOutputDoc.get("*metaData");
 				final JsonArray transformers=(JsonArray) asyncOutputDoc.get("*futureTransformers");
 				String status=(String)metaData.get("status");
 				String batchID=(String)metaData.get("batchId");
-				Integer timeOut=(Integer)metaData.get("*timeout_ms");
+				Long timeOut=(Long)metaData.get("*timeout_ms");
 				Long timedOut=0l;
 				Long startTime=(Long)metaData.get("*start_time_ms");
+				Boolean closed=(Boolean)metaData.get("*Closed");
 				if(timeOut==null)
 					metaData.put("*timeout_ms", timeout_ms);
 				if(startTime!=null) {
-					timedOut=System.currentTimeMillis()-((timeout_ms)+startTime);
+					timedOut=(long)(((timeout_ms)+startTime)-System.currentTimeMillis());
 				}
 				if(startTime!=null && timedOut<=0 && metaData.get("*timedout")==null) { 
 					listSize.decrementAndGet();
 					metaData.put("*timedout",Boolean.TRUE);
 				}
-				if(startTime!=null && timedOut>0) {
+				if(startTime!=null && timedOut>0 && !Boolean.TRUE.equals(closed)) {
 					try {
 						Thread.sleep(1);
 						if(!"Active".equals(status)) {
 							listSize.decrementAndGet();
+							metaData.put("*Closed",Boolean.TRUE);
 						}
 						if("Completed".equals(status)) {
+							
 							//dp.clearServicePayload();
 							//servicePayload.clear();
 							asyncOutputDoc.forEach((k,v)->{
 								if(k!=null & v!=null)
-									dp.put(k, v);
+									dp.getServicePayload().put(k, v);
 							});
-							dp.put("asyncOutputDoc", asyncOutputDoc);
+							dp.getServicePayload().put("asyncOutputDoc", asyncOutputDoc);
 							if(transformers!=null)
 								FlowUtils.mapAfter(transformers, dp);
 							
-							dp.put(indexVar, index.getAndIncrement());
+							//dp.getServicePayload().put(indexVar, );
 							JsonArray flows = await.getJsonArray("children");
 							for (JsonValue jsonValue : flows) {
 								final String type = jsonValue.asJsonObject().getString("type");
@@ -174,7 +181,7 @@ public class Await {
 									break;
 								}
 							}
-							dp.drop("asyncOutputDoc");
+							//dp.drop("asyncOutputDoc");
 							//dp.clearServicePayload();
 						}
 						if("Failed".equals(status))
@@ -185,9 +192,14 @@ public class Await {
 						} catch (Exception e2) {
 							ServiceUtils.printException("Nested exception in await", e);
 						}
+					}finally {
+						//index.getAndIncrement();
+						dp.clearServicePayload();
 					}
 				}
 			});
+			}catch (Exception e) {
+				ServiceUtils.printException("Internal error inside async service call", e);
 			}finally {
 				dp.drop("asyncOutputDoc");
 				if(listSize.get()<=0)

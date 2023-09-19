@@ -681,7 +681,7 @@ public class DataPipeline {
 		return futureList;
 	}
 
-/*	public List<Map<String, Object>> await(final int timeout_MS)  throws SnippetException {
+	public List<Map<String, Object>> await(final int timeout_MS)  throws SnippetException {
 		String curres=this.currentResource;
 		String callres=this.callingResource;
 		this.currentResource=this.callingResource;
@@ -730,7 +730,6 @@ public class DataPipeline {
 		this.futureList=new ArrayList<>();
 		return futureList;
 	}
-	*/
 	
 	public void applyAsync(String fqnOfMethod,final JsonArray transformers) throws SnippetException {
 		if(fqnOfMethod==null)
@@ -827,12 +826,12 @@ public class DataPipeline {
 			taskList.add(metaData);
 			metaData.put("*resource", fqnOfFunction);
 			metaData.put("*initiatedBy", currResrc);
-			
+			long startTime=System.currentTimeMillis();
 			try {
 				final RuntimePipeline rpAsync = RuntimePipeline.create(rp.getTenant(),uuidAsync, correlationID, null, fqnOfFunction,
 						"");
 				rpRef=rpAsync;
-				long startTime=System.currentTimeMillis();
+				
 				metaData.put("*start_time", new Date().toString());
 				metaData.put("*start_time_ms", System.currentTimeMillis());
 				final DataPipeline dpAsync = rpAsync.dataPipeLine;
@@ -896,8 +895,7 @@ public class DataPipeline {
 						asyncOutputDoc.put(k, v);
 				});
 				metaData.put("status", "Completed");
-				metaData.put("*end_time", new Date().toString());
-				metaData.put("*total_duration_ms", (System.currentTimeMillis()-startTime)+"");
+				
 				
 				return asyncOutputDoc;
 			} catch (Exception e) {
@@ -907,6 +905,8 @@ public class DataPipeline {
 				asyncOutputDoc.put("error", e.getMessage());
 				throw e;
 			} finally {
+				metaData.put("*end_time", new Date().toString());
+				metaData.put("*total_duration_ms", (System.currentTimeMillis()-startTime)+"");
 				taskList.remove(metaData);
 				synchronized (syncObject) {
 					if(taskList.size()==0)
