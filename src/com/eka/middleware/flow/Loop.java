@@ -11,9 +11,11 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import lombok.Getter;
 
-public class Loop {
+public class Loop implements FlowBasicInfo {
 	private boolean disabled = false;
 	private String inputArrayPath;
 	private String outPutArrayPath;
@@ -26,6 +28,16 @@ public class Loop {
 	private String outArrayType = "document";
 	private String snapshot=null;
 	private String snapCondition=null;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
+
 	public Loop(JsonObject jo) {
 		loop = jo;
 		data = loop.get("data").asJsonObject();
@@ -42,9 +54,14 @@ public class Loop {
 		snapCondition=data.getString("snapCondition",null);
 		indexVar = data.getString("indexVar", "*index");
 		outArrayType = data.getString("outArrayType", "document");
+
+		guid = data.getString("guid",null);
+		name = loop.getString("text",null);
+		type = loop.getString("type",null);
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
+		dp.addErrorStack(this);
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		if (disabled || inputArrayPath == null)

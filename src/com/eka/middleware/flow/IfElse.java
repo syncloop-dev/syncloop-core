@@ -7,9 +7,11 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import lombok.Getter;
 
-public class IfElse {
+public class IfElse implements FlowBasicInfo {
 	private List<Scope> conditions;
 	private boolean disabled = false;
 	private String condition;
@@ -21,6 +23,15 @@ public class IfElse {
 	private String snapCondition = null;
 	private JsonObject data = null;
 	private String comment;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
 
 	public IfElse(JsonObject jo) {
 		ifelse = jo;
@@ -35,9 +46,14 @@ public class IfElse {
 			snapshot = null;
 		snapCondition = data.getString("snapCondition", null);
 		comment = data.getString("comment", null);
+
+		guid = data.getString("guid",null);
+		name = ifelse.getString("text",null);
+		type = ifelse.getString("type",null);
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
+		dp.addErrorStack(this);
 		if (dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread",
 					new Exception("Service runtime pipeline destroyed manually"));
