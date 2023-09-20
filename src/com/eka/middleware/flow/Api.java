@@ -66,6 +66,7 @@ public class Api implements FlowBasicInfo {
 
 	}
 	public void process(DataPipeline dp) throws SnippetException {
+		dp.addErrorStack(this);
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		String snap=dp.getString("*snapshot");
