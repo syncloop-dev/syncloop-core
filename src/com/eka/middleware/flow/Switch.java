@@ -93,7 +93,7 @@ public class Switch implements FlowBasicInfo {
 			String caseLabel=jsonValue.asJsonObject().get("data").asJsonObject().getString("case",null);
 			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
 			String status=jov.getString("status",null);
-			if(!"disabled".equals(status))
+			if("disabled".equalsIgnoreCase(status))
 				continue;
 			if(caseLabel == null)
 				throw new SnippetException(dp,"Case label is a required field. It can not be left empty. Use #null for null comparision, use !null(empty is not null) or !empty(null is also considered empty)." , new Exception("Exception in Switch CASE"));

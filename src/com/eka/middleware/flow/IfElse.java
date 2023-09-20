@@ -83,6 +83,11 @@ public class IfElse implements FlowBasicInfo {
 			String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
 			boolean result = false;
 
+			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+			String status=jov.getString("status",null);
+			if("disabled".equalsIgnoreCase(status))
+				continue;
+
 			// ifLogic=xVal;
 			if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
 				Scope scope = new Scope(jsonValue.asJsonObject());
