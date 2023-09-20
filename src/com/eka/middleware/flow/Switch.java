@@ -99,39 +99,11 @@ public class Switch {
 				Scope scope=new Scope(jsonValue.asJsonObject());
 				scope.process(dp);
 				return;
-			}
-
-			else if (xPathValue != null && xPathValue.startsWith("[")){
-				String substringXpathValue = xPathValue.substring(1, xPathValue.length() - 1);
-				String[] values = substringXpathValue.split(",");
-
-				for (String value : values) {
-					value = value.trim();
-
-					if (value.equals(caseLabel)) {
-						Scope scope = new Scope(jsonValue.asJsonObject());
-						scope.process(dp);
-						return;
-					}
-				}
-
-			}
-
-			else if(xPathValue!=null && xPathValue.equals(caseLabel)) {
+			}else if(xPathValue!=null && xPathValue.equals(caseLabel)) {
 				Scope scope=new Scope(jsonValue.asJsonObject());
 				scope.process(dp);
 				return;
-			}
-
-			else if (xPathValue.equals("")) {
-				if (caseLabel == null || caseLabel.equals("#null")) {
-					Scope scope = new Scope(jsonValue.asJsonObject());
-					scope.process(dp);
-					break;
-				}
-			}
-
-			else if(xPathValue!=null && caseLabel.toLowerCase().startsWith("#regex:")) {
+			}else if(xPathValue!=null && caseLabel.toLowerCase().startsWith("#regex:")) {
 				caseLabel=caseLabel.substring(7);
 				String label=FlowUtils.placeXPathValue(caseLabel, dp);
 				boolean match=FlowUtils.patternMatches(xPathValue,label);
@@ -153,7 +125,6 @@ public class Switch {
 		}else if(snap!=null)
 			dp.put("*snapshot",snap);
 	}
-
 
 	public void setCases(List<Scope> cases) {
 		this.cases = cases;
