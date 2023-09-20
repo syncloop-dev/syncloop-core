@@ -270,7 +270,7 @@ public class Client {
 		responseMap.put("statusCode", response.statusCode());
 		responseMap.put("respPayload", response.body());
 		responseMap.put("inputStream", response.body());
-		responseMap.put("respHeaders", responseHeaderFields);
+		responseMap.put("respHeaders", responseHeaders);
 
 		return responseMap;
 	}

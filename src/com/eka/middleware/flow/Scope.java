@@ -7,12 +7,24 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import lombok.Getter;
 
-public class Scope {
+public class Scope implements FlowBasicInfo {
 	private JsonObject data=null;
 	private String snapshot=null;
 	private String snapCondition=null;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
+
 	public Scope(JsonObject jo) {
 		scope=jo;		
 		data=scope.get("data").asJsonObject();
@@ -26,9 +38,14 @@ public class Scope {
 		if(snapshot!=null && snapshot.equals("disabled"))
 			snapshot=null;
 		snapCondition=data.getString("snapCondition",null);
+
+		guid = data.getString("guid",null);
+		name = scope.getString("text",null);
+		type = scope.getString("type",null);
 	}
 	
 	public void process(DataPipeline dp) throws SnippetException{
+		dp.addErrorStack(this);
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		if(disabled)

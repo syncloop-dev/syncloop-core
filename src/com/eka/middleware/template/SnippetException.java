@@ -1,6 +1,7 @@
 package com.eka.middleware.template;
 
 import com.google.common.collect.Maps;
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,6 +16,9 @@ public class SnippetException extends Exception {
     public static Logger logger = LogManager.getLogger(SnippetException.class);
     public boolean propagate = true;
     private final String message;
+
+    @Getter
+    private final DataPipeline dataPipeLine;
     private String code = "SY_0001";
     private final Map<String, Object> meta;
 
@@ -23,6 +27,7 @@ public class SnippetException extends Exception {
         meta = Maps.newHashMap();
         propagate = !errMsg.equals(e.getMessage());
         message = e.getMessage();
+        this.dataPipeLine = dataPipeLine;
         if (propagate) {
             ServiceUtils.printException(dataPipeLine.getSessionId() + "    " + dataPipeLine.getCorrelationId() + "    " + errMsg, this);
             ServiceUtils.printException(dataPipeLine, errMsg, this);
@@ -40,6 +45,7 @@ public class SnippetException extends Exception {
         this.meta = meta;
         propagate = !errMsg.equals(e.getMessage());
         message = e.getMessage();
+        this.dataPipeLine = dataPipeLine;
 
         if (StringUtils.isNotBlank(code)) {
             this.code = code;

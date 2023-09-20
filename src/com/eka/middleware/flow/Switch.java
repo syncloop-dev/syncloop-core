@@ -14,30 +14,32 @@ import com.eka.middleware.template.SnippetException;
 
 public class Switch {
 	private List<Scope> cases;
-	private boolean disabled=false;
+	private boolean disabled = false;
 	private String condition;
 	private String caseLabel;
 	private String switchVariable;
 	private JsonObject swich;
 	private String switchXpath;
-	private String snapshot=null;
-	private String snapCondition=null;
-	private JsonObject data=null;
+	private String snapshot = null;
+	private String snapCondition = null;
+	private JsonObject data = null;
 	private String comment;
+
 	public Switch(JsonObject jo) {
-		swich=jo;
-		data=swich.get("data").asJsonObject();
-		condition=swich.get("data").asJsonObject().getString("condition",null);
-		String status=swich.get("data").asJsonObject().getString("status",null);
-		disabled="disabled".equals(status);
-		caseLabel=swich.get("data").asJsonObject().getString("label",null);
-		switchXpath=swich.get("data").asJsonObject().getString("switch",null);
-		snapshot=data.getString("snap",null);
-		if(snapshot!=null && snapshot.equals("disabled"))
-			snapshot=null;
-		snapCondition=data.getString("snapCondition",null);
-		comment=data.getString("comment",null);
+		swich = jo;
+		data = swich.get("data").asJsonObject();
+		condition = swich.get("data").asJsonObject().getString("condition", null);
+		String status = swich.get("data").asJsonObject().getString("status", null);
+		disabled = "disabled".equals(status);
+		caseLabel = swich.get("data").asJsonObject().getString("label", null);
+		switchXpath = swich.get("data").asJsonObject().getString("switch", null);
+		snapshot = data.getString("snap", null);
+		if (snapshot != null && snapshot.equals("disabled"))
+			snapshot = null;
+		snapCondition = data.getString("snapCondition", null);
+		comment = data.getString("comment", null);
 	}
+
 
 	public void process(DataPipeline dp) throws SnippetException {
 		if(dp.isDestroyed())
@@ -88,7 +90,8 @@ public class Switch {
 					Object objLablVal=dp.getValueByPointer(pointer);// FlowUtils.placeXPathValue(switchXpath, dp);
 					if(objLablVal!=null)
 						xVal=objLablVal+"";
-				}
+				}else
+					xVal=caseLabel;
 			}else
 				xVal=caseLabel;
 			
@@ -106,7 +109,8 @@ public class Switch {
 				return;
 			}else if(xPathValue!=null && caseLabel.toLowerCase().startsWith("#regex:")) {
 				caseLabel=caseLabel.substring(7);
-				boolean match=FlowUtils.patternMatches(xPathValue,caseLabel);
+				String label=FlowUtils.placeXPathValue(caseLabel, dp);
+				boolean match=FlowUtils.patternMatches(xPathValue,label);
 				if(match) {
 					Scope scope=new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
@@ -126,10 +130,6 @@ public class Switch {
 			dp.put("*snapshot",snap);
 	}
 
-
-	public List<Scope> getCases() {
-		return cases;
-	}
 	public void setCases(List<Scope> cases) {
 		this.cases = cases;
 	}

@@ -14,6 +14,7 @@ import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderValues;
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -37,6 +38,9 @@ public class DataPipeline {
 	private final Map<String, Map<String, Object>> payloadStack = new HashMap<String, Map<String, Object>>();
 	private final Map<String, Boolean> hasDroppedPrevious = new HashMap<String, Boolean>();
 	private final List<String> resourceStack = new ArrayList<String>();
+
+	@Getter
+	private final List<FlowMeta> errorStack = new ArrayList<>();
 	private String currentResource = null;
 	private String callingResource = null;
 	private final String urlPath;
@@ -58,6 +62,15 @@ public class DataPipeline {
 		payloadStack.put(resource, rp.payload);
 		currentResource = resource;
 		resourceStack.add(resource);
+	}
+
+	public void addErrorStack(FlowBasicInfo flowBasicInfo) {
+
+		FlowMeta flowMeta = FlowMeta.builder().guid(flowBasicInfo.getGuid())
+				.name(flowBasicInfo.getName())
+				.type(flowBasicInfo.getType()).resource(resource).build();
+
+		errorStack.add(flowMeta);
 	}
 
 	public boolean isDestroyed() {

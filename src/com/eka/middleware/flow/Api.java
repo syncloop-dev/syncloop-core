@@ -6,9 +6,12 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
-public class Api {
+public class Api implements FlowBasicInfo {
 	private boolean disabled=false;
 	private boolean sync=true;
 	private String fqn;
@@ -25,6 +28,15 @@ public class Api {
 	private String requestMethod;
 	private String snapshot=null;
 	private String snapCondition=null;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
 
 	public Api(JsonObject jo) {
 		api=jo;
@@ -43,10 +55,15 @@ public class Api {
 //		System.out.println(data.isNull("transformers"));
 		if(data.containsKey("transformers") && !data.isNull("transformers"))
 			transformers=data.getJsonArray("transformers");
-		if(data.containsKey("createList") && !data.isNull("createList"))
+		if(!data.isNull("createList"))
 			createList=data.getJsonArray("createList");
-		if(data.containsKey("dropList") && !data.isNull("dropList"))
+		if(!data.isNull("dropList"))
 			dropList=data.getJsonArray("dropList");
+
+		guid = data.getString("guid",null);
+		name = api.getString("text",null);
+		type = api.getString("type",null);
+
 	}
 	public void process(DataPipeline dp) throws SnippetException {
 		if(dp.isDestroyed())
@@ -74,7 +91,10 @@ public class Api {
 		//FlowUtils.setValue(createList, dp);
 		//if(transformers!=null)
 		//	FlowUtils.mapBefore(transformers, dp);
-		String serviceFqn=api.getString("text",null);
+		String serviceFqn=data.getString("fqn", null);
+		if (StringUtils.isBlank(serviceFqn)) {
+			serviceFqn = api.getString("text",null);
+		}
 		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
 			if("async".equals(requestMethod))
 				dp.applyAsync(serviceFqn.trim()+".main",transformers);
