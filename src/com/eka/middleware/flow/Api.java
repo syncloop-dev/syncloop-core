@@ -6,10 +6,12 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
-public class Api {
+public class Api implements FlowBasicInfo {
 	private boolean disabled=false;
 	private boolean sync=true;
 	private String fqn;
@@ -26,6 +28,15 @@ public class Api {
 	private String requestMethod;
 	private String snapshot=null;
 	private String snapCondition=null;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
 
 	public Api(JsonObject jo) {
 		api=jo;
@@ -49,8 +60,13 @@ public class Api {
 		if(!data.isNull("dropList"))
 			dropList=data.getJsonArray("dropList");
 
+		guid = data.getString("guid",null);
+		name = api.getString("text",null);
+		type = api.getString("type",null);
+
 	}
 	public void process(DataPipeline dp) throws SnippetException {
+		dp.addErrorStack(this);
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		String snap=dp.getString("*snapshot");

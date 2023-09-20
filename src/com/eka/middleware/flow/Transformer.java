@@ -6,9 +6,11 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import lombok.Getter;
 
-public class Transformer {
+public class Transformer implements FlowBasicInfo {
 	private boolean disabled=false;
 	private String condition;
 	private String label;
@@ -22,6 +24,16 @@ public class Transformer {
 	private JsonArray dropList;
 	private String snapshot=null;
 	private String snapCondition=null;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
+
 	public Transformer(JsonObject jo) {
 		transformer=jo;		
 		data=transformer.get("data").asJsonObject();
@@ -41,9 +53,14 @@ public class Transformer {
 		if(snapshot!=null && snapshot.equals("disabled"))
 			snapshot=null;
 		snapCondition=data.getString("snapCondition",null);
+
+		guid = data.getString("guid",null);
+		name = transformer.getString("text",null);
+		type = transformer.getString("type",null);
 	}
 	
     public void process(DataPipeline dp) throws SnippetException {
+		dp.addErrorStack(this);
     	if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
     	if(disabled)
