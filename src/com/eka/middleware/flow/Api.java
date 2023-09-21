@@ -66,9 +66,9 @@ public class Api implements FlowBasicInfo {
 
 	}
 	public void process(DataPipeline dp) throws SnippetException {
-		dp.addErrorStack(this);
-		if(dp.isDestroyed())
+		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+		}
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {
@@ -88,6 +88,8 @@ public class Api implements FlowBasicInfo {
 		}
 		if(disabled)
 			return;
+		dp.addErrorStack(this);
+
 		//if(createList!=null)
 		//FlowUtils.setValue(createList, dp);
 		//if(transformers!=null)

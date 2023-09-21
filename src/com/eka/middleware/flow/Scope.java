@@ -45,11 +45,13 @@ public class Scope implements FlowBasicInfo {
 	}
 	
 	public void process(DataPipeline dp) throws SnippetException{
-		dp.addErrorStack(this);
-		if(dp.isDestroyed())
+		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
-		if(disabled)
+		}
+		if(disabled) {
 			return;
+		}
+		dp.addErrorStack(this);
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {

@@ -10,11 +10,13 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.fasterxml.jackson.databind.node.BooleanNode;
+import lombok.Getter;
 
-public class Await {
+public class Await implements FlowBasicInfo {
 	private boolean disabled = false;
 //	private String inputArrayPath;
 //	private String outPutArrayPath;
@@ -28,6 +30,16 @@ public class Await {
 	private String snapshot=null;
 	private String snapCondition=null;
 	private long timeout_seconds_each_thread=60;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
+
 	public Await(JsonObject jo) {
 		await = jo;
 		data = await.get("data").asJsonObject();
@@ -54,6 +66,10 @@ public class Await {
 			}
 		}
 //		outArrayType = data.getString("outArrayType", "document");
+
+		guid = data.getString("guid",null);
+		name = await.getString("text",null);
+		type = await.getString("type",null);
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
@@ -61,6 +77,8 @@ public class Await {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		if (disabled)
 			return;
+
+		dp.addErrorStack(this);
 		
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
