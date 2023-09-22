@@ -62,7 +62,6 @@ public class SQL {
                     String v = map.get(k) + "";
                     //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
                     query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
-                    System.out.println("query" + query);
                 }
                 if (logQuery)
                     dp.log(query);

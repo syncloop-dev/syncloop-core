@@ -46,7 +46,6 @@ public class Client {
 		URL endpointUrl;
         try {
             endpointUrl = new URL(url);
-            System.out.println(endpointUrl);
         } catch (MalformedURLException e) {
             throw new RuntimeException("Unable to parse service endpoint: " + e.getMessage());
         }

@@ -188,12 +188,9 @@ public class AWSV4Auth {
                                                                   currentDate,regionName,serviceName));
           headers.put("x-amz-content-sha256", payloadHex);
           /*// if (debug) {
-          System.out.println("##Signature:\n" + signature);
-          System.out.println("##Header:");
                 for (Map.Entry<String, String> entrySet : headers.entrySet()) {
                 	System.out.println(entrySet.getKey() + " = " + entrySet.getValue());
                 }
-                System.out.println("================================");
            // }*/
             
             //return header;
