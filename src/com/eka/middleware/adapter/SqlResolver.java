@@ -80,6 +80,8 @@ public class SqlResolver {
 				dp.put("success", true);
 				break;
 			case "DML_RGK":
+				System.out.println("sqlcode " + sqlCode );
+				System.out.println("sqlParameters " + sqlParameters );
 				String keys[]=SQL.DML_RGKs(sqlCode, sqlParameters, myCon,dp,lq);
 				dp.put("rows", keys.length);
 				dp.put("keys", keys);
@@ -118,6 +120,5 @@ public class SqlResolver {
 		if(validationRequired)
 			FlowUtils.validateDocuments(dp, sqlOutput);
 	}
-	
 	
 }

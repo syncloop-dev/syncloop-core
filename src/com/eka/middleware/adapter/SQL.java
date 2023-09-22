@@ -34,6 +34,13 @@ public class SQL {
                     outputDocList.addAll(docList);
             }
         } else {
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
+            if (placeholders != null) {
+                for (String placeholder : placeholders) {
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
+                }
+            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -55,6 +62,7 @@ public class SQL {
                     String v = map.get(k) + "";
                     //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
                     query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
+                    System.out.println("query" + query);
                 }
                 if (logQuery)
                     dp.log(query);
@@ -62,6 +70,15 @@ public class SQL {
                 rows += myStmt.executeUpdate();
             }
         } else {
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
+            if (placeholders != null) {
+                for (String placeholder : placeholders) {
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
+                }
+            }
+            if (logQuery)
+                dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
             rows = myStmt.executeUpdate();
         }
@@ -83,15 +100,23 @@ public class SQL {
                 PreparedStatement myStmt = myCon.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
                 if (myStmt.executeUpdate() > 0) {
                     ResultSet keys = myStmt.getGeneratedKeys();
-                    if (keys.next())
+                    if (keys.next()) {
                         ids += keys.getObject(1) + ",";
-                    else
+                    }
+                    else {
                         ids += "null,";
+                    }
                 }
-
-                //rows += myStmt.executeUpdate();
+               // rows += myStmt.executeUpdate();
             }
         } else {
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
+            if (placeholders != null) {
+                for (String placeholder : placeholders) {
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
+                }
+            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -125,6 +150,13 @@ public class SQL {
                 isSuccessful = myStmt.execute();
             }
         } else {
+            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
+            if (placeholders != null) {
+                for (String placeholder : placeholders) {
+                    String replacement = "NULL";
+                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
+                }
+            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
