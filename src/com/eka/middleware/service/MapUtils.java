@@ -85,13 +85,21 @@ public class MapUtils {
 			break;
 		}
 
+		Object currentPayload=null;
 		if (tokenCount == 1) {
-			if(parentMap instanceof DataPipeline)
+			if(parentMap instanceof DataPipeline) {
 				((DataPipeline)parentMap).put(pointerTokens[0], value);
-			else
+				currentPayload=((DataPipeline)parentMap).getMap();
+			}
+			else {
 				((Map)parentMap).put(pointerTokens[0], value);
+				currentPayload=((Map)parentMap);
+			}
 			return;
+		} else if(parentMap instanceof DataPipeline) {
+			currentPayload=((DataPipeline)parentMap).getMap();
 		}
+
 		String key;
 		for (int i = 0; i < tokenCount - 1; i++) {
 			key = pointerTokens[i];
@@ -100,7 +108,7 @@ public class MapUtils {
 				path = key;
 			else
 				path += "/" + key;
-			obj = getValueByPointer(path,parentMap);
+			obj = getValueByPointer(path, currentPayload);
 			if (obj == null) {
 				if (preObj.getClass().toString().contains("ArrayList") && isNumeric) {
 					int index = Integer.parseInt(key);
