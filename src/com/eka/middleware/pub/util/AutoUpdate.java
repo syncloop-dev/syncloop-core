@@ -141,9 +141,6 @@ public class AutoUpdate {
 
         String downloadLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/import/";
         createFoldersIfNotExist(downloadLocation);   
-        System.out.println("package path: " + PropertyManager.getPackagePath(dataPipeline.rp.getTenant()));
-        System.err.println("downloadLocation: " + downloadLocation);
-
 
         File downloadedFile = new File(downloadLocation + fileName);
 
