@@ -61,12 +61,14 @@ public class Loop implements FlowBasicInfo {
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
-		dp.addErrorStack(this);
-		if(dp.isDestroyed())
+		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
-		if (disabled || inputArrayPath == null)
+		}
+		if (disabled || inputArrayPath == null) {
 			return;
-		
+		}
+		dp.addErrorStack(this);
+
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {
@@ -159,6 +161,9 @@ public class Loop implements FlowBasicInfo {
 			JsonArray flows = loop.getJsonArray("children");
 			for (JsonValue jsonValue : flows) {
 				final String type = jsonValue.asJsonObject().getString("type");
+				JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+				String status=jov.getString("status",null);
+				if(!"disabled".equals(status))
 				switch (type) {
 				case "try-catch":
 					TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
@@ -196,6 +201,10 @@ public class Loop implements FlowBasicInfo {
 					case "transformer":
 					Transformer transformer = new Transformer(jsonValue.asJsonObject());
 					transformer.process(dp);
+					break;
+				case "await":
+						Await await=new Await(jsonValue.asJsonObject());
+						await.process(dp);
 					break;
 				}
 			}

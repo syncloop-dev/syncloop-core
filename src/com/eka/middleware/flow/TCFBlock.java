@@ -51,11 +51,11 @@ public class TCFBlock implements FlowBasicInfo {
 	}
 	
 	public void process(DataPipeline dp) throws SnippetException {
-		dp.addErrorStack(this);
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		if(disabled)
 			return;
+		dp.addErrorStack(this);
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {
@@ -91,7 +91,7 @@ public class TCFBlock implements FlowBasicInfo {
 		try {
 			TRY.process(dp);
 		} catch (Exception e) {
-			dp.put("lastErrorDump", ServiceUtils.getExceptionMap(e));
+			dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
 			CATCH.process(dp);
 		}finally {
 			FINALLY.process(dp);

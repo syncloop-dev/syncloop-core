@@ -53,12 +53,14 @@ public class IfElse implements FlowBasicInfo {
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
-		dp.addErrorStack(this);
-		if (dp.isDestroyed())
+		if (dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread",
 					new Exception("Service runtime pipeline destroyed manually"));
-		if (disabled)
+		}
+		if (disabled) {
 			return;
+		}
+		dp.addErrorStack(this);
 		String snap = dp.getString("*snapshot");
 		boolean canSnap = false;
 		if (snap != null || snapshot != null) {
@@ -82,6 +84,11 @@ public class IfElse implements FlowBasicInfo {
 		for (JsonValue jsonValue : flows) {
 			String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
 			boolean result = false;
+
+			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+			String status=jov.getString("status",null);
+			if("disabled".equalsIgnoreCase(status))
+				continue;
 
 			// ifLogic=xVal;
 			if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {

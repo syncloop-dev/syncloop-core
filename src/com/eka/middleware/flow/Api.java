@@ -53,7 +53,7 @@ public class Api implements FlowBasicInfo {
 		snapCondition=data.getString("snapCondition",null);
 		requestMethod=data.getString("requestMethod","sync");
 //		System.out.println(data.isNull("transformers"));
-		if(!data.isNull("transformers"))
+		if(data.containsKey("transformers") && !data.isNull("transformers"))
 			transformers=data.getJsonArray("transformers");
 		if(!data.isNull("createList"))
 			createList=data.getJsonArray("createList");
@@ -66,9 +66,9 @@ public class Api implements FlowBasicInfo {
 
 	}
 	public void process(DataPipeline dp) throws SnippetException {
-		dp.addErrorStack(this);
-		if(dp.isDestroyed())
+		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+		}
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {
@@ -88,10 +88,12 @@ public class Api implements FlowBasicInfo {
 		}
 		if(disabled)
 			return;
+		dp.addErrorStack(this);
+
 		//if(createList!=null)
 		//FlowUtils.setValue(createList, dp);
-		if(transformers!=null)
-			FlowUtils.mapBefore(transformers, dp);
+		//if(transformers!=null)
+		//	FlowUtils.mapBefore(transformers, dp);
 		String serviceFqn=data.getString("fqn", null);
 		if (StringUtils.isBlank(serviceFqn)) {
 			serviceFqn = api.getString("text",null);
@@ -100,9 +102,10 @@ public class Api implements FlowBasicInfo {
 			if("async".equals(requestMethod))
 				dp.applyAsync(serviceFqn.trim()+".main",transformers);
 			else
-				dp.apply(serviceFqn.trim()+".main");
-			if(transformers!=null)
-				FlowUtils.mapAfter(transformers, dp);
+				dp.apply(serviceFqn.trim()+".main",transformers);
+			//if(transformers!=null)
+				//FlowUtils.mapAfter(transformers, dp);
+			dp.clearServicePayload();
 		}
 		if(createList!=null)
 			FlowUtils.setValue(createList, dp);

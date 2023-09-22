@@ -45,11 +45,13 @@ public class Scope implements FlowBasicInfo {
 	}
 	
 	public void process(DataPipeline dp) throws SnippetException{
-		dp.addErrorStack(this);
-		if(dp.isDestroyed())
+		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
-		if(disabled)
+		}
+		if(disabled) {
 			return;
+		}
+		dp.addErrorStack(this);
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {
@@ -70,7 +72,9 @@ public class Scope implements FlowBasicInfo {
 		JsonArray flows= scope.getJsonArray("children");
 		for (JsonValue jsonValue : flows) {
 			String type=jsonValue.asJsonObject().getString("type",null);
-			//System.out.println(type);
+			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+			String status=jov.getString("status",null);
+			if(!"disabled".equals(status))
 			switch(type) {
 				case "try-catch":
 					TCFBlock tcfBlock=new TCFBlock(jsonValue.asJsonObject());
@@ -156,7 +160,17 @@ public class Scope implements FlowBasicInfo {
 						if(canExecute)
 							transformer.process(dp);
 					}
-				break;		
+				break;	
+				case "await":
+					Await await=new Await(jsonValue.asJsonObject());
+					if(!evaluateCondition) {
+						await.process(dp);
+					}else { 
+						boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
+						if(canExecute)
+							await.process(dp);
+					}
+				break;
 			}
 		}
 		if(canSnap) {

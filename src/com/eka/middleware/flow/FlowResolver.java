@@ -66,6 +66,10 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				Transformer transformer=new Transformer(jsonValue.asJsonObject());
 				transformer.process(dp);
 			break;
+			case "await":
+				Await await=new Await(jsonValue.asJsonObject());
+				await.process(dp);
+			break;
 		}	
 	}
 	
