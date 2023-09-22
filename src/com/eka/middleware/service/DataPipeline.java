@@ -766,8 +766,8 @@ public class DataPipeline {
 		int size=resourceStack.size();
 		resourceStack.add(currentResource);
 		put("*currentResource", currentResource);
+		allowGlobal=true;
 		if(transformers!=null) {
-			allowGlobal=true;
 			FlowUtils.mapBefore(transformers, this);
 		}
 		final Map<String, Object> asyncInputDoc = this.getAsMap("asyncInputDoc")==null?new HashMap<>():this.getAsMap("asyncInputDoc");
@@ -1119,8 +1119,9 @@ public class DataPipeline {
 			rp.getTenant().logError(resource, log);
 		}else if(Level.TRACE.intLevel()==level.intLevel()) {
 			rp.getTenant().logTrace(resource, log);
+		} else {
+			LOGGER.log(level, log);
 		}
-		LOGGER.log(level, log);
 	}
 
 	public String getGlobalConfig(String key) throws SnippetException {
