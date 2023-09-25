@@ -19,10 +19,14 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import static com.eka.middleware.pub.util.AppUpdate.getStatus;
+import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
 
 
 public class AutoUpdate {
@@ -334,5 +338,20 @@ public class AutoUpdate {
             }
         }
     }
+    public static void updateTenantAsync(String version, DataPipeline dataPipeline) throws Exception {
+        String uniqueId = getDigestFromUrl(returnTenantUpdateUrl());
+        Runnable task = () -> {
+            updateStatus(uniqueId, "Start", dataPipeline);
+            try {
+                updateTenant(version, dataPipeline);
+                updateStatus(uniqueId, "Success", dataPipeline);
+                System.err.println("status " + getStatus(uniqueId, dataPipeline));
+            } catch (Exception e) {
+                e.printStackTrace();
+                updateStatus(uniqueId, "Error" , dataPipeline);
+            }
+        };
 
+        MultiTaskExecutor.execute(task);
+    }
 }
