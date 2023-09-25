@@ -89,11 +89,9 @@ public class MapUtils {
 		if (tokenCount == 1) {
 			if(parentMap instanceof DataPipeline) {
 				((DataPipeline)parentMap).put(pointerTokens[0], value);
-				currentPayload=((DataPipeline)parentMap).getMap();
 			}
 			else {
 				((Map)parentMap).put(pointerTokens[0], value);
-				currentPayload=((Map)parentMap);
 			}
 			return;
 		} else if(parentMap instanceof DataPipeline) {

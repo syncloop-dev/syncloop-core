@@ -81,7 +81,16 @@ public class DataPipeline {
 		String currentResource = getCurrentResource();
 		Map<String, Object> map = payloadStack.get(currentResource);
 		if (servicePayload != null) {
-			Object value = servicePayload.get(key);
+			Object value = null;
+
+			if(value==null&& allowGlobal && payloadStack.get(this.callingResource)!=null){
+				value=payloadStack.get(this.callingResource).get(key);
+				if (value != null)
+					return value;
+			}
+
+			value = servicePayload.get(key);
+
 			if (value != null)
 				return value;
 			else if(map!=null){
@@ -91,11 +100,6 @@ public class DataPipeline {
 			}
 			if(value==null && globalPayload!=null){
 				value=globalPayload.get(key);
-				if (value != null)
-					return value;
-			}
-			if(value==null&& allowGlobal && payloadStack.get(this.callingResource)!=null){
-				value=payloadStack.get(this.callingResource).get(key);
 				if (value != null)
 					return value;
 			}
