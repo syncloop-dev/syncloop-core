@@ -338,20 +338,27 @@ public class AutoUpdate {
             }
         }
     }
-    public static void updateTenantAsync(String version, DataPipeline dataPipeline) throws Exception {
+    public static String updateTenantAsync(String version, DataPipeline dataPipeline) throws Exception {
         String uniqueId = getDigestFromUrl(returnTenantUpdateUrl());
+
+        Object status = getStatus(uniqueId, dataPipeline);
+
+        if (null != status && "PENDING".equalsIgnoreCase(status.toString())) {
+            throw new Exception("Update is already in progress");
+        }
+
         Runnable task = () -> {
-            updateStatus(uniqueId, "Start", dataPipeline);
+            updateStatus(uniqueId, "PENDING", dataPipeline);
             try {
                 updateTenant(version, dataPipeline);
-                updateStatus(uniqueId, "Success", dataPipeline);
-                System.err.println("status " + getStatus(uniqueId, dataPipeline));
+                updateStatus(uniqueId, "COMPLETED_SUCCESS", dataPipeline);
             } catch (Exception e) {
                 e.printStackTrace();
-                updateStatus(uniqueId, "Error" , dataPipeline);
+                updateStatus(uniqueId, "COMPLETED_ERROR" , dataPipeline);
             }
         };
 
-        MultiTaskExecutor.execute(task);
+        dataPipeline.rp.getExecutor().execute(task);
+        return uniqueId;
     }
 }

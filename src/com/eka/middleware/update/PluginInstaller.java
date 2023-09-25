@@ -1,7 +1,6 @@
 package com.eka.middleware.update;
 
 import com.eka.middleware.pub.util.AutoUpdate;
-import com.eka.middleware.pub.util.MultiTaskExecutor;
 import com.eka.middleware.server.Build;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
@@ -173,18 +172,19 @@ public class PluginInstaller {
             }
         }
     }
-    public static void installPluginAsync(String pluginId, String version, DataPipeline dataPipeline) throws Exception {
+    public static String installPluginAsync(String pluginId, String version, DataPipeline dataPipeline) throws Exception {
         Runnable task = () -> {
-            updateStatus(pluginId, "Start", dataPipeline);
+            updateStatus(pluginId, "PENDING", dataPipeline);
             try {
                 installPlugin(version,version ,dataPipeline);
-                updateStatus(pluginId, "Success", dataPipeline);
+                updateStatus(pluginId, "COMPLETED_SUCCESS", dataPipeline);
 
             } catch (Exception e) {
                 e.printStackTrace();
-                updateStatus(pluginId, "Error" , dataPipeline);
+                updateStatus(pluginId, "COMPLETED_ERROR" , dataPipeline);
             }
         };
-        MultiTaskExecutor.execute(task);
+        dataPipeline.rp.getExecutor().execute(task);
+        return pluginId;
     }
 }

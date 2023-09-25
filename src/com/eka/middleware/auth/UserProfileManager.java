@@ -205,7 +205,9 @@ public class UserProfileManager implements IdentityManager {
 			}
 
 			Map<String, Object> user = new HashMap();
-			user.put("profile", account.getAuthProfile());
+			Map<String, Object> profile = account.getAuthProfile();
+			profile.put("verification_secret", "");
+			user.put("profile", profile);
 
 			user.put("password", password);
 			user.put("status", status);
