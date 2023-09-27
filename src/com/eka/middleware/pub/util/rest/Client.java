@@ -254,6 +254,14 @@ public class Client {
 			response = httpClientBuilder.build().send(builder.build(), HttpResponse.BodyHandlers.ofString());
 		}
 
+		if (response.statusCode() == 301 || response.statusCode() == 302) {
+			String redirectUrl = response.headers().firstValue("Location").orElse(null);
+			if (StringUtils.isNotBlank(redirectUrl)) {
+				return invoke(redirectUrl, method, formData, reqHeaders, payload, inputStream, queryParameters,
+						settings, sslValidation);
+			}
+		}
+
 		Map<String, List<String>> responseHeaderFields = response.headers().map();
 
 		Map<String, String> responseHeaders = Maps.newHashMap();
