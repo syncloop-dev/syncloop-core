@@ -34,13 +34,6 @@ public class SQL {
                     outputDocList.addAll(docList);
             }
         } else {
-            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
-            if (placeholders != null) {
-                for (String placeholder : placeholders) {
-                    String replacement = "NULL";
-                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
-                }
-            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -63,19 +56,14 @@ public class SQL {
                     //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
                     query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
                 }
+                query = removeUninitialized(query);
                 if (logQuery)
                     dp.log(query);
                 PreparedStatement myStmt = myCon.prepareStatement(query);
                 rows += myStmt.executeUpdate();
             }
         } else {
-            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
-            if (placeholders != null) {
-                for (String placeholder : placeholders) {
-                    String replacement = "NULL";
-                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
-                }
-            }
+            sqlCode = removeUninitialized(sqlCode);
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -94,6 +82,7 @@ public class SQL {
                     //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
                     query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
                 }
+                query = removeUninitialized(query);
                 if (logQuery)
                     dp.log(query);
                 PreparedStatement myStmt = myCon.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
@@ -109,13 +98,7 @@ public class SQL {
                // rows += myStmt.executeUpdate();
             }
         } else {
-            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
-            if (placeholders != null) {
-                for (String placeholder : placeholders) {
-                    String replacement = "NULL";
-                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
-                }
-            }
+            sqlCode = removeUninitialized(sqlCode);
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -129,6 +112,17 @@ public class SQL {
         }
         ids = (ids + "_").replace(",_", "");
         return ids.split(",");
+    }
+
+    private static String removeUninitialized(String sqlCode) {
+        String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
+        if (placeholders != null) {
+            for (String placeholder : placeholders) {
+                String replacement = "NULL";
+                sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
+            }
+        }
+        return sqlCode;
     }
 
     public static Boolean DDL(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
@@ -149,13 +143,6 @@ public class SQL {
                 isSuccessful = myStmt.execute();
             }
         } else {
-            String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}"); // Extract placeholders
-            if (placeholders != null) {
-                for (String placeholder : placeholders) {
-                    String replacement = "NULL";
-                    sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
-                }
-            }
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
