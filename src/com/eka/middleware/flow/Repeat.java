@@ -107,8 +107,11 @@ public class Repeat implements FlowBasicInfo {
         }
         long index = 0;
         boolean canExecute = true;
-        if (repeatTimes < 0 && getCondition() != null)
+        if (repeatTimes < 0 && getCondition() != null) {
             canExecute = FlowUtils.evaluateCondition(getCondition(), dp);
+        } else if (repeatTimes == 0) {
+            canExecute = false;
+        }
         while (repeatOn != null && canExecute) {
 
             dp.put(indexVar, index + "");
