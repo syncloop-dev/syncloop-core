@@ -242,6 +242,10 @@ public class DataPipeline {
 		}
 
 	}
+
+	public void map(String key, Object value) {
+		servicePayload.put(key, value);
+	}
 	
 	public void putGlobal(String key, Object value) {
 		globalPayload.put(key, value);

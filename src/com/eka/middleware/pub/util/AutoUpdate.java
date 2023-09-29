@@ -45,8 +45,8 @@ public class AutoUpdate {
             if(dp.getString("error")==null){
                 String key=(String)k;
                 String value=(String)v;
-                dp.put("fqn",value);
-                dp.put("alias",key);
+                dp.map("fqn",value);
+                dp.map("alias",key);
                 try{
                     dp.apply("packages.middleware.pub.server.browse.registerURLAlias");
                     String msg=dp.getString("msg");

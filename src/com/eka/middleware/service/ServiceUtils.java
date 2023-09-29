@@ -1393,7 +1393,7 @@ public class ServiceUtils {
 
 					if (rootName.toLowerCase().equals("introspectionquery")) {
 						//dp.put("*gqlData", gqlData);
-						dp.getServicePayload().put("*gqlData", gqlData);
+						dp.map("*gqlData", gqlData);
 						dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
 						dp.clearServicePayload();
 						rootObject = dp.get("*multiPart");
@@ -1434,7 +1434,7 @@ public class ServiceUtils {
 
 		if (StringUtils.isNotBlank(gql) && StringUtils.isBlank(GraphQLDBC)) {
 			//dp.put("*gqlData", gqlData);
-			dp.getServicePayload().put("*gqlData", gqlData);
+			dp.map("*gqlData", gqlData);
 			Map<String, Object> data = new HashMap<>();
 			String rootName = (String) gqlData.get("rootName");
 			rootObject = dp.get(rootName);
