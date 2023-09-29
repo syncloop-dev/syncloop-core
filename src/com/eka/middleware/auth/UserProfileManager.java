@@ -132,7 +132,10 @@ public class UserProfileManager implements IdentityManager {
 		//String tenant = profile.get("tenant").toString();
 		//String userId1 = profile.get("userId").toString();
 
-		return new User(password,email,1,name,"1",UUID.randomUUID().toString(),groups);
+		String userId = account.getUserId().toString();
+		String passHash = "[#]" + ServiceUtils.generateUUID(password + userId);
+
+		return new User(passHash,email,1,name,"1",UUID.randomUUID().toString(),groups);
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
