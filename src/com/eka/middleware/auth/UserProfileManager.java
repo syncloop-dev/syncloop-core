@@ -68,10 +68,13 @@ public class UserProfileManager implements IdentityManager {
 		String json = ServiceUtils.toPrettyJson(map);
 		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
 	}
-	
+
 	public static void newGroup(String name) throws Exception {
-		GroupRepoImpl.addGroup(new Group(name));
+
+		Group group = new Group(name,1);
+		GroupRepoImpl.addGroup(group);
 	}
+
 	public static void removeGroup(String name) throws Exception {
 		GroupRepoImpl.deleteGroup(name);
 	}
@@ -125,8 +128,11 @@ public class UserProfileManager implements IdentityManager {
 		List<Group> groups = groupName.stream()
 				.map(Group::new)
 				.collect(Collectors.toList());
-		String tenant = profile.get("tenant").toString();
-		return new User(email,password, name, groups, email, tenant, "1");
+
+		//String tenant = profile.get("tenant").toString();
+		//String userId1 = profile.get("userId").toString();
+
+		return new User(password,email,1,name,"1",UUID.randomUUID().toString(),groups);
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
@@ -135,32 +141,9 @@ public class UserProfileManager implements IdentityManager {
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass, String status) throws SystemException {
-		try {
-			final Map<String, Object> map = new HashMap();
-			final Map<String, Object> umap = getUsers();
-			Object existingUser = umap.get(account.getUserId());
-			if (existingUser == null) {
-				throw new Exception("User not found: " + account.getUserId());
-			}
-			String password=(String) ((Map)existingUser).get("password");
-			if(pass!=null) {
-				password=new String(pass,StandardCharsets.UTF_8);
-				password = "[#]" + ServiceUtils.generateUUID(password + account.getUserId());
-			}
 
-			Map<String, Object> user = new HashMap();
-			user.put("profile", account.getAuthProfile());
-
-			user.put("password", password);
-			user.put("status", status);
-			umap.put(account.getUserId(), user);
-			map.put("users", umap);
-			map.put("tenants", getTenants());
-			String json = ServiceUtils.toPrettyJson(map);
-			PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
-		} catch (Exception e) {
-			throw new SystemException("EKA_MWS_1001", e);
-		}
+		User userFromAccount = createUserFromAccount(account);
+		UserRepoImpl.updateUser(userFromAccount.getEmail(),userFromAccount);
 	}
 
 	public static void removeUser(String id) throws SystemException {
@@ -183,7 +166,6 @@ public class UserProfileManager implements IdentityManager {
 
 	@Override
 	public Account verify(Account account) {
-		// An existing account so for testing assume still valid.
 		return account;
 	}
 

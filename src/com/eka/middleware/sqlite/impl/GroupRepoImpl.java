@@ -49,16 +49,20 @@ public class GroupRepoImpl {
     }
 
     public static void addGroup(Group group) throws SystemException {
+        String name = group.getGroupName();
+        int tenantId =group.getTenantId();
         try (Connection conn = ConnectionManager.getConnection()) {
-            String sql = "INSERT INTO groups (name) VALUES (?)";
+            String sql = "INSERT INTO groups (name, tenant_id) VALUES (?, ?)";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, group.getGroupName());
+                statement.setString(1, name);
+                statement.setInt(2, tenantId);
                 statement.executeUpdate();
             }
         } catch (SQLException e) {
             throw new SystemException("EKA_MWS_1001", e);
         }
     }
+
 
     public static void updateGroup(String groupName, Group group) throws SystemException {
         try (Connection conn = ConnectionManager.getConnection()) {
