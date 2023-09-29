@@ -1,17 +1,16 @@
 package com.eka.middleware.flow;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
+import lombok.Getter;
 
-public class TCFBlock {
+public class TCFBlock implements FlowBasicInfo {
 	private Scope TRY;
 	private Scope CATCH;
 	private Scope FINALLY;
@@ -23,6 +22,16 @@ public class TCFBlock {
 	private JsonObject data=null;
 	private String snapshot=null;
 	private String snapCondition=null;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
+
 	public TCFBlock(JsonObject jo) {
 		tcfBlock=jo;	
 		data=tcfBlock.get("data").asJsonObject();
@@ -35,13 +44,18 @@ public class TCFBlock {
 		if(snapshot!=null && snapshot.equals("disabled"))
 			snapshot=null;
 		snapCondition=data.getString("snapCondition",null);
+
+		guid = data.getString("guid",null);
+		name = tcfBlock.getString("text",null);
+		type = tcfBlock.getString("type",null);
 	}
 	
-	public void process(DataPipeline dp) throws SnippetException {	
+	public void process(DataPipeline dp) throws SnippetException {
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		if(disabled)
 			return;
+		dp.addErrorStack(this);
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {
@@ -77,7 +91,7 @@ public class TCFBlock {
 		try {
 			TRY.process(dp);
 		} catch (Exception e) {
-			dp.put("lastErrorDump", ServiceUtils.getExceptionMap(e));
+			dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
 			CATCH.process(dp);
 		}finally {
 			FINALLY.process(dp);

@@ -16,6 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
+import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
+
 public class PluginInstaller {
 
     /**
@@ -170,5 +172,19 @@ public class PluginInstaller {
             }
         }
     }
+    public static String installPluginAsync(String pluginId, String version, DataPipeline dataPipeline) throws Exception {
+        Runnable task = () -> {
+            updateStatus(pluginId, "PENDING", dataPipeline);
+            try {
+                installPlugin(version,version ,dataPipeline);
+                updateStatus(pluginId, "COMPLETED_SUCCESS", dataPipeline);
 
+            } catch (Exception e) {
+                e.printStackTrace();
+                updateStatus(pluginId, "COMPLETED_ERROR" , dataPipeline);
+            }
+        };
+        dataPipeline.rp.getExecutor().execute(task);
+        return pluginId;
+    }
 }

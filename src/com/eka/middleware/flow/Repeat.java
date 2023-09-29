@@ -6,13 +6,16 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
+import com.eka.middleware.service.FlowBasicInfo;
+import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
-public class Repeat {
+public class Repeat implements FlowBasicInfo {
     private List<Scope> scopes;
     private List<TCFBlock> tcfBlocks;
     private List<Api> invokes;
@@ -33,13 +36,25 @@ public class Repeat {
     private String snapshot = null;
     private String snapCondition = null;
 
+    @Getter
+    private String name;
+
+    @Getter
+    private String type;
+
+    @Getter
+    private String guid;
+
     public Repeat(JsonObject jo) {
         repeat = jo;
         data = repeat.get("data").asJsonObject();
         condition = data.getString("condition", null);
         String status = data.getString("status", null);
         disabled = "disabled".equals(status);
-        String rt = data.getString("redo", "0");
+        String rt = data.getString("redo", null);
+        if (StringUtils.isBlank(rt)) {
+            rt = data.getString("repeat", "0");
+        }
         if (rt.startsWith("#{")) {
             rt = FlowUtils.extractExpressions(rt)[0];
         }
@@ -59,13 +74,20 @@ public class Repeat {
         if (snapshot != null && snapshot.equals("disabled"))
             snapshot = null;
         snapCondition = data.getString("snapCondition", null);
+
+        guid = data.getString("guid",null);
+        name = repeat.getString("text",null);
+        type = repeat.getString("type",null);
     }
 
     public void process(DataPipeline dp) throws SnippetException {
-        if (dp.isDestroyed())
+        if (dp.isDestroyed()) {
             throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
-        if (disabled)
+        }
+        if (disabled) {
             return;
+        }
+        dp.addErrorStack(this);
         String snap = dp.getString("*snapshot");
         boolean canSnap = false;
         if (snap != null || snapshot != null) {
@@ -85,8 +107,11 @@ public class Repeat {
         }
         long index = 0;
         boolean canExecute = true;
-        if (repeatTimes < 0 && getCondition() != null)
+        if (repeatTimes < 0 && getCondition() != null) {
             canExecute = FlowUtils.evaluateCondition(getCondition(), dp);
+        } else if (repeatTimes == 0) {
+            canExecute = false;
+        }
         while (repeatOn != null && canExecute) {
 
             dp.put(indexVar, index + "");
@@ -108,11 +133,11 @@ public class Repeat {
                         se = (SnippetException) e;
                     else
                         se = new SnippetException(dp, "Exception on step repeat(" + comment + ")", new Exception(e));
-                    dp.put("lastErrorDump", ServiceUtils.getExceptionMap(se));
+                    dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(se));
                     if (se.propagate)
                         throw se;
                 } else
-                    dp.put("lastErrorDump", ServiceUtils.getExceptionMap(new Exception(e)));
+                    dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(new Exception(e)));
             }
             repeatTimes--;
             if (repeatTimes == 0)
@@ -125,7 +150,7 @@ public class Repeat {
             try {
                 Thread.sleep(interval);
             } catch (Exception e) {
-                dp.put("lastErrorDump", ServiceUtils.getExceptionMap(e));
+                dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
             }
 
             if (repeatTimes < 0 && repeatOn != null)
@@ -145,7 +170,9 @@ public class Repeat {
         JsonArray flows = repeat.getJsonArray("children");
         for (JsonValue jsonValue : flows) {
             String type = jsonValue.asJsonObject().getString("type", null);
-            //System.out.println(type);
+            JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+			String status=jov.getString("status",null);
+			if(!"disabled".equals(status))
             switch (type) {
                 case "try-catch":
                     TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
@@ -232,6 +259,16 @@ public class Repeat {
                             transformer.process(dp);
                     }
                     break;
+                case "await":
+					Await await=new Await(jsonValue.asJsonObject());
+					if(!evaluateCondition) {
+						await.process(dp);
+					}else { 
+						boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
+						if(canExecute)
+							await.process(dp);
+					}
+				break;
             }
         }
     }

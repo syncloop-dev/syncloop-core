@@ -1392,8 +1392,10 @@ public class ServiceUtils {
 					gqlData.put("rootName", rootName);
 
 					if (rootName.toLowerCase().equals("introspectionquery")) {
-						dp.put("*gqlData", gqlData);
+						//dp.put("*gqlData", gqlData);
+						dp.map("*gqlData", gqlData);
 						dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
+						dp.clearServicePayload();
 						rootObject = dp.get("*multiPart");
 						if (rootObject != null)
 							dp.put("*multiPart", rootObject);
@@ -1431,7 +1433,8 @@ public class ServiceUtils {
 			FlowResolver.execute(dp, mainflowJsonObject);
 
 		if (StringUtils.isNotBlank(gql) && StringUtils.isBlank(GraphQLDBC)) {
-			dp.put("*gqlData", gqlData);
+			//dp.put("*gqlData", gqlData);
+			dp.map("*gqlData", gqlData);
 			Map<String, Object> data = new HashMap<>();
 			String rootName = (String) gqlData.get("rootName");
 			rootObject = dp.get(rootName);
@@ -1440,13 +1443,16 @@ public class ServiceUtils {
 			dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
 			// dp.drop("*gqlData");
 			rootObject = dp.getValueByPointer("executionResult/rootObject");
-			if (rootObject != null)
+			if (rootObject != null) {
 				dp.put(rootName, rootObject);
+			}
 			Object errors = dp.getValueByPointer("executionResult/errors");
-			if (errors != null)
+			if (errors != null) {
 				dp.put(rootName, errors);
+			}
 			dp.drop("executionResult");
 			dp.drop("*gqlData");
+			dp.clearServicePayload();
 		}
 	}
 
