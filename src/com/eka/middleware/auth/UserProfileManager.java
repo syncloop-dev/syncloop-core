@@ -17,7 +17,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.pac4j.core.profile.UserProfile;
 
-import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -130,12 +129,11 @@ public class UserProfileManager implements IdentityManager {
 				.collect(Collectors.toList());
 
 		//String tenant = profile.get("tenant").toString();
-		//String userId1 = profile.get("userId").toString();
 
 		String userId = account.getUserId().toString();
 		String passHash = "[#]" + ServiceUtils.generateUUID(password + userId);
 
-		return new User(passHash,email,1,name,"1",UUID.randomUUID().toString(),groups);
+		return new User(passHash,email,1,name,"1",userId,groups);
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
