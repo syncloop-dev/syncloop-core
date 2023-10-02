@@ -174,6 +174,17 @@ public class SQL {
 		return savepoint;
 	}
 
+    public static Connection getProfileConnection() {
+        String connectionURL = "jdbc:sqlite:" + PropertyManager.getConfigFolderPath() + "profiles.db";
+
+        try {
+            Class.forName("org.sqlite.JDBC");
+            return DBCPDataSource.getConnection(connectionURL, connectionURL, null, null, 0, 0, null, null, "org.sqlite.JDBC");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Connection getConnection(String jdbcConnection, DataPipeline dp) throws Exception {
         Properties jdbcProperties = new Properties();
         String pPath = PropertyManager.getPackagePath(dp.rp.getTenant());

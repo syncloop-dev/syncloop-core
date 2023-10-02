@@ -1,13 +1,13 @@
-package com.eka.middleware.sqlite.entity;
+package com.eka.middleware.auth.db.entity;
 
 import java.util.List;
 import java.util.Map;
 
-public class User {
+public class Users {
 
     private String password;
     private String name;
-    private List<Group> groups;
+    private List<Groups> groups;
     private String email;
     private int tenant;
     private String status;
@@ -30,11 +30,11 @@ public class User {
         this.name = name;
     }
 
-    public List<Group> getGroups() {
+    public List<Groups> getGroups() {
         return groups;
     }
 
-    public void setGroups(List<Group> groups) {
+    public void setGroups(List<Groups> groups) {
         this.groups = groups;
     }
 
@@ -78,10 +78,10 @@ public class User {
         this.profile = profile;
     }
 
-    public User() {
+    public Users() {
     }
 
-    public User(String password, String email, int tenant, String name, String status, String user_id, List<Group> groups) {
+    public Users(String password, String email, int tenant, String name, String status, String user_id, List<Groups> groups) {
         this.user_id = user_id;
         this.password = password;
         this.name = name;

@@ -61,8 +61,5 @@ public class AuthAccount implements Account{
 	public void setProfile(Map<String, Object> profile) {
 		this.profile = profile;
 	}
-	public Map<String, Object> getProfile() {
-		return profile;
-	}
 
 }

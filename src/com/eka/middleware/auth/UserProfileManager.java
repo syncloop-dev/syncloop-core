@@ -2,10 +2,10 @@ package com.eka.middleware.auth;
 
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
-import com.eka.middleware.sqlite.entity.Group;
-import com.eka.middleware.sqlite.entity.User;
-import com.eka.middleware.sqlite.impl.GroupRepoImpl;
-import com.eka.middleware.sqlite.impl.UserRepoImpl;
+import com.eka.middleware.auth.db.entity.Groups;
+import com.eka.middleware.auth.db.entity.Users;
+import com.eka.middleware.auth.db.repository.GroupsRepository;
+import com.eka.middleware.auth.db.repository.UsersRepository;
 import com.eka.middleware.template.SystemException;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -30,7 +30,7 @@ public class UserProfileManager implements IdentityManager {
 	public static Logger LOGGER = LogManager.getLogger(UserProfileManager.class);
 
 	public static final Map<String, Object> getUsers() throws SystemException {
-		return UserRepoImpl.getUsers();
+		return UsersRepository.getUsers();
 	}
 
 	public static List<String> getTenants() {
@@ -51,7 +51,7 @@ public class UserProfileManager implements IdentityManager {
 	}
 	
 	public static List<String> getGroups() throws SystemException {
-		return GroupRepoImpl.getAllGroups();
+		return GroupsRepository.getAllGroups();
 
 
 	}
@@ -70,12 +70,12 @@ public class UserProfileManager implements IdentityManager {
 
 	public static void newGroup(String name) throws Exception {
 
-		Group group = new Group(name,1);
-		GroupRepoImpl.addGroup(group);
+		Groups group = new Groups(name,1);
+		GroupsRepository.addGroup(group);
 	}
 
 	public static void removeGroup(String name) throws Exception {
-		GroupRepoImpl.deleteGroup(name);
+		GroupsRepository.deleteGroup(name);
 	}
 
 	public static boolean isUserExist(String user) throws SystemException {
@@ -112,20 +112,20 @@ public class UserProfileManager implements IdentityManager {
 				}
 				user.put("password", pass);
 			}
-			UserRepoImpl.addUser(createUserFromAccount(account));
+			UsersRepository.addUser(createUserFromAccount(account));
 
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1001", e);
 		}
 	}
-	private static User createUserFromAccount(AuthAccount account) {
-		Map<String, Object> profile = account.getProfile();
+	private static Users createUserFromAccount(AuthAccount account) {
+		Map<String, Object> profile = account.getAuthProfile();
 		String name = profile.get("name") != null ? profile.get("name").toString() : "";
 		String password = profile.get("password") != null ? profile.get("password").toString() : "";
 		String email = profile.get("email") != null ? profile.get("email").toString() : "";
 		List<String> groupName = (List<String>) profile.get("groups");
-		List<Group> groups = groupName.stream()
-				.map(Group::new)
+		List<Groups> groups = groupName.stream()
+				.map(Groups::new)
 				.collect(Collectors.toList());
 
 		//String tenant = profile.get("tenant").toString();
@@ -133,22 +133,22 @@ public class UserProfileManager implements IdentityManager {
 		String userId = account.getUserId().toString();
 		String passHash = "[#]" + ServiceUtils.generateUUID(password + userId);
 
-		return new User(passHash,email,1,name,"1",userId,groups);
+		return new Users(passHash,email,1,name,"1",userId,groups);
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
-		User userFromAccount = createUserFromAccount(account);
-		UserRepoImpl.updateUser(userFromAccount.getEmail(),userFromAccount);
+		Users userFromAccount = createUserFromAccount(account);
+		UsersRepository.updateUser(userFromAccount.getEmail(),userFromAccount);
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass, String status) throws SystemException {
 
-		User userFromAccount = createUserFromAccount(account);
-		UserRepoImpl.updateUser(userFromAccount.getEmail(),userFromAccount);
+		Users userFromAccount = createUserFromAccount(account);
+		UsersRepository.updateUser(userFromAccount.getEmail(),userFromAccount);
 	}
 
 	public static void removeUser(String id) throws SystemException {
-		UserRepoImpl.deleteUser(id);
+		UsersRepository.deleteUser(id);
 	}
 
 	public static UserProfileManager create() throws SystemException {

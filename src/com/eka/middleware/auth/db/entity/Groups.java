@@ -1,18 +1,18 @@
-package com.eka.middleware.sqlite.entity;
+package com.eka.middleware.auth.db.entity;
 
-public class Group {
+public class Groups {
     private int group_id;
     private String groupName;
 
     private int tenant_id;
 
 
-    public Group(String groupName, int tenant_id) {
+    public Groups(String groupName, int tenant_id) {
         this.groupName = groupName;
         this.tenant_id = tenant_id;
     }
 
-    public Group(String groupName) {
+    public Groups(String groupName) {
         this.groupName = groupName;
     }
 
@@ -45,6 +45,6 @@ public class Group {
         this.tenant_id = tenant_id;
     }
 
-    public Group() {
+    public Groups() {
     }
 }

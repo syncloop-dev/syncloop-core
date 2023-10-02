@@ -1,24 +1,25 @@
-package com.eka.middleware.sqlite.impl;
+package com.eka.middleware.auth.db.repository;
 
 
-import com.eka.middleware.sqlite.connection.ConnectionManager;
-import com.eka.middleware.sqlite.entity.Group;
-import com.eka.middleware.sqlite.entity.User;
+import com.eka.middleware.adapter.SQL;
+import com.eka.middleware.auth.db.entity.Groups;
+import com.eka.middleware.auth.db.entity.Users;
 import com.eka.middleware.template.SystemException;
 
-
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static com.eka.middleware.auth.UserProfileManager.isUserExist;
-import static com.eka.middleware.auth.UserProfileManager.usersMap;
 
-public class UserRepoImpl {
+public class UsersRepository {
 
     public static Map<String, Object> getUsers() throws SystemException {
         Map<String, Object> usersMap = new HashMap<>();
 
-        try (Connection conn = ConnectionManager.getConnection()) {
+        try (Connection conn = SQL.getProfileConnection()) {
             String userSql = "SELECT u.* FROM users u";
             try (PreparedStatement userStatement = conn.prepareStatement(userSql)) {
                 ResultSet userResultSet = userStatement.executeQuery();
@@ -79,8 +80,8 @@ public class UserRepoImpl {
         return usersMap;
     }
 
-    public static void addUser(User user) throws SystemException {
-        try (Connection conn = ConnectionManager.getConnection()) {
+    public static void addUser(Users user) throws SystemException {
+        try (Connection conn = SQL.getProfileConnection()) {
             if (isUserExist(user.getEmail())) {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
             }
@@ -112,8 +113,8 @@ public class UserRepoImpl {
 
 
 
-    public static void updateUser(String email, User user) throws SystemException {
-        try (Connection conn = ConnectionManager.getConnection()) {
+    public static void updateUser(String email, Users user) throws SystemException {
+        try (Connection conn = SQL.getProfileConnection()) {
             String sql = "UPDATE \"users\" SET password = ?, name = ?, email = ?, tenant_id = ?, status = ? WHERE email = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, user.getPassword());
@@ -133,7 +134,7 @@ public class UserRepoImpl {
     }
 
     public static void deleteUser(String email) throws SystemException {
-        try (Connection conn = ConnectionManager.getConnection()) {
+        try (Connection conn = SQL.getProfileConnection()) {
             String userId = getUserIdByEmail(conn, email);
             deleteGroupsForUser(conn, userId);
 
@@ -158,10 +159,10 @@ public class UserRepoImpl {
         }
     }
 
-    private static void addGroupsForUser(Connection conn, String userId, List<Group> groups) throws SQLException {
+    private static void addGroupsForUser(Connection conn, String userId, List<Groups> groups) throws SQLException {
         String insertGroupSql = "INSERT INTO user_group_mapping (user_id, group_id) VALUES (?, ?)";
         try (PreparedStatement insertGroupStatement = conn.prepareStatement(insertGroupSql)) {
-            for (Group group : groups) {
+            for (Groups group : groups) {
                 int groupId = getGroupIdByName(conn, group.getGroupName());
                 if (groupId != -1) {
                     insertGroupStatement.setString(1, userId);
@@ -174,7 +175,7 @@ public class UserRepoImpl {
         }
     }
 
-    private static void updateGroupsForUser(Connection conn, String userId, List<Group> groups) throws SQLException {
+    private static void updateGroupsForUser(Connection conn, String userId, List<Groups> groups) throws SQLException {
         String deleteGroupSql = "DELETE FROM user_group_mapping WHERE user_id = ?";
         try (PreparedStatement deleteGroupStatement = conn.prepareStatement(deleteGroupSql)) {
             deleteGroupStatement.setString(1, userId);

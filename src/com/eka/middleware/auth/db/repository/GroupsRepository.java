@@ -1,7 +1,7 @@
-package com.eka.middleware.sqlite.impl;
+package com.eka.middleware.auth.db.repository;
 
-import com.eka.middleware.sqlite.connection.ConnectionManager;
-import com.eka.middleware.sqlite.entity.Group;
+import com.eka.middleware.adapter.SQL;
+import com.eka.middleware.auth.db.entity.Groups;
 import com.eka.middleware.template.SystemException;
 
 import java.sql.Connection;
@@ -11,11 +11,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GroupRepoImpl {
+public class GroupsRepository {
 
     public static List<String> getAllGroups() throws SystemException {
         List<String> groups = new ArrayList<>();
-        try (Connection conn = ConnectionManager.getConnection()) {
+        try (Connection conn = SQL.getProfileConnection()) {
             String sql = "SELECT * FROM groups";
             try (PreparedStatement statement = conn.prepareStatement(sql);
                  ResultSet resultSet = statement.executeQuery()) {
@@ -32,7 +32,7 @@ public class GroupRepoImpl {
     }
 
     public static String getGroupByName(String groupName) throws SystemException {
-        try (Connection conn = ConnectionManager.getConnection()) {
+        try (Connection conn = SQL.getProfileConnection()) {
             String sql = "SELECT * FROM groups WHERE name = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, groupName);
@@ -48,10 +48,10 @@ public class GroupRepoImpl {
         return null;
     }
 
-    public static void addGroup(Group group) throws SystemException {
+    public static void addGroup(Groups group) throws SystemException {
         String name = group.getGroupName();
         int tenantId =group.getTenantId();
-        try (Connection conn = ConnectionManager.getConnection()) {
+        try (Connection conn = SQL.getProfileConnection()) {
             String sql = "INSERT INTO groups (name, tenant_id) VALUES (?, ?)";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, name);
@@ -64,8 +64,8 @@ public class GroupRepoImpl {
     }
 
 
-    public static void updateGroup(String groupName, Group group) throws SystemException {
-        try (Connection conn = ConnectionManager.getConnection()) {
+    public static void updateGroup(String groupName, Groups group) throws SystemException {
+        try (Connection conn = SQL.getProfileConnection()) {
             String sql = "UPDATE groups SET name = ? WHERE name = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, group.getGroupName());
@@ -78,7 +78,7 @@ public class GroupRepoImpl {
     }
 
     public static void deleteGroup(String groupName) throws SystemException {
-        try (Connection conn = ConnectionManager.getConnection()) {
+        try (Connection conn = SQL.getProfileConnection()) {
             String sql = "DELETE FROM groups WHERE name = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, groupName);
