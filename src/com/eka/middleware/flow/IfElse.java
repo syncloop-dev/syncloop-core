@@ -78,37 +78,45 @@ public class IfElse implements FlowBasicInfo {
 		if (canSnap && snap == null) {
 			dp.snapBefore(comment, guid);
 		}
-		//String text = ifelse.get("data").asJsonObject().getString("text", null);
-		JsonArray flows = ifelse.getJsonArray("children");
+		try {
+			//String text = ifelse.get("data").asJsonObject().getString("text", null);
+			JsonArray flows = ifelse.getJsonArray("children");
 
-		for (JsonValue jsonValue : flows) {
-			String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
-			boolean result = false;
+			for (JsonValue jsonValue : flows) {
+				String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
+				boolean result = false;
 
-			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-			String status=jov.getString("status",null);
-			if("disabled".equalsIgnoreCase(status))
-				continue;
+				JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+				String status=jov.getString("status",null);
+				if("disabled".equalsIgnoreCase(status))
+					continue;
 
-			// ifLogic=xVal;
-			if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
-				Scope scope = new Scope(jsonValue.asJsonObject());
-				scope.process(dp);
-				break;
-			} else {
-				result = FlowUtils.evaluateCondition(ifLogic, dp);
-				if (result) {
+				// ifLogic=xVal;
+				if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
 					Scope scope = new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
 					break;
+				} else {
+					result = FlowUtils.evaluateCondition(ifLogic, dp);
+					if (result) {
+						Scope scope = new Scope(jsonValue.asJsonObject());
+						scope.process(dp);
+						break;
+					}
 				}
 			}
+			dp.putGlobal("hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("error", e.getMessage());
+			dp.putGlobal("hasError", true);
+			throw e;
+		} finally {
+			if (canSnap) {
+				dp.snapAfter(comment, guid);
+				dp.drop("*snapshot");
+			} else if (snap != null)
+				dp.put("*snapshot", snap);
 		}
-		if (canSnap) {
-			dp.snapAfter(comment, guid);
-			dp.drop("*snapshot");
-		} else if (snap != null)
-			dp.put("*snapshot", snap);
 	}
 
 	public List<Scope> getCases() {

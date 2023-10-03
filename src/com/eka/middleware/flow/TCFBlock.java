@@ -73,34 +73,42 @@ public class TCFBlock implements FlowBasicInfo {
 		if(canSnap && snap==null) {
 			dp.snapBefore(comment, guid);
 		}
-		JsonArray scopes=tcfBlock.getJsonArray("children");
-		for (JsonValue scope : scopes) {
-			String text=scope.asJsonObject().getString("text",null);
-			switch(text) {
-			case "TRY":
-				TRY=new Scope(scope.asJsonObject());
-				break;
-			case "CATCH":
-				CATCH=new Scope(scope.asJsonObject());
-				break;
-			case "FINALLY":
-				FINALLY=new Scope(scope.asJsonObject());
-				break;
-			}
-		}
 		try {
-			TRY.process(dp);
+			JsonArray scopes=tcfBlock.getJsonArray("children");
+			for (JsonValue scope : scopes) {
+				String text=scope.asJsonObject().getString("text",null);
+				switch(text) {
+					case "TRY":
+						TRY=new Scope(scope.asJsonObject());
+						break;
+					case "CATCH":
+						CATCH=new Scope(scope.asJsonObject());
+						break;
+					case "FINALLY":
+						FINALLY=new Scope(scope.asJsonObject());
+						break;
+				}
+			}
+			try {
+				TRY.process(dp);
+			} catch (Exception e) {
+				dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
+				CATCH.process(dp);
+			}finally {
+				FINALLY.process(dp);
+			}
+			dp.putGlobal("hasError", false);
 		} catch (Exception e) {
-			dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
-			CATCH.process(dp);
-		}finally {
-			FINALLY.process(dp);
+			dp.putGlobal("error", e.getMessage());
+			dp.putGlobal("hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid);
+				dp.drop("*snapshot");
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
 		}
-		if(canSnap) {
-			dp.snapAfter(comment, guid);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
 	}
 	
 	public Scope getTRY() {

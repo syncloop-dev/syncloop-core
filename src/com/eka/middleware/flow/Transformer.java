@@ -67,32 +67,40 @@ public class Transformer implements FlowBasicInfo {
 		dp.addErrorStack(this);
     	String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
-		if(snap!=null || snapshot!=null) {
-			canSnap = true;
-			//snap=snapshot;
-			if(snapshot!=null && snapshot.equals("conditional") && snapCondition!=null){
-				canSnap =FlowUtils.evaluateCondition(snapCondition,dp);
-				if(canSnap)
-					dp.put("*snapshot","enabled");
-			}else
-				dp.put("*snapshot","enabled");
+		try {
+			if (snap != null || snapshot != null) {
+				canSnap = true;
+				//snap=snapshot;
+				if (snapshot != null && snapshot.equals("conditional") && snapCondition != null) {
+					canSnap = FlowUtils.evaluateCondition(snapCondition, dp);
+					if (canSnap)
+						dp.put("*snapshot", "enabled");
+				} else
+					dp.put("*snapshot", "enabled");
+			}
+			if (!canSnap)
+				dp.drop("*snapshot");
+			if (canSnap && snap == null) {
+				dp.snapBefore(comment, guid);
+			}
+			if (transformers != null)
+				FlowUtils.map(transformers, dp);
+			if (createList != null)
+				FlowUtils.setValue(createList, dp);
+			if (dropList != null)
+				FlowUtils.dropValue(dropList, dp);
+			dp.putGlobal("hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("error", e.getMessage());
+			dp.putGlobal("hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid);
+				dp.drop("*snapshot");
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
 		}
-		if(!canSnap)
-			dp.drop("*snapshot");
-		if(canSnap && snap==null) {
-			dp.snapBefore(comment, guid);
-		}
-    	if(transformers!=null)
-			FlowUtils.map(transformers, dp);
-    	if(createList!=null)
-			FlowUtils.setValue(createList, dp);
-    	if(dropList!=null)
-			FlowUtils.dropValue(dropList, dp);
-    	if(canSnap) {
-			dp.snapAfter(comment, guid);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
 	}
 	
 	public boolean isDisabled() {

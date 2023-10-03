@@ -87,155 +87,163 @@ public class Loop implements FlowBasicInfo {
 			dp.snapBefore(comment, guid);
 		}
 		
-		inputArrayPath = ("//" + inputArrayPath + "//").replace("///", "").replace("//", "");
-		String outKey = null;
-		List<Object> outputList = null;
-		String outTypePath = "";
-		String outputArrayParent = "";
-		Object outVar = null;
-		if (outPutArrayPath != null && outPutArrayPath.trim().length()>0) {
-			outPutArrayPath = ("//" + outPutArrayPath + "//").replace("///", "").replace("//", "");
-			String outTokens[] = outPutArrayPath.split("/");
-			outTypePath = "";
-			for (String string : outTokens) {
-				outTypePath += "/document";
-			}
-			outKey = outTokens[outTokens.length - 1];
-			outputArrayParent = (outPutArrayPath + "_#").replace(outKey + "_#", "");
-			outputList = new ArrayList<>();
-
-			if (outputArrayParent.trim().length() > 0) {
-				switch (outArrayType) {
-				case "document":
-					outVar = dp.getAsMap(outputArrayParent);
-					break;
-				case "string":
-					outVar = dp.getAsString(outputArrayParent);
-					break;
-				case "integer":
-					outVar = dp.getAsInteger(outputArrayParent);
-					break;
-				case "number":
-					outVar = dp.getAsNumber(outputArrayParent);
-					break;
-				case "boolean":
-					outVar = dp.getAsBoolean(outputArrayParent);
-					break;
-				case "byte":
-					outVar = dp.getAsByte(outputArrayParent);
-					break;
-				case "date":
-					outVar = dp.getAsDate(outputArrayParent);
-					break;
-				case "object":
-					outVar = dp.getValueByPointer(outputArrayParent);
-					break;
-
-				default:
-					break;
+		try {
+			inputArrayPath = ("//" + inputArrayPath + "//").replace("///", "").replace("//", "");
+			String outKey = null;
+			List<Object> outputList = null;
+			String outTypePath = "";
+			String outputArrayParent = "";
+			Object outVar = null;
+			if (outPutArrayPath != null && outPutArrayPath.trim().length()>0) {
+				outPutArrayPath = ("//" + outPutArrayPath + "//").replace("///", "").replace("//", "");
+				String outTokens[] = outPutArrayPath.split("/");
+				outTypePath = "";
+				for (String string : outTokens) {
+					outTypePath += "/document";
 				}
+				outKey = outTokens[outTokens.length - 1];
+				outputArrayParent = (outPutArrayPath + "_#").replace(outKey + "_#", "");
+				outputList = new ArrayList<>();
 
+				if (outputArrayParent.trim().length() > 0) {
+					switch (outArrayType) {
+						case "document":
+							outVar = dp.getAsMap(outputArrayParent);
+							break;
+						case "string":
+							outVar = dp.getAsString(outputArrayParent);
+							break;
+						case "integer":
+							outVar = dp.getAsInteger(outputArrayParent);
+							break;
+						case "number":
+							outVar = dp.getAsNumber(outputArrayParent);
+							break;
+						case "boolean":
+							outVar = dp.getAsBoolean(outputArrayParent);
+							break;
+						case "byte":
+							outVar = dp.getAsByte(outputArrayParent);
+							break;
+						case "date":
+							outVar = dp.getAsDate(outputArrayParent);
+							break;
+						case "object":
+							outVar = dp.getValueByPointer(outputArrayParent);
+							break;
+
+						default:
+							break;
+					}
+
+				}
 			}
-		}
 
-		List<Object> list = dp.getAsList(inputArrayPath);
-		if (list == null)
-			return;
+			List<Object> list = dp.getAsList(inputArrayPath);
+			if (list == null)
+				return;
 
-		String tokens[] = inputArrayPath.split("/");
-		String key = tokens[tokens.length - 1];
-		String inputArrayParent = (inputArrayPath + "_#").replace(key + "_#", "");
-		Map<String, Object> map = null;
-		if (inputArrayParent.trim().length() > 0)
-			map = (Map<String, Object>) dp.getAsMap(inputArrayParent);
+			String tokens[] = inputArrayPath.split("/");
+			String key = tokens[tokens.length - 1];
+			String inputArrayParent = (inputArrayPath + "_#").replace(key + "_#", "");
+			Map<String, Object> map = null;
+			if (inputArrayParent.trim().length() > 0)
+				map = (Map<String, Object>) dp.getAsMap(inputArrayParent);
 //		if(map==null && dpM)
 //			throw new SnippetException(dp, "Path pointer '"+inputArrayParent+"'. Please loop over parent array first", null);
-		long index = 0;
-		for (Object object : list) {
-			dp.put(indexVar, index + "");
-			index++;
-			if (map != null)
-				map.put(key, object);
-			else
-			  dp.put(key, object);
-			JsonArray flows = loop.getJsonArray("children");
-			for (JsonValue jsonValue : flows) {
-				final String type = jsonValue.asJsonObject().getString("type");
-				JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-				String status=jov.getString("status",null);
-				if(!"disabled".equals(status))
-				switch (type) {
-				case "try-catch":
-					TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
-					tcfBlock.process(dp);
-					break;
-				case "sequence":
-					case "group":
-					Scope scope = new Scope(jsonValue.asJsonObject());
-					scope.process(dp);
-					break;
-				case "switch":
-					Switch swich = new Switch(jsonValue.asJsonObject());
-					swich.process(dp);
-					break;
-				case "ifelse":
-					IfElse ifElse = new IfElse(jsonValue.asJsonObject());
-					ifElse.process(dp);
-					break;
-				case "loop":
-					case "foreach":
-					Loop loop = new Loop(jsonValue.asJsonObject());
-					loop.process(dp);
-					break;
-				case "repeat":
-					case "redo":
-					Repeat repeat = new Repeat(jsonValue.asJsonObject());
-					repeat.process(dp);
-					break;
-				case "invoke":
-					case "service":
-					Api api = new Api(jsonValue.asJsonObject());
-					api.process(dp);
-					break;
-				case "map":
-					case "transformer":
-					Transformer transformer = new Transformer(jsonValue.asJsonObject());
-					transformer.process(dp);
-					break;
-				case "await":
-						Await await=new Await(jsonValue.asJsonObject());
-						await.process(dp);
-					break;
+			long index = 0;
+			for (Object object : list) {
+				dp.put(indexVar, index + "");
+				index++;
+				if (map != null)
+					map.put(key, object);
+				else
+					dp.put(key, object);
+				JsonArray flows = loop.getJsonArray("children");
+				for (JsonValue jsonValue : flows) {
+					final String type = jsonValue.asJsonObject().getString("type");
+					JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+					String status=jov.getString("status",null);
+					if(!"disabled".equals(status))
+						switch (type) {
+							case "try-catch":
+								TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
+								tcfBlock.process(dp);
+								break;
+							case "sequence":
+							case "group":
+								Scope scope = new Scope(jsonValue.asJsonObject());
+								scope.process(dp);
+								break;
+							case "switch":
+								Switch swich = new Switch(jsonValue.asJsonObject());
+								swich.process(dp);
+								break;
+							case "ifelse":
+								IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+								ifElse.process(dp);
+								break;
+							case "loop":
+							case "foreach":
+								Loop loop = new Loop(jsonValue.asJsonObject());
+								loop.process(dp);
+								break;
+							case "repeat":
+							case "redo":
+								Repeat repeat = new Repeat(jsonValue.asJsonObject());
+								repeat.process(dp);
+								break;
+							case "invoke":
+							case "service":
+								Api api = new Api(jsonValue.asJsonObject());
+								api.process(dp);
+								break;
+							case "map":
+							case "transformer":
+								Transformer transformer = new Transformer(jsonValue.asJsonObject());
+								transformer.process(dp);
+								break;
+							case "await":
+								Await await=new Await(jsonValue.asJsonObject());
+								await.process(dp);
+								break;
+						}
 				}
-			}
-			
-			if(outKey!=null) {
-				Object append=dp.get(outKey);
-				if(append!=null && outputList!=null) {
-					outputList.add(append);
-					dp.put(outKey,null);
+
+				if(outKey!=null) {
+					Object append=dp.get(outKey);
+					if(append!=null && outputList!=null) {
+						outputList.add(append);
+						dp.put(outKey,null);
+					}
 				}
+				if(dp.isDestroyed())
+					throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 			}
-			if(dp.isDestroyed())
-				throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
-		}
 //		map.put(key, list);
 
-		if (map != null)
-			map.put(key, list);
-		else
-			dp.put(key, list);
-		if (outPutArrayPath != null && outPutArrayPath.trim().length()>0 && outputList!=null && outputList.size()>0) {
-			if (outVar != null && outArrayType.equals("document"))
-				((Map<String,Object>)outVar).put(outKey, outputList);
+			if (map != null)
+				map.put(key, list);
 			else
-				dp.put(outKey, outputList);
+				dp.put(key, list);
+			if (outPutArrayPath != null && outPutArrayPath.trim().length()>0 && outputList!=null && outputList.size()>0) {
+				if (outVar != null && outArrayType.equals("document"))
+					((Map<String,Object>)outVar).put(outKey, outputList);
+				else
+					dp.put(outKey, outputList);
+			}
+			dp.putGlobal("hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("error", e.getMessage());
+			dp.putGlobal("hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid);
+				dp.drop("*snapshot");
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
 		}
-		if(canSnap) {
-			dp.snapAfter(comment, guid);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
 	}
 
 	public boolean isDisabled() {

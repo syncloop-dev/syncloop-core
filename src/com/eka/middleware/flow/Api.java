@@ -86,37 +86,44 @@ public class Api implements FlowBasicInfo {
 		if(canSnap && snap==null) {
 			dp.snapBefore(comment, guid);
 		}
-		if(disabled)
-			return;
-		dp.addErrorStack(this);
+		try {
+			if (disabled)
+				return;
+			dp.addErrorStack(this);
 
-		//if(createList!=null)
-		//FlowUtils.setValue(createList, dp);
-		//if(transformers!=null)
-		//	FlowUtils.mapBefore(transformers, dp);
-		String serviceFqn=data.getString("fqn", null);
-		if (StringUtils.isBlank(serviceFqn)) {
-			serviceFqn = api.getString("text",null);
-		}
-		if(serviceFqn!=null && serviceFqn.trim().length()>8) {
-			if("async".equals(requestMethod))
-				dp.applyAsync(serviceFqn.trim()+".main",transformers);
-			else
-				dp.apply(serviceFqn.trim()+".main",transformers);
+			//if(createList!=null)
+			//FlowUtils.setValue(createList, dp);
 			//if(transformers!=null)
+			//	FlowUtils.mapBefore(transformers, dp);
+			String serviceFqn = data.getString("fqn", null);
+			if (StringUtils.isBlank(serviceFqn)) {
+				serviceFqn = api.getString("text", null);
+			}
+			if (serviceFqn != null && serviceFqn.trim().length() > 8) {
+				if ("async".equals(requestMethod))
+					dp.applyAsync(serviceFqn.trim() + ".main", transformers);
+				else
+					dp.apply(serviceFqn.trim() + ".main", transformers);
+				//if(transformers!=null)
 				//FlowUtils.mapAfter(transformers, dp);
-			dp.clearServicePayload();
+				dp.clearServicePayload();
+			}
+			if (createList != null)
+				FlowUtils.setValue(createList, dp);
+			if (dropList != null)
+				FlowUtils.dropValue(dropList, dp);// setValue(dropList, dp);
+			dp.putGlobal("hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("error", e.getMessage());
+			dp.putGlobal("hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid);
+				dp.drop("*snapshot");
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
 		}
-		if(createList!=null)
-			FlowUtils.setValue(createList, dp);
-		if(dropList!=null)
-			FlowUtils.dropValue(dropList, dp);// setValue(dropList, dp);
-
-		if(canSnap) {
-			dp.snapAfter(comment, guid);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
 	}
 
 	public boolean isDisabled() {
