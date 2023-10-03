@@ -490,12 +490,22 @@ public class DataPipeline {
 		}
 	}
 
-	public void snap(String comment) {
+	public void snapBefore(String comment, String guid) {
+		snap(comment, guid, true);
+	}
+
+	public void snapAfter(String comment, String guid) {
+		snap(comment, guid, false);
+	}
+
+	private void snap(String comment, String guid, boolean beforeExecution) {
 		try {
 			HashMap<String, Object> map = new HashMap<>();
 			if (comment == null)
 				comment = "Commentless step";
 			map.put("comment", comment);
+			map.put("guid", guid);
+			map.put("before_execution", beforeExecution);
 			map.put(currentResource, new Map[]{servicePayload,payloadStack,globalPayload});
 			String json = ServiceUtils.toPrettyJson(map);
 			rp.writeSnapshot(resource, json);

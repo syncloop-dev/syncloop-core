@@ -80,7 +80,7 @@ public class Transformer implements FlowBasicInfo {
 		if(!canSnap)
 			dp.drop("*snapshot");
 		if(canSnap && snap==null) {
-			dp.snap(comment);
+			dp.snapBefore(comment, guid);
 		}
     	if(transformers!=null)
 			FlowUtils.map(transformers, dp);
@@ -89,7 +89,7 @@ public class Transformer implements FlowBasicInfo {
     	if(dropList!=null)
 			FlowUtils.dropValue(dropList, dp);
     	if(canSnap) {
-			dp.snap(comment);
+			dp.snapAfter(comment, guid);
 			dp.drop("*snapshot");
 		}else if(snap!=null)
 			dp.put("*snapshot",snap);

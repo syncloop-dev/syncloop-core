@@ -71,7 +71,7 @@ public class TCFBlock implements FlowBasicInfo {
 		if(!canSnap)
 			dp.drop("*snapshot");
 		if(canSnap && snap==null) {
-			dp.snap(comment);
+			dp.snapBefore(comment, guid);
 		}
 		JsonArray scopes=tcfBlock.getJsonArray("children");
 		for (JsonValue scope : scopes) {
@@ -97,7 +97,7 @@ public class TCFBlock implements FlowBasicInfo {
 			FINALLY.process(dp);
 		}
 		if(canSnap) {
-			dp.snap(comment);
+			dp.snapAfter(comment, guid);
 			dp.drop("*snapshot");
 		}else if(snap!=null)
 			dp.put("*snapshot",snap);

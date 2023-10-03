@@ -67,7 +67,7 @@ public class Scope implements FlowBasicInfo {
 		if(!canSnap)
 			dp.drop("*snapshot");
 		if(canSnap && snap==null) {
-			dp.snap(comment);
+			dp.snapBefore(comment, guid);
 		}
 		JsonArray flows= scope.getJsonArray("children");
 		for (JsonValue jsonValue : flows) {
@@ -174,7 +174,7 @@ public class Scope implements FlowBasicInfo {
 			}
 		}
 		if(canSnap) {
-			dp.snap(comment);
+			dp.snapAfter(comment, guid);
 			dp.drop("*snapshot");
 		}else if(snap!=null)
 			dp.put("*snapshot",snap);

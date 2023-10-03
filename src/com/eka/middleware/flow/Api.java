@@ -84,7 +84,7 @@ public class Api implements FlowBasicInfo {
 		if(!canSnap)
 			dp.drop("*snapshot");
 		if(canSnap && snap==null) {
-			dp.snap(comment);
+			dp.snapBefore(comment, guid);
 		}
 		if(disabled)
 			return;
@@ -113,7 +113,7 @@ public class Api implements FlowBasicInfo {
 			FlowUtils.dropValue(dropList, dp);// setValue(dropList, dp);
 
 		if(canSnap) {
-			dp.snap(comment);
+			dp.snapAfter(comment, guid);
 			dp.drop("*snapshot");
 		}else if(snap!=null)
 			dp.put("*snapshot",snap);

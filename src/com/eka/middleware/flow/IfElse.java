@@ -76,7 +76,7 @@ public class IfElse implements FlowBasicInfo {
 		if (!canSnap)
 			dp.drop("*snapshot");
 		if (canSnap && snap == null) {
-			dp.snap(comment);
+			dp.snapBefore(comment, guid);
 		}
 		//String text = ifelse.get("data").asJsonObject().getString("text", null);
 		JsonArray flows = ifelse.getJsonArray("children");
@@ -105,7 +105,7 @@ public class IfElse implements FlowBasicInfo {
 			}
 		}
 		if (canSnap) {
-			dp.snap(comment);
+			dp.snapAfter(comment, guid);
 			dp.drop("*snapshot");
 		} else if (snap != null)
 			dp.put("*snapshot", snap);

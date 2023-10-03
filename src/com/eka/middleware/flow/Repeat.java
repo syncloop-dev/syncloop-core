@@ -103,7 +103,7 @@ public class Repeat implements FlowBasicInfo {
         if (!canSnap)
             dp.drop("*snapshot");
         if (canSnap && snap == null) {
-            dp.snap(comment);
+            dp.snapBefore(comment, guid);
         }
         long index = 0;
         boolean canExecute = true;
@@ -160,7 +160,7 @@ public class Repeat implements FlowBasicInfo {
                 throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
         }
         if (canSnap) {
-            dp.snap(comment);
+            dp.snapAfter(comment, guid);
             dp.drop("*snapshot");
         } else if (snap != null)
             dp.put("*snapshot", snap);
