@@ -1,5 +1,7 @@
 package com.eka.middleware.auth;
 
+import com.eka.middleware.adapter.SQL;
+import com.eka.middleware.auth.db.repository.TenantRepository;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.auth.db.entity.Groups;
@@ -18,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 import org.pac4j.core.profile.UserProfile;
 
 import java.security.Principal;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -33,43 +36,19 @@ public class UserProfileManager implements IdentityManager {
 		return UsersRepository.getUsers();
 	}
 
-	public static List<String> getTenants() {
-		byte bytes[] = null;
-		try {
-			bytes = PropertyManager.readConfigurationFile("profiles.json");
-		} catch (SystemException e) {
-			ServiceUtils.printException("Failed while loading tenant list", e);
-		}
-		List<String> tenantList = null;
-		if (bytes != null) {
-			String json = new String(bytes);
-			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-			tenantList = (List<String>) map.get("tenants");
-			tenants.addAll(tenantList);
-		}
-		return new ArrayList(tenants);
-	}
-	
 	public static List<String> getGroups() throws SystemException {
 		return GroupsRepository.getAllGroups();
+	}
 
-
+	public static List<String> getTenants() {
+		return TenantRepository.getAllTenants();
 	}
 
 	public static void newTenant(String name) throws Exception {
-		final Map<String, Object> map = new HashMap();
-		List<String> tenantList = getTenants();
-		tenantList.add(name);
-		tenants.add(name);
-		map.put("tenants", tenantList);
-		map.put("groups", getGroups());
-		map.put("users", getUsers());
-		String json = ServiceUtils.toPrettyJson(map);
-		PropertyManager.writeConfigurationFile("profiles.json", json.getBytes());
+		TenantRepository.create(name);
 	}
 
 	public static void newGroup(String name) throws Exception {
-
 		Groups group = new Groups(name,1);
 		GroupsRepository.addGroup(group);
 	}
@@ -79,71 +58,55 @@ public class UserProfileManager implements IdentityManager {
 	}
 
 	public static boolean isUserExist(String user) throws SystemException {
-		final Map<String, Object> map = new HashMap();
-		final Map<String, Object> umap = getUsers();
-		Object existingUser = umap.get(user);
-		return existingUser != null;
+		try {
+			return UsersRepository.isUserExist(SQL.getProfileConnection(), user);
+		} catch (SQLException e) {
+			throw new SystemException("EKA_MWS_1001", e);
+		}
 	}
 
 	public static void addUser(AuthAccount account) throws SystemException {
 		try {
-			final Map<String, Object> map = new HashMap();
-			final Map<String, Object> umap = getUsers();
 			if (isUserExist(account.getUserId())) {
 				throw new Exception("User already exists: " + account.getUserId());
 			}
 			Map<String, Object> user = new HashMap();
 			user.put("profile", account.getAuthProfile());
 
+			byte[] password = null;
+
 			if (account.getUserId().equals("admin")) {
-				
-				Scanner in = new Scanner(System.in);
-				String pass = "admin";
-				LOGGER.info("Default tenant is created with user: admin & password: admin.");
-				while(pass==null) {
-					LOGGER.info("Creating Admin account for default tenant.\nPlease enter strong password:");
-					pass=in.nextLine();
-					LOGGER.info("\nRe-enter your password:");
-					String again=in.nextLine();
-					if(!pass.equals(again)) {
-						pass=null;
-						LOGGER.info("Password did not match. Try again.");
-					}
-				}
-				user.put("password", pass);
+				password = "admin".getBytes();
 			}
-			UsersRepository.addUser(createUserFromAccount(account));
+			UsersRepository.addUser(createUserFromAccount(account, password));
 
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1001", e);
 		}
 	}
-	private static Users createUserFromAccount(AuthAccount account) {
+	private static Users createUserFromAccount(AuthAccount account, byte[] password) {
 		Map<String, Object> profile = account.getAuthProfile();
 		String name = profile.get("name") != null ? profile.get("name").toString() : "";
-		String password = profile.get("password") != null ? profile.get("password").toString() : "";
 		String email = profile.get("email") != null ? profile.get("email").toString() : "";
 		List<String> groupName = (List<String>) profile.get("groups");
 		List<Groups> groups = groupName.stream()
 				.map(Groups::new)
 				.collect(Collectors.toList());
 
-		//String tenant = profile.get("tenant").toString();
-
-		String userId = account.getUserId().toString();
+		String userId = account.getUserId();
 		String passHash = "[#]" + ServiceUtils.generateUUID(password + userId);
 
 		return new Users(passHash,email,1,name,"1",userId,groups);
 	}
 
 	public static void updateUser(AuthAccount account,final byte[] pass) throws SystemException {
-		Users userFromAccount = createUserFromAccount(account);
+		Users userFromAccount = createUserFromAccount(account, pass);
 		UsersRepository.updateUser(userFromAccount.getEmail(),userFromAccount);
 	}
 
-	public static void updateUser(AuthAccount account,final byte[] pass, String status) throws SystemException {
-
-		Users userFromAccount = createUserFromAccount(account);
+	public static void updateUser(AuthAccount account, final byte[] pass, String status) throws SystemException {
+		Users userFromAccount = createUserFromAccount(account, pass);
+		userFromAccount.setStatus(status);
 		UsersRepository.updateUser(userFromAccount.getEmail(),userFromAccount);
 	}
 

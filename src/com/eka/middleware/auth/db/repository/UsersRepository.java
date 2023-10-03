@@ -12,8 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.eka.middleware.auth.UserProfileManager.isUserExist;
-
 public class UsersRepository {
 
     public static Map<String, Object> getUsers() throws SystemException {
@@ -33,7 +31,7 @@ public class UsersRepository {
                     String email = userResultSet.getString("email");
                     String status = userResultSet.getString("status");
 
-                    String tenantSql = "SELECT t.name FROM tenant t WHERE t.tenant_id = ?";
+                    String tenantSql = "SELECT t.name FROM tenant t WHERE t.id = ?";
                     String groupSql = "SELECT g.name FROM \"groups\" g " +
                             "JOIN user_group_mapping ug ON g.group_id = ug.group_id " +
                             "WHERE ug.user_id = ?";
@@ -82,7 +80,7 @@ public class UsersRepository {
 
     public static void addUser(Users user) throws SystemException {
         try (Connection conn = SQL.getProfileConnection()) {
-            if (isUserExist(user.getEmail())) {
+            if (isUserExist(conn, user.getEmail())) {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
             }
 
@@ -155,6 +153,17 @@ public class UsersRepository {
             userIdStatement.setString(1, email);
             try (ResultSet userIdResultSet = userIdStatement.executeQuery()) {
                 return userIdResultSet.next() ? userIdResultSet.getString("user_id") : null;
+            }
+        }
+    }
+
+    public static boolean isUserExist(Connection conn, String userIdOrEmail) throws SQLException {
+        String userIdSql = "SELECT user_id FROM \"users\" WHERE email = ? OR user_id = ?";
+        try (PreparedStatement userIdStatement = conn.prepareStatement(userIdSql)) {
+            userIdStatement.setString(1, userIdOrEmail);
+            userIdStatement.setString(2, userIdOrEmail);
+            try (ResultSet userIdResultSet = userIdStatement.executeQuery()) {
+                return userIdResultSet.next();
             }
         }
     }
