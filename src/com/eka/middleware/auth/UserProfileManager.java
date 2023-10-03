@@ -94,7 +94,7 @@ public class UserProfileManager implements IdentityManager {
 				.collect(Collectors.toList());
 
 		String userId = account.getUserId();
-		String passHash = "[#]" + ServiceUtils.generateUUID(password + userId);
+		String passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
 
 		return new Users(passHash,email,1,name,"1",userId,groups);
 	}
@@ -156,7 +156,7 @@ public class UserProfileManager implements IdentityManager {
 	private boolean verifyCredential(Account account, Credential credential) throws SystemException {
 		if (credential instanceof PasswordCredential) {
 			char[] password = ((PasswordCredential) credential).getPassword();
-			Map<String, Object> usersMap = (Map<String, Object>) getUsers();
+			Map<String, Object> usersMap = getUsers();
 			String userId = account.getPrincipal().getName();
 			Map<String, Object> user = (Map<String, Object>) usersMap.get(userId);
 			if (user == null) {
