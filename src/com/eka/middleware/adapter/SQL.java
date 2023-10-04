@@ -56,12 +56,16 @@ public class SQL {
                     //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
                     query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
                 }
+                query = removeUninitialized(query);
                 if (logQuery)
                     dp.log(query);
                 PreparedStatement myStmt = myCon.prepareStatement(query);
                 rows += myStmt.executeUpdate();
             }
         } else {
+            sqlCode = removeUninitialized(sqlCode);
+            if (logQuery)
+                dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
             rows = myStmt.executeUpdate();
         }
@@ -78,20 +82,23 @@ public class SQL {
                     //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
                     query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
                 }
+                query = removeUninitialized(query);
                 if (logQuery)
                     dp.log(query);
                 PreparedStatement myStmt = myCon.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
                 if (myStmt.executeUpdate() > 0) {
                     ResultSet keys = myStmt.getGeneratedKeys();
-                    if (keys.next())
+                    if (keys.next()) {
                         ids += keys.getObject(1) + ",";
-                    else
+                    }
+                    else {
                         ids += "null,";
+                    }
                 }
-
-                //rows += myStmt.executeUpdate();
+               // rows += myStmt.executeUpdate();
             }
         } else {
+            sqlCode = removeUninitialized(sqlCode);
             if (logQuery)
                 dp.log(sqlCode);
             PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
@@ -105,6 +112,17 @@ public class SQL {
         }
         ids = (ids + "_").replace(",_", "");
         return ids.split(",");
+    }
+
+    private static String removeUninitialized(String sqlCode) {
+        String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
+        if (placeholders != null) {
+            for (String placeholder : placeholders) {
+                String replacement = "NULL";
+                sqlCode = sqlCode.replace("'{" + placeholder + "}'", replacement);
+            }
+        }
+        return sqlCode;
     }
 
     public static Boolean DDL(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {

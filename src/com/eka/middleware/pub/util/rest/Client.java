@@ -46,7 +46,6 @@ public class Client {
 		URL endpointUrl;
         try {
             endpointUrl = new URL(url);
-            System.out.println(endpointUrl);
         } catch (MalformedURLException e) {
             throw new RuntimeException("Unable to parse service endpoint: " + e.getMessage());
         }
@@ -255,6 +254,14 @@ public class Client {
 			response = httpClientBuilder.build().send(builder.build(), HttpResponse.BodyHandlers.ofString());
 		}
 
+		if (response.statusCode() == 301 || response.statusCode() == 302) {
+			String redirectUrl = response.headers().firstValue("Location").orElse(null);
+			if (StringUtils.isNotBlank(redirectUrl)) {
+				return invoke(redirectUrl, method, formData, reqHeaders, payload, inputStream, queryParameters,
+						settings, sslValidation);
+			}
+		}
+
 		Map<String, List<String>> responseHeaderFields = response.headers().map();
 
 		Map<String, String> responseHeaders = Maps.newHashMap();
@@ -270,7 +277,7 @@ public class Client {
 		responseMap.put("statusCode", response.statusCode());
 		responseMap.put("respPayload", response.body());
 		responseMap.put("inputStream", response.body());
-		responseMap.put("respHeaders", responseHeaderFields);
+		responseMap.put("respHeaders", responseHeaders);
 
 		return responseMap;
 	}

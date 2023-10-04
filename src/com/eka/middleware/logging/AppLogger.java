@@ -71,10 +71,10 @@ public class AppLogger {
 	}
 
 	public void finish() {
-		if (!isLoggable) {
-			return ;
-		}
 		try {
+			if (CONTEXT.get().getMAP().size() == 1) {
+				return ;
+			}
 			StopWatch stopWatch = CONTEXT.get().stopTracking();
 			add("TT", stopWatch.getLastTaskTimeMillis());
 
@@ -98,7 +98,7 @@ public class AppLogger {
 		if (CONTEXT.get() != null) {
 			StringBuilder logBuilder = new StringBuilder();
 			for (Map.Entry<String, Object> entry : CONTEXT.get().getMAP().entrySet()) {
-				logBuilder.append(entry.getKey()).append("=").append(entry.getValue()).append(" ");
+				logBuilder.append(entry.getKey()).append("=").append("\"").append(entry.getValue()).append("\"").append(" ");
 			}
 			return logBuilder.toString().trim();
 		}

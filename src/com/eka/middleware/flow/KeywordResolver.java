@@ -29,7 +29,7 @@ public class KeywordResolver {
                 if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))) {
                     return "/eka";
                 } else {
-                    return "./";
+                    return "./eka";
                 }
             case "PackageConfig":
                 return dataPipeline.getMyPackageConfigPath();

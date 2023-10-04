@@ -19,10 +19,14 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import static com.eka.middleware.pub.util.AppUpdate.getStatus;
+import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
 
 
 public class AutoUpdate {
@@ -41,8 +45,8 @@ public class AutoUpdate {
             if(dp.getString("error")==null){
                 String key=(String)k;
                 String value=(String)v;
-                dp.put("fqn",value);
-                dp.put("alias",key);
+                dp.map("fqn",value);
+                dp.map("alias",key);
                 try{
                     dp.apply("packages.middleware.pub.server.browse.registerURLAlias");
                     String msg=dp.getString("msg");
@@ -128,17 +132,19 @@ public class AutoUpdate {
         String fileName=null;
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
              fileName = String.format("eka-distribution-community-tenant-v%s.zip", version);
-        else
-             fileName = String.format("eka-distribution-tenant-v%s.zip", version);
+        else {
+            if (Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
+                fileName = String.format("eka-distribution-tenant-core-v%s.zip", version);
+            } else {
+                fileName = String.format("eka-distribution-tenant-v%s.zip", version);
+            }
+        }
 
 
         URL url = new URL(String.format(Build.DISTRIBUTION_REPO + "%s", fileName));
 
         String downloadLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/import/";
         createFoldersIfNotExist(downloadLocation);   
-        System.out.println("package path: " + PropertyManager.getPackagePath(dataPipeline.rp.getTenant()));
-        System.err.println("downloadLocation: " + downloadLocation);
-
 
         File downloadedFile = new File(downloadLocation + fileName);
 
@@ -324,8 +330,35 @@ public class AutoUpdate {
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
 
             return Build.DISTRIBUTION_REPO + "community-tenant-update.json";
-        else
-            return Build.DISTRIBUTION_REPO + "tenant-update.json";
+        else {
+            if (Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
+                return Build.DISTRIBUTION_REPO + "tenant-update-core.json";
+            } else {
+                return Build.DISTRIBUTION_REPO + "tenant-update.json";
+            }
+        }
     }
+    public static String updateTenantAsync(String version, DataPipeline dataPipeline) throws Exception {
+        String uniqueId = getDigestFromUrl(returnTenantUpdateUrl());
 
+        Object status = getStatus(uniqueId, dataPipeline);
+
+        if (null != status && "PENDING".equalsIgnoreCase(status.toString())) {
+            throw new Exception("Update is already in progress");
+        }
+
+        Runnable task = () -> {
+            updateStatus(uniqueId, "PENDING", dataPipeline);
+            try {
+                updateTenant(version, dataPipeline);
+                updateStatus(uniqueId, "COMPLETED_SUCCESS", dataPipeline);
+            } catch (Exception e) {
+                e.printStackTrace();
+                updateStatus(uniqueId, "COMPLETED_ERROR" , dataPipeline);
+            }
+        };
+
+        dataPipeline.rp.getExecutor().execute(task);
+        return uniqueId;
+    }
 }

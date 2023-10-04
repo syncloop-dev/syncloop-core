@@ -283,7 +283,26 @@ public class ServiceUtils {
 	public static final void execute(String fqn, DataPipeline dataPipeLine) throws SnippetException {
 		if (!fqn.endsWith(".main"))
 			fqn += ".main";
-		ServiceManager.invokeJavaMethod(fqn, dataPipeLine);
+		if (fqn.startsWith("packages")) {
+			ServiceManager.invokeJavaMethod(fqn, dataPipeLine);
+		} else {
+			executeEmbeddedService(dataPipeLine, CacheManager.getEmbeddedService(fqn.replaceAll("embedded.", "")
+					.replaceAll(".main", ""), dataPipeLine.rp.getTenant()));
+		}
+	}
+
+	public static final void executeEmbeddedService(DataPipeline dataPipeline, String apiServiceJson) throws SnippetException {
+		try {
+			InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
+			JsonObject mainflowJsonObject = Json.createReader(is).readObject();
+			FlowResolver.execute(dataPipeline, mainflowJsonObject);
+		} catch (Throwable e) {
+			dataPipeline.clear();
+			dataPipeline.put("error", e.getMessage());
+			dataPipeline.put("status", "Service error");
+			throw new SnippetException(dataPipeline, "Failed to execute " + dataPipeline.getCurrentResourceName(),
+					new Exception(e));
+		}
 	}
 	
 	public static final boolean isPublicFolder(String path) {
@@ -608,6 +627,35 @@ public class ServiceUtils {
 		return msg;
 	}
 
+	public static final String deleteURLAlias(String alias, DataPipeline dp) throws Exception {
+		String aliasTenantName = dp.rp.getTenant().getName();
+		String existingFQN = getPathService(alias, null, dp.rp.getTenant());
+
+		Properties urlMappings = getUrlAliasMapping(dp.rp.getTenant());
+
+		boolean aliasFound = false;
+		for (Object key : urlMappings.keySet()) {
+			String mappedAlias = key.toString();
+			if (mappedAlias.equals(alias)) {
+				urlMappings.remove(key);
+				aliasFound = true;
+				break;
+			}
+		}
+
+		if (!aliasFound) {
+			return "Alias not found. Nothing to delete.";
+		}
+
+		FileOutputStream fos = new FileOutputStream(new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
+		urlMappings.store(fos, "");
+		fos.flush();
+		fos.close();
+
+		return "Alias deleted successfully.";
+	}
+
+
 	private static boolean isAliasValid(String alias) {
 		if (alias.contains("?")) {
 			return false; // Alias contains a query parameter
@@ -617,6 +665,9 @@ public class ServiceUtils {
 		String invalidCharacters = ".*[^a-zA-Z0-9_.\\-/{}]+.*";
 		if (alias.matches(invalidCharacters)) {
 			return false; // Alias contains special characters
+		}
+		if (alias.matches(".*\\{.\\}[a-zA-Z].*")) { // Alias does not contains dynamic pattern such as Y in {X}Y
+			return false;
 		}
 
 		return true;
@@ -1341,8 +1392,10 @@ public class ServiceUtils {
 					gqlData.put("rootName", rootName);
 
 					if (rootName.toLowerCase().equals("introspectionquery")) {
-						dp.put("*gqlData", gqlData);
+						//dp.put("*gqlData", gqlData);
+						dp.map("*gqlData", gqlData);
 						dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
+						dp.clearServicePayload();
 						rootObject = dp.get("*multiPart");
 						if (rootObject != null)
 							dp.put("*multiPart", rootObject);
@@ -1380,7 +1433,8 @@ public class ServiceUtils {
 			FlowResolver.execute(dp, mainflowJsonObject);
 
 		if (StringUtils.isNotBlank(gql) && StringUtils.isBlank(GraphQLDBC)) {
-			dp.put("*gqlData", gqlData);
+			//dp.put("*gqlData", gqlData);
+			dp.map("*gqlData", gqlData);
 			Map<String, Object> data = new HashMap<>();
 			String rootName = (String) gqlData.get("rootName");
 			rootObject = dp.get(rootName);
@@ -1389,13 +1443,16 @@ public class ServiceUtils {
 			dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
 			// dp.drop("*gqlData");
 			rootObject = dp.getValueByPointer("executionResult/rootObject");
-			if (rootObject != null)
+			if (rootObject != null) {
 				dp.put(rootName, rootObject);
+			}
 			Object errors = dp.getValueByPointer("executionResult/errors");
-			if (errors != null)
+			if (errors != null) {
 				dp.put(rootName, errors);
+			}
 			dp.drop("executionResult");
 			dp.drop("*gqlData");
+			dp.clearServicePayload();
 		}
 	}
 
@@ -1466,5 +1523,36 @@ public class ServiceUtils {
 			mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
 		}
 		return mainflowJsonObject;
+	}
+
+	public static void saveServerProperties(DataPipeline dataPipeline) throws Exception {
+		if (!dataPipeline.rp.getTenant().getName().equalsIgnoreCase("default")) {
+			throw new Exception("Server properties are not allowed to save for other tenants");
+		}
+		Map<String, Object> properties = dataPipeline.getAsMap("properties");
+
+		if (properties == null || properties.isEmpty()) {
+			return;
+		}
+
+		Properties props = new Properties();
+		String filePath = PropertyManager.getConfigFolderPath() + "server.properties";
+		FileInputStream inputStream = new FileInputStream(filePath);
+		props.load(new FileInputStream(filePath));
+		inputStream.close();
+
+		for (Map.Entry<String, Object> entry : properties.entrySet()) {
+			String key = entry.getKey();
+			String value = entry.getValue().toString();
+
+			if (StringUtils.isNotBlank(key) && StringUtils.isNotBlank(value)) {
+				props.setProperty(key, value);
+			}
+		}
+
+		FileOutputStream outputStream = new FileOutputStream(filePath);
+		props.store(outputStream, "");
+		outputStream.flush();
+		outputStream.close();
 	}
 }
