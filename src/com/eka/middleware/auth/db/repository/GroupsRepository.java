@@ -4,10 +4,7 @@ import com.eka.middleware.adapter.SQL;
 import com.eka.middleware.auth.db.entity.Groups;
 import com.eka.middleware.template.SystemException;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,4 +89,20 @@ public class GroupsRepository {
         String groupName = resultSet.getString("name");
         return groupName;
     }
+    public static int getOrCreateGroup(String groupName, int tenantId, Connection connection) throws SQLException {
+        String insertGroupSQL = "INSERT INTO groups (name, tenant_id) VALUES (?, ?)";
+        try (PreparedStatement groupStatement = connection.prepareStatement(insertGroupSQL, Statement.RETURN_GENERATED_KEYS)) {
+            groupStatement.setString(1, groupName);
+            groupStatement.setInt(2, tenantId);
+            groupStatement.executeUpdate();
+
+            ResultSet generatedKeys = groupStatement.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                return generatedKeys.getInt(1);
+            } else {
+                throw new SQLException("Failed to retrieve generated group_id.");
+            }
+        }
+    }
+
 }

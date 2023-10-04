@@ -31,7 +31,7 @@ public class UsersRepository {
                     String email = userResultSet.getString("email");
                     String status = userResultSet.getString("status");
 
-                    String tenantSql = "SELECT t.name FROM tenant t WHERE t.id = ?";
+                    String tenantSql = "SELECT t.name FROM tenant t WHERE t.tenant_id = ?";
                     String groupSql = "SELECT g.name FROM \"groups\" g " +
                             "JOIN user_group_mapping ug ON g.group_id = ug.group_id " +
                             "WHERE ug.user_id = ?";
@@ -147,7 +147,7 @@ public class UsersRepository {
     }
 
 
-    private static String getUserIdByEmail(Connection conn, String email) throws SQLException {
+    public static String getUserIdByEmail(Connection conn, String email) throws SQLException {
         String userIdSql = "SELECT user_id FROM \"users\" WHERE email = ?";
         try (PreparedStatement userIdStatement = conn.prepareStatement(userIdSql)) {
             userIdStatement.setString(1, email);
@@ -202,7 +202,7 @@ public class UsersRepository {
         }
     }
 
-    private static int getGroupIdByName(Connection conn, String groupName) throws SQLException {
+    public static int getGroupIdByName(Connection conn, String groupName) throws SQLException {
         String groupIdSql = "SELECT group_id FROM \"groups\" WHERE name = ?";
         try (PreparedStatement groupIdStatement = conn.prepareStatement(groupIdSql)) {
             groupIdStatement.setString(1, groupName);

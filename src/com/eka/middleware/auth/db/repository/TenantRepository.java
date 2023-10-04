@@ -2,12 +2,15 @@ package com.eka.middleware.auth.db.repository;
 
 import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.adapter.SQL;
+import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.template.SystemException;
 
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.eka.middleware.auth.UserProfileManager.migration;
 
 public class TenantRepository {
 
@@ -54,6 +57,31 @@ public class TenantRepository {
             e.printStackTrace();
         }
         return tenants;
+    }
+
+    public static int getOrCreateTenant(String tenantName, Connection connection) throws SQLException {
+        String checkTenantSQL = "SELECT tenant_id FROM tenant WHERE name = ?";
+        try (PreparedStatement checkStatement = connection.prepareStatement(checkTenantSQL)) {
+            checkStatement.setString(1, tenantName);
+            ResultSet resultSet = checkStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getInt("tenant_id");
+            }
+        }
+
+        String insertTenantSQL = "INSERT INTO tenant (name) VALUES (?)";
+        try (PreparedStatement tenantStatement = connection.prepareStatement(insertTenantSQL, Statement.RETURN_GENERATED_KEYS)) {
+            tenantStatement.setString(1, tenantName);
+            tenantStatement.executeUpdate();
+
+            ResultSet generatedKeys = tenantStatement.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                return generatedKeys.getInt(1);
+            } else {
+                throw new SQLException("Failed to retrieve generated tenant_id.");
+            }
+        }
     }
 
 }
