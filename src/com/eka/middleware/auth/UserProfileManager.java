@@ -430,4 +430,10 @@ public class UserProfileManager implements IdentityManager {
 		}
 	};
 
+	public static void migration() {
+		//Check if profile.json exist
+		//read & migrate all data
+		// rename profile.json
+	}
+
 }
