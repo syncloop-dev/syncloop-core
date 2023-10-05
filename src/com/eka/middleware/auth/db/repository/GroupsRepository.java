@@ -89,18 +89,32 @@ public class GroupsRepository {
         String groupName = resultSet.getString("name");
         return groupName;
     }
-    public static int getOrCreateGroup(String groupName, int tenantId, Connection connection) throws SQLException {
-        String insertGroupSQL = "INSERT INTO groups (name, tenant_id) VALUES (?, ?)";
-        try (PreparedStatement groupStatement = connection.prepareStatement(insertGroupSQL, Statement.RETURN_GENERATED_KEYS)) {
-            groupStatement.setString(1, groupName);
-            groupStatement.setInt(2, tenantId);
-            groupStatement.executeUpdate();
 
-            ResultSet generatedKeys = groupStatement.getGeneratedKeys();
-            if (generatedKeys.next()) {
-                return generatedKeys.getInt(1);
+    public static int getOrCreateGroup(String groupName, int tenantId, Connection connection) throws SQLException {
+        String selectGroupSQL = "SELECT group_id FROM groups WHERE name = ? AND tenant_id = ?";
+        String insertGroupSQL = "INSERT INTO groups (name, tenant_id) VALUES (?, ?)";
+
+        try (PreparedStatement selectGroupStatement = connection.prepareStatement(selectGroupSQL)) {
+            selectGroupStatement.setString(1, groupName);
+            selectGroupStatement.setInt(2, tenantId);
+
+            ResultSet resultSet = selectGroupStatement.executeQuery();
+            if (resultSet.next()) {
+
+                return resultSet.getInt("group_id");
             } else {
-                throw new SQLException("Failed to retrieve generated group_id.");
+                try (PreparedStatement insertGroupStatement = connection.prepareStatement(insertGroupSQL, Statement.RETURN_GENERATED_KEYS)) {
+                    insertGroupStatement.setString(1, groupName);
+                    insertGroupStatement.setInt(2, tenantId);
+                    insertGroupStatement.executeUpdate();
+
+                    ResultSet generatedKeys = insertGroupStatement.getGeneratedKeys();
+                    if (generatedKeys.next()) {
+                        return generatedKeys.getInt(1);
+                    } else {
+                        throw new SQLException("Failed to retrieve generated group_id.");
+                    }
+                }
             }
         }
     }

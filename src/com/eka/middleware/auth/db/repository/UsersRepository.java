@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.eka.middleware.auth.UserProfileManager.migration;
+
 public class UsersRepository {
 
     public static Map<String, Object> getUsers() throws SystemException {
@@ -210,9 +212,19 @@ public class UsersRepository {
                 if (groupIdResultSet.next()) {
                     return groupIdResultSet.getInt("group_id");
                 } else {
-                    return -1; // Group not found
+                    return -1;
                 }
             }
+        }
+    }
+    public static boolean doesMappingExist(String username, int groupId, Connection connection) throws SQLException {
+        String checkMappingSQL = "SELECT 1 FROM user_group_mapping WHERE user_id = ? AND group_id = ?";
+        try (PreparedStatement checkStatement = connection.prepareStatement(checkMappingSQL)) {
+            checkStatement.setString(1, username);
+            checkStatement.setInt(2, groupId);
+
+            ResultSet resultSet = checkStatement.executeQuery();
+            return resultSet.next();
         }
     }
 }

@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import static com.eka.middleware.auth.db.repository.GroupsRepository.*;
 import static com.eka.middleware.auth.db.repository.TenantRepository.*;
+import static com.eka.middleware.auth.db.repository.UsersRepository.doesMappingExist;
 import static com.eka.middleware.auth.db.repository.UsersRepository.getGroupIdByName;
 
 public class UserProfileManager implements IdentityManager {
@@ -434,61 +435,57 @@ public class UserProfileManager implements IdentityManager {
 		}
 	};
 
-	public static void migration() throws SystemException {
-		byte[] bytes = PropertyManager.readConfigurationFile("profiles.json");
-		if (bytes != null) {
-			String json = new String(bytes);
-			final Map<String, Object> map = ServiceUtils.jsonToMap(json);
-			final Map<String, Object> usersMap = (Map<String, Object>) map.get("users");
+		public static void migration() throws SystemException {
+			byte[] bytes = PropertyManager.readConfigurationFile("profiles.json");
+			if (bytes != null) {
+				String json = new String(bytes);
+				final Map<String, Object> map = ServiceUtils.jsonToMap(json);
+				final Map<String, Object> usersMap = (Map<String, Object>) map.get("users");
 
-			if (usersMap != null) {
-				usersMap.forEach((username, userObj) -> {
-					Map<String, Object> user = (Map<String, Object>) userObj;
-					Map<String, Object> profile = (Map<String, Object>) user.get("profile");
+				if (usersMap != null) {
+					usersMap.forEach((username, userObj) -> {
+						Map<String, Object> user = (Map<String, Object>) userObj;
+						Map<String, Object> profile = (Map<String, Object>) user.get("profile");
 
-					try (Connection connection = SQL.getProfileConnection()) {
-						String insertUserSQL = "INSERT INTO users (password, email, tenant_id, status, user_id, name) VALUES (?, ?, ?, ?, ?, ?)";
-						String insertUserGroupMappingSQL = "INSERT INTO user_group_mapping (user_id, group_id) VALUES (?, ?)";
+						try (Connection connection = SQL.getProfileConnection()) {
+							String insertUserSQL = "INSERT INTO users (password, email, tenant_id, status, user_id, name) VALUES (?, ?, ?, ?, ?, ?)";
+							String insertUserGroupMappingSQL = "INSERT INTO user_group_mapping (user_id, group_id) VALUES (?, ?)";
 
-						int tenantId = getOrCreateTenant(profile.get("tenant").toString(), connection);
+							int tenantId = getOrCreateTenant(profile.get("tenant").toString(), connection);
 
-						try (PreparedStatement userStatement = connection.prepareStatement(insertUserSQL);
-							 PreparedStatement mappingStatement = connection.prepareStatement(insertUserGroupMappingSQL)) {
+							try (PreparedStatement userStatement = connection.prepareStatement(insertUserSQL);
+								 PreparedStatement mappingStatement = connection.prepareStatement(insertUserGroupMappingSQL)) {
 
-							userStatement.setString(1, user.get("password") != null ? user.get("password").toString() : null);
-							userStatement.setString(2, profile.get("email") != null ? profile.get("email").toString() : null);
-							userStatement.setInt(3, tenantId);
-							userStatement.setString(4, user.get("status") != null ? user.get("status").toString() : null);
-							userStatement.setString(5, username);
-							userStatement.setString(6, profile.get("name") != null ? profile.get("name").toString() : null);
+								userStatement.setString(1, user.get("password") != null ? user.get("password").toString() : null);
+								userStatement.setString(2, profile.get("email") != null ? profile.get("email").toString() : null);
+								userStatement.setInt(3, tenantId);
+								userStatement.setString(4, user.get("status") != null ? user.get("status").toString() : null);
+								userStatement.setString(5, username);
+								userStatement.setString(6, profile.get("name") != null ? profile.get("name").toString() : null);
 
-							userStatement.executeUpdate();
+								userStatement.executeUpdate();
 
-							List<String> userGroups = (List<String>) profile.get("groups");
-							if (userGroups != null) {
-								for (String groupName : userGroups) {
-									int groupId = getGroupIdByName(connection, groupName);
-									if (groupId == -1) {
-										// Group doesn't exist, create it
-										groupId = getOrCreateGroup(groupName, tenantId, connection);
+								List<String> userGroups = (List<String>) profile.get("groups");
+								if (userGroups != null) {
+									for (String groupName : userGroups) {
+										int groupId = getOrCreateGroup(groupName, tenantId, connection);
+
+										if (!doesMappingExist(username, groupId, connection)) {
+											mappingStatement.setString(1, username);
+											mappingStatement.setInt(2, groupId);
+											mappingStatement.executeUpdate();
+										}
 									}
-									mappingStatement.setString(1, username);
-									mappingStatement.setInt(2, groupId);
-
-									mappingStatement.executeUpdate();
 								}
+							} catch (SQLException e) {
+								e.printStackTrace();
+								connection.rollback();
 							}
 						} catch (SQLException e) {
 							e.printStackTrace();
-							connection.rollback();
 						}
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
-				});
+					});
+				}
 			}
 		}
-	}
-
-
 }
