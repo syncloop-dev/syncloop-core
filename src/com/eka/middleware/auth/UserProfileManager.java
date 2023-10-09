@@ -493,6 +493,10 @@ public class UserProfileManager implements IdentityManager {
 							}
 						}
 						SQL.commitTransaction(connection);
+                        /**
+                         * Rename profile.json
+                         */
+                        file.renameTo(new File(PropertyManager.getConfigFolderPath() + "profiles-v1.4.9.json"));
 					} catch (Exception e) {
 						e.printStackTrace();
 						try {
@@ -505,11 +509,6 @@ public class UserProfileManager implements IdentityManager {
                     e.printStackTrace();
                 }
             }
-
-			/**
-			 * Rename profile.json
-			 */
-			file.renameTo(new File(PropertyManager.getConfigFolderPath() + "profiles-v1.4.9.json"));
 		}
     }
 }
