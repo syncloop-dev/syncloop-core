@@ -170,11 +170,17 @@ public class SQL {
         return connection;
     }
 
-    public static void commitTransaction(Connection myCon) throws Exception {
+    public static void commitTransaction(Connection myCon) throws SQLException {
+        if (null == myCon) {
+            throw new RuntimeException("Null Connection");
+        }
         myCon.commit();
     }
 
-    public static void rollbackTransaction(Connection myCon) throws Exception {
+    public static void rollbackTransaction(Connection myCon) throws SQLException {
+        if (null == myCon) {
+            throw new RuntimeException("Null Connection");
+        }
         myCon.rollback();
     }
 
@@ -192,12 +198,16 @@ public class SQL {
 		return savepoint;
 	}
 
-    public static Connection getProfileConnection() {
+    public static Connection getProfileConnection(boolean isTransactional) {
         String connectionURL = "jdbc:sqlite:" + PropertyManager.getConfigFolderPath() + "profiles.db";
 
         try {
             Class.forName("org.sqlite.JDBC");
-            return DBCPDataSource.getConnection(connectionURL, connectionURL, null, null, 0, 0, null, null, "org.sqlite.JDBC");
+            Connection connection = DBCPDataSource.getConnection(connectionURL, connectionURL, null, null, 0, 0, null, null, "org.sqlite.JDBC");
+            if (isTransactional) {
+                connection.setAutoCommit(false);
+            }
+            return connection;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

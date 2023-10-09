@@ -79,7 +79,7 @@ public class MiddlewareServer {
 
 		try {
 			PropertyManager.initConfig(args);
-			UserProfileManager.migration();
+			UserProfileManager.migrationProfiles();
 			local_IP = PropertyManager.getLocal_IP();
 			String ports[] = ServiceUtils.getServerProperty("middleware.server.http.ports").split(",");
 			String https = ServiceUtils.getServerProperty("middleware.server.https.ports");

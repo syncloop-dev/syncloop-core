@@ -12,14 +12,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.eka.middleware.auth.UserProfileManager.migration;
-
 public class UsersRepository {
 
+    @Deprecated
     public static Map<String, Object> getUsers() throws SystemException {
         Map<String, Object> usersMap = new HashMap<>();
 
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String userSql = "SELECT u.* FROM users u";
             try (PreparedStatement userStatement = conn.prepareStatement(userSql)) {
                 ResultSet userResultSet = userStatement.executeQuery();
@@ -70,7 +69,7 @@ public class UsersRepository {
                         userMap.put("profile", profile);
                         userMap.put("status", status);
 
-                        usersMap.put(email, userMap);
+                        usersMap.put(userId, userMap);
                     }
                 }
             }
@@ -81,7 +80,7 @@ public class UsersRepository {
     }
 
     public static void addUser(Users user) throws SystemException {
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             if (isUserExist(conn, user.getEmail())) {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
             }
@@ -111,10 +110,8 @@ public class UsersRepository {
         }
     }
 
-
-
     public static void updateUser(String email, Users user) throws SystemException {
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String sql = "UPDATE \"users\" SET password = ?, name = ?, email = ?, tenant_id = ?, status = ? WHERE email = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, user.getPassword());
@@ -134,7 +131,7 @@ public class UsersRepository {
     }
 
     public static void deleteUser(String email) throws SystemException {
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String userId = getUserIdByEmail(conn, email);
             deleteGroupsForUser(conn, userId);
 

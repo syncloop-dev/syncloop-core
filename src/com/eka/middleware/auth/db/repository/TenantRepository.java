@@ -1,16 +1,12 @@
 package com.eka.middleware.auth.db.repository;
 
-import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.adapter.SQL;
-import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.template.SystemException;
 
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.eka.middleware.auth.UserProfileManager.migration;
 
 public class TenantRepository {
 
@@ -19,7 +15,7 @@ public class TenantRepository {
      * @throws SystemException
      */
     public static int create(String name) throws SystemException {
-        try (Connection connection = SQL.getProfileConnection()) {
+        try (Connection connection = SQL.getProfileConnection(false)) {
             String sql = "INSERT INTO tenant (name, created_date) VALUES (?, ?)";
             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, name);
@@ -40,9 +36,10 @@ public class TenantRepository {
         }
     }
 
+    @Deprecated
     public static List<String> getAllTenants() {
         List<String> tenants = new ArrayList<>();
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String sql = "SELECT name FROM tenant";
             try (PreparedStatement statement = conn.prepareStatement(sql);
                  ResultSet resultSet = statement.executeQuery()) {

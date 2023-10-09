@@ -10,9 +10,10 @@ import java.util.List;
 
 public class GroupsRepository {
 
+    @Deprecated
     public static List<String> getAllGroups() throws SystemException {
         List<String> groups = new ArrayList<>();
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String sql = "SELECT * FROM groups";
             try (PreparedStatement statement = conn.prepareStatement(sql);
                  ResultSet resultSet = statement.executeQuery()) {
@@ -29,7 +30,7 @@ public class GroupsRepository {
     }
 
     public static String getGroupByName(String groupName) throws SystemException {
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String sql = "SELECT * FROM groups WHERE name = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, groupName);
@@ -48,7 +49,7 @@ public class GroupsRepository {
     public static void addGroup(Groups group) throws SystemException {
         String name = group.getGroupName();
         int tenantId =group.getTenantId();
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String sql = "INSERT INTO groups (name, tenant_id) VALUES (?, ?)";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, name);
@@ -62,7 +63,7 @@ public class GroupsRepository {
 
 
     public static void updateGroup(String groupName, Groups group) throws SystemException {
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String sql = "UPDATE groups SET name = ? WHERE name = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, group.getGroupName());
@@ -75,7 +76,7 @@ public class GroupsRepository {
     }
 
     public static void deleteGroup(String groupName) throws SystemException {
-        try (Connection conn = SQL.getProfileConnection()) {
+        try (Connection conn = SQL.getProfileConnection(false)) {
             String sql = "DELETE FROM groups WHERE name = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, groupName);
