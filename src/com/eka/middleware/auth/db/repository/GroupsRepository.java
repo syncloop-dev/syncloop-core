@@ -28,6 +28,24 @@ public class GroupsRepository {
         }
         return groups;
     }
+    public static List<String> getGroupsForTenant(int tenantId) throws SystemException {
+        List<String> groups = new ArrayList<>();
+        try (Connection conn = SQL.getProfileConnection(false)) {
+            String sql = "SELECT * FROM groups WHERE tenant_id = ?";
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setInt(1, tenantId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        String group = getGroupFromResultSet(resultSet);
+                        groups.add(group);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new SystemException("EKA_MWS_1001", e);
+        }
+        return groups;
+    }
 
     public static String getGroupByName(String groupName) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
@@ -86,6 +104,20 @@ public class GroupsRepository {
             throw new SystemException("EKA_MWS_1001", e);
         }
     }
+
+    public static void deleteGroupForTenant(String groupName, int tenantId) throws SystemException {
+        try (Connection conn = SQL.getProfileConnection(false)) {
+            String sql = "DELETE FROM groups WHERE name = ? AND tenant_id = ?";
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, groupName);
+                statement.setInt(2, tenantId);
+                statement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            throw new SystemException("EKA_MWS_1001", e);
+        }
+    }
+
     private static String getGroupFromResultSet(ResultSet resultSet) throws SQLException {
         String groupName = resultSet.getString("name");
         return groupName;

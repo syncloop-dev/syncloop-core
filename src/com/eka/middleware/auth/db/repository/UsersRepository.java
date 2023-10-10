@@ -4,6 +4,7 @@ package com.eka.middleware.auth.db.repository;
 import com.eka.middleware.adapter.SQL;
 import com.eka.middleware.auth.db.entity.Groups;
 import com.eka.middleware.auth.db.entity.Users;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.template.SystemException;
 import org.ldaptive.auth.User;
 
@@ -42,7 +43,7 @@ public class UsersRepository {
                     try (PreparedStatement tenantStatement = conn.prepareStatement(tenantSql);
                          PreparedStatement groupStatement = conn.prepareStatement(groupSql)) {
 
-                        tenantStatement.setInt(1, tenantId); // Set the tenant_id parameter
+                        tenantStatement.setInt(1, tenantId);
                         ResultSet tenantResultSet = tenantStatement.executeQuery();
 
                         String tenantName = null;
@@ -125,7 +126,7 @@ public class UsersRepository {
                     userMap.put("password", passwordHash);
                     userMap.put("profile", profile);
                     userMap.put("status", status);
-
+                    userMap.put(userId, userMap);
                 }
             }
         } catch (SQLException e) {
@@ -155,7 +156,6 @@ public class UsersRepository {
                 statement.setString(6, user.getUser_id());
 
                 statement.executeUpdate();
-
                 ResultSet generatedKeys = statement.getGeneratedKeys();
                 if (generatedKeys.next()) {
                     int userId = generatedKeys.getInt(1);
@@ -177,7 +177,7 @@ public class UsersRepository {
                 statement.setString(1, user.getPassword());
                 statement.setString(2, user.getName());
                 statement.setString(3, user.getEmail());
-                statement.setInt(4, 1);
+                statement.setInt(4, user.getTenant());
                 statement.setString(5, user.getStatus());
                 statement.setString(6, email);
                 statement.executeUpdate();

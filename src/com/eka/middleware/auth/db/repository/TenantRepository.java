@@ -55,6 +55,22 @@ public class TenantRepository {
         }
         return tenants;
     }
+    public static int getTenantIdByName(String tenantName) throws SystemException {
+        try (Connection conn = SQL.getProfileConnection(false)) {
+            String sql = "SELECT tenant_id FROM tenant WHERE name = ?";
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, tenantName);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        return resultSet.getInt("tenant_id");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new SystemException("EKA_MWS_1001", e);
+        }
+        return -1;
+    }
 
     public static int getOrCreateTenant(String tenantName, Connection connection) throws SQLException {
         String checkTenantSQL = "SELECT tenant_id FROM tenant WHERE name = ?";

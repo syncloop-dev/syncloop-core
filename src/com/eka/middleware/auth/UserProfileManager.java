@@ -2,6 +2,7 @@ package com.eka.middleware.auth;
 
 import com.eka.middleware.adapter.SQL;
 import com.eka.middleware.auth.db.repository.TenantRepository;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.auth.db.entity.Groups;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 import static com.eka.middleware.auth.db.repository.GroupsRepository.*;
 import static com.eka.middleware.auth.db.repository.TenantRepository.*;
+import static com.eka.middleware.auth.db.repository.TenantRepository.getTenantIdByName;
 import static com.eka.middleware.auth.db.repository.UsersRepository.doesMappingExist;
 import static com.eka.middleware.auth.db.repository.UsersRepository.getUserById;
 
@@ -46,6 +48,12 @@ public class UserProfileManager implements IdentityManager {
         return GroupsRepository.getAllGroups();
     }
 
+    //1- getGroups for tennat
+    public static List<String> getGroupsForTenant(DataPipeline dataPipeline) throws SystemException {
+       String tenant= dataPipeline.rp.getTenant().getName();
+        return GroupsRepository.getGroupsForTenant(getTenantIdByName(tenant));
+    }
+
     public static List<String> getTenants() {
         return TenantRepository.getAllTenants();
     }
@@ -59,8 +67,26 @@ public class UserProfileManager implements IdentityManager {
         GroupsRepository.addGroup(group);
     }
 
+    //2- new Group for tenant
+    public static void createGroupForTenant(String groupName, DataPipeline dataPipeline) throws Exception {
+        String tenantName = dataPipeline.rp.getTenant().getName();
+        int tenantId = getTenantIdByName(tenantName);
+        if (tenantId != -1) {
+            Groups group = new Groups(groupName, tenantId);
+            GroupsRepository.addGroup(group);
+        } else {
+            throw new Exception("Tenant not found: " + tenantName);
+        }
+    }
     public static void removeGroup(String name) throws Exception {
         GroupsRepository.deleteGroup(name);
+    }
+
+    //3- remove group for tenant
+    public static void removeGroupForTenant(String groupName,DataPipeline dataPipeline) throws Exception {
+        String tenantName = dataPipeline.rp.getTenant().getName();
+        int tenantId = getTenantIdByName(tenantName);
+        deleteGroupForTenant(groupName, tenantId);
     }
 
     public static boolean isUserExist(String user) throws SystemException {
@@ -91,7 +117,30 @@ public class UserProfileManager implements IdentityManager {
         }
     }
 
-    private static Users createUserFromAccount(AuthAccount account, byte[] password) {
+    //add user for tenant
+    public static void addUserForTenant(AuthAccount account,DataPipeline dataPipeline) throws SystemException {
+        try {
+            if (isUserExist(account.getUserId())) {
+                System.out.println("s-3");
+                throw new Exception("User already exists: " + account.getUserId());
+            }
+            Map<String, Object> user = new HashMap();
+            user.put("profile", account.getAuthProfile());
+
+            byte[] password = null;
+
+            if (account.getUserId().equals("admin")) {
+                System.out.println("s-4");
+                password = "admin".getBytes();
+            }
+            UsersRepository.addUser(createUserFromAccount(account, password,dataPipeline));
+            System.out.println("s-6");
+        } catch (Exception e) {
+            throw new SystemException("EKA_MWS_1001", e);
+        }
+    }
+
+    private static Users createUserFromAccount(AuthAccount account, byte[] password) throws SystemException {
         Map<String, Object> profile = account.getAuthProfile();
         String name = profile.get("name") != null ? profile.get("name").toString() : "";
         String email = profile.get("email") != null ? profile.get("email").toString() : "";
@@ -99,11 +148,27 @@ public class UserProfileManager implements IdentityManager {
         List<Groups> groups = groupName.stream()
                 .map(Groups::new)
                 .collect(Collectors.toList());
-
+        String tenant = profile.get("tenant").toString();
         String userId = account.getUserId();
         String passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
 
-        return new Users(passHash, email, 1, name, "1", userId, groups);
+        return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups);
+    }
+
+    //createUserFromAccount with datapipeline
+    private static Users createUserFromAccount(AuthAccount account, byte[] password,DataPipeline dataPipeline) throws SystemException {
+        Map<String, Object> profile = account.getAuthProfile();
+        String name = profile.get("name") != null ? profile.get("name").toString() : "";
+        String email = profile.get("email") != null ? profile.get("email").toString() : "";
+        List<String> groupName = (List<String>) profile.get("groups");
+        List<Groups> groups = groupName.stream()
+                .map(Groups::new)
+                .collect(Collectors.toList());
+        String tenant = dataPipeline.rp.getTenant().getName();
+        String userId = account.getUserId();
+        String passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
+        System.out.println("create user complete........... ");
+        return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups);
     }
 
     public static void updateUser(AuthAccount account, final byte[] pass) throws SystemException {
@@ -111,6 +176,18 @@ public class UserProfileManager implements IdentityManager {
         UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
     }
 
+    //update user with dataPipeline
+    public static void updateUser(AuthAccount account, final byte[] pass,DataPipeline dataPipeline) throws SystemException {
+        Users userFromAccount = createUserFromAccount(account, pass,dataPipeline);
+        UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
+    }
+
+    //update with pipeline
+    public static void updateUser(AuthAccount account, final byte[] pass, String status,DataPipeline dataPipeline) throws SystemException {
+        Users userFromAccount = createUserFromAccount(account, pass,dataPipeline);
+        userFromAccount.setStatus(status);
+        UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
+    }
     public static void updateUser(AuthAccount account, final byte[] pass, String status) throws SystemException {
         Users userFromAccount = createUserFromAccount(account, pass);
         userFromAccount.setStatus(status);
@@ -164,21 +241,14 @@ public class UserProfileManager implements IdentityManager {
         if (credential instanceof PasswordCredential) {
             char[] password = ((PasswordCredential) credential).getPassword();
             String userId = account.getPrincipal().getName();
-
-           // AuthAccount authAccount = verify(userId, credential);
-            //String accountUserId = authAccount.getUserId();
             Map<String, Object> usersMap = getUserById(userId);
-
             Map<String, Object> user = (Map<String, Object>) usersMap.get(userId);
             if (user == null) {
                 return false;
             }
-
             if (user.get("status") != null && user.get("status").equals("0")) {
                 return false;
             }
-
-
             if (user.get("password") == null)
                 return false;
             char[] expectedPassword = user.get("password").toString().toCharArray();
@@ -201,10 +271,7 @@ public class UserProfileManager implements IdentityManager {
     public static AuthAccount getAccount(final String id, final UserProfile up) {
         Map<String, Object> usersMap = null;
         try {
-            //AuthAccount account= getAccount(up);
-          //  String user_id = account.getUserId();
             usersMap = getUserById(id);
-
         } catch (SystemException e) {
             ServiceUtils.printException("Could not load users list: " + id, e);
             return null;
