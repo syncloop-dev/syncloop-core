@@ -5,6 +5,7 @@ import com.eka.middleware.adapter.SQL;
 import com.eka.middleware.auth.db.entity.Groups;
 import com.eka.middleware.auth.db.entity.Users;
 import com.eka.middleware.template.SystemException;
+import org.ldaptive.auth.User;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -79,6 +80,65 @@ public class UsersRepository {
         return usersMap;
     }
 
+    public static Map<String, Object> getUserById(String userId) throws SystemException {
+        Map<String, Object> userMap = new HashMap<>();
+
+        try (Connection conn = SQL.getProfileConnection(false)) {
+            String userSql = "SELECT u.*, t.name AS tenant_name " +
+                    "FROM users u " +
+                    "LEFT JOIN tenant t ON u.tenant_id = t.tenant_id " +
+                    "WHERE u.user_id = ?";
+            try (PreparedStatement userStatement = conn.prepareStatement(userSql)) {
+                userStatement.setString(1, userId);
+                ResultSet userResultSet = userStatement.executeQuery();
+
+                if (userResultSet.next()) {
+                    int tenantId = userResultSet.getInt("tenant_id");
+                    String passwordHash = userResultSet.getString("password");
+                    String name = userResultSet.getString("name");
+                    String email = userResultSet.getString("email");
+                    String status = userResultSet.getString("status");
+                    String tenantName = userResultSet.getString("tenant_name");
+
+                    List<String> groupNames = new ArrayList<>();
+
+                    String groupSql = "SELECT g.name FROM \"groups\" g " +
+                            "JOIN user_group_mapping ug ON g.group_id = ug.group_id " +
+                            "WHERE ug.user_id = ?";
+
+                    try (PreparedStatement groupStatement = conn.prepareStatement(groupSql)) {
+                        groupStatement.setString(1, userId);
+                        ResultSet groupResultSet = groupStatement.executeQuery();
+
+                        while (groupResultSet.next()) {
+                            String groupName = groupResultSet.getString("name");
+                            groupNames.add(groupName);
+                        }
+                    }
+
+                    Map<String, Object> profile = new HashMap<>();
+                    profile.put("name", name);
+                    profile.put("groups", groupNames);
+                    profile.put("email", email);
+                    profile.put("tenant", tenantName);
+
+                    userMap.put("password", passwordHash);
+                    userMap.put("profile", profile);
+                    userMap.put("status", status);
+
+                }
+            }
+        } catch (SQLException e) {
+            throw new SystemException("EKA_MWS_1001", e);
+        }
+
+        return userMap;
+    }
+
+    public static void main(String[] args) throws SystemException {
+        Map<String, Object>  u =getUserById("jak@gmail.com");
+        System.out.println(u);
+    }
     public static void addUser(Users user) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
             if (isUserExist(conn, user.getEmail())) {

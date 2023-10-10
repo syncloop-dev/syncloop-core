@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import static com.eka.middleware.auth.db.repository.GroupsRepository.*;
 import static com.eka.middleware.auth.db.repository.TenantRepository.*;
 import static com.eka.middleware.auth.db.repository.UsersRepository.doesMappingExist;
+import static com.eka.middleware.auth.db.repository.UsersRepository.getUserById;
 
 public class UserProfileManager implements IdentityManager {
     public static final Map<String, Object> usersMap = new ConcurrentHashMap<String, Object>();
@@ -162,8 +163,12 @@ public class UserProfileManager implements IdentityManager {
     private boolean verifyCredential(Account account, Credential credential) throws SystemException {
         if (credential instanceof PasswordCredential) {
             char[] password = ((PasswordCredential) credential).getPassword();
-            Map<String, Object> usersMap = getUsers();
             String userId = account.getPrincipal().getName();
+
+           // AuthAccount authAccount = verify(userId, credential);
+            //String accountUserId = authAccount.getUserId();
+            Map<String, Object> usersMap = getUserById(userId);
+
             Map<String, Object> user = (Map<String, Object>) usersMap.get(userId);
             if (user == null) {
                 return false;
@@ -184,7 +189,7 @@ public class UserProfileManager implements IdentityManager {
         return false;
     }
 
-    public AuthAccount getAccount(UserProfile up) {
+    public static AuthAccount getAccount(UserProfile up) {
         if (up == null)
             return null;
         String id = (String) up.getId();
@@ -196,7 +201,10 @@ public class UserProfileManager implements IdentityManager {
     public static AuthAccount getAccount(final String id, final UserProfile up) {
         Map<String, Object> usersMap = null;
         try {
-            usersMap = (Map<String, Object>) getUsers();
+            //AuthAccount account= getAccount(up);
+          //  String user_id = account.getUserId();
+            usersMap = getUserById(id);
+
         } catch (SystemException e) {
             ServiceUtils.printException("Could not load users list: " + id, e);
             return null;
