@@ -19,6 +19,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
+import com.eka.middleware.scheduling.ApplicationSchedulerFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -62,6 +63,8 @@ public class MiddlewareServer {
 	public static String CORE_DEPLOYMENT = System.getProperty("CORE_DEPLOYMENT");
 	public static String disableEndpointIdentification = System.getProperty("com.sun.jndi.ldap.object.disableEndpointIdentification");
 
+	public static ApplicationSchedulerFactory appSchedulerFactory;
+
 	public static void main(final String[] args) throws SystemException {
 
 		if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))) {
@@ -80,6 +83,8 @@ public class MiddlewareServer {
 		try {
 			PropertyManager.initConfig(args);
 			local_IP = PropertyManager.getLocal_IP();
+			appSchedulerFactory = ApplicationSchedulerFactory.initScheduler(null);
+			appSchedulerFactory.startScheduler();
 			String ports[] = ServiceUtils.getServerProperty("middleware.server.http.ports").split(",");
 			String https = ServiceUtils.getServerProperty("middleware.server.https.ports");
 			String keyStoreFilePath = ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
