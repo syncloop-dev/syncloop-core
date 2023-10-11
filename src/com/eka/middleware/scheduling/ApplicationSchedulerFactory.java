@@ -150,19 +150,21 @@ public class ApplicationSchedulerFactory {
 
             Trigger oldTrigger = scheduler.getTrigger(TriggerKey.triggerKey(jobName, jobGroup));
 
-            if (oldTrigger != null) {
-                scheduler.unscheduleJob(oldTrigger.getKey());
-            }
+            //When you update a trigger for a specific job in Quartz Scheduler,
+            // you should use the scheduler.rescheduleJob method instead of scheduler.scheduleJob
 
-            Trigger newTrigger = buildCronTrigger(jobName, jobGroup, newCronExpression);
-            scheduler.scheduleJob(newTrigger);
+
+            if (oldTrigger != null) {
+                Trigger newTrigger = buildCronTrigger(jobName, jobGroup, newCronExpression);
+
+                scheduler.rescheduleJob(oldTrigger.getKey(), newTrigger);
+            }
         } catch (SchedulerException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * @param scheduler
      * @param jobClass
      * @param identificationName
      * @param identificationGroup
