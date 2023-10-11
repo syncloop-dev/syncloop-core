@@ -16,10 +16,12 @@ public class TenantRepository {
      */
     public static int create(String name) throws SystemException {
         try (Connection connection = SQL.getProfileConnection(false)) {
-            String sql = "INSERT INTO tenant (name, created_date) VALUES (?, ?)";
+            String sql = "INSERT INTO tenant (name, created_date, modified_date, deleted) VALUES (?, ?, ?, ?)";
             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, name);
-            statement.setString(2, LocalDateTime.now().toString());
+            statement.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            statement.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
+            statement.setInt(4, 0);
 
             statement.executeUpdate();
 

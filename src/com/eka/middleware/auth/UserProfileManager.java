@@ -48,7 +48,7 @@ public class UserProfileManager implements IdentityManager {
         return GroupsRepository.getAllGroups();
     }
 
-    //1- getGroups for tennat
+    //1- getGroups for tenant
     public static List<String> getGroupsForTenant(DataPipeline dataPipeline) throws SystemException {
        String tenant= dataPipeline.rp.getTenant().getName();
         return GroupsRepository.getGroupsForTenant(getTenantIdByName(tenant));
@@ -68,16 +68,42 @@ public class UserProfileManager implements IdentityManager {
     }
 
     //2- new Group for tenant
-    public static void createGroupForTenant(String groupName, DataPipeline dataPipeline) throws Exception {
+   /* public static void createGroupForTenant(String groupName, DataPipeline dataPipeline) throws Exception {
         String tenantName = dataPipeline.rp.getTenant().getName();
         int tenantId = getTenantIdByName(tenantName);
         if (tenantId != -1) {
-            Groups group = new Groups(groupName, tenantId);
+            Timestamp createdDate = new Timestamp(System.currentTimeMillis());
+            Groups group = new Groups(groupName, tenantId,createdDate,createdDate,0);
             GroupsRepository.addGroup(group);
         } else {
             throw new Exception("Tenant not found: " + tenantName);
         }
+    }*/
+
+    //2- new Group for tenant with support of modifying existing group
+    public static void createGroupForTenant(String groupName, DataPipeline dataPipeline) throws Exception {
+        String tenantName = dataPipeline.rp.getTenant().getName();
+        int tenantId = getTenantIdByName(tenantName);
+        if (tenantId != -1) {
+            Timestamp createdDate = new Timestamp(System.currentTimeMillis());
+            // Check if a group with the same name exists and is deleted
+            Groups existingGroup = GroupsRepository.getGroupByNameAndTenant(groupName, tenantId);
+            if (existingGroup != null) {
+                if (existingGroup.getDeleted() == 1) {
+                    existingGroup.setDeleted(0);
+                    existingGroup.setModified_date(createdDate);
+                    GroupsRepository.updateGroup(existingGroup);
+                }
+            }else {
+                    Groups group = new Groups(groupName, tenantId, createdDate, createdDate, 0);
+                    GroupsRepository.addGroup(group);
+                }
+
+        }else {
+            throw new Exception("Tenant not found: " + tenantName);
+        }
     }
+
     public static void removeGroup(String name) throws Exception {
         GroupsRepository.deleteGroup(name);
     }
@@ -121,20 +147,15 @@ public class UserProfileManager implements IdentityManager {
     public static void addUserForTenant(AuthAccount account,DataPipeline dataPipeline) throws SystemException {
         try {
             if (isUserExist(account.getUserId())) {
-                System.out.println("s-3");
                 throw new Exception("User already exists: " + account.getUserId());
             }
             Map<String, Object> user = new HashMap();
             user.put("profile", account.getAuthProfile());
-
             byte[] password = null;
-
             if (account.getUserId().equals("admin")) {
-                System.out.println("s-4");
                 password = "admin".getBytes();
             }
             UsersRepository.addUser(createUserFromAccount(account, password,dataPipeline));
-            System.out.println("s-6");
         } catch (Exception e) {
             throw new SystemException("EKA_MWS_1001", e);
         }
@@ -167,29 +188,38 @@ public class UserProfileManager implements IdentityManager {
         String tenant = dataPipeline.rp.getTenant().getName();
         String userId = account.getUserId();
         String passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
+        Timestamp createdDate = new Timestamp(System.currentTimeMillis());
         System.out.println("create user complete........... ");
-        return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups);
+        return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups, createdDate, createdDate, 0);
     }
 
     public static void updateUser(AuthAccount account, final byte[] pass) throws SystemException {
         Users userFromAccount = createUserFromAccount(account, pass);
+        Timestamp modifiedDate = new Timestamp(System.currentTimeMillis());
+        userFromAccount.setModified_date(modifiedDate);
         UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
     }
 
     //update user with dataPipeline
     public static void updateUser(AuthAccount account, final byte[] pass,DataPipeline dataPipeline) throws SystemException {
         Users userFromAccount = createUserFromAccount(account, pass,dataPipeline);
+        Timestamp modifiedDate = new Timestamp(System.currentTimeMillis());
+        userFromAccount.setModified_date(modifiedDate);
         UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
     }
 
     //update with pipeline
     public static void updateUser(AuthAccount account, final byte[] pass, String status,DataPipeline dataPipeline) throws SystemException {
         Users userFromAccount = createUserFromAccount(account, pass,dataPipeline);
+        Timestamp modifiedDate = new Timestamp(System.currentTimeMillis());
+        userFromAccount.setModified_date(modifiedDate);
         userFromAccount.setStatus(status);
         UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
     }
     public static void updateUser(AuthAccount account, final byte[] pass, String status) throws SystemException {
         Users userFromAccount = createUserFromAccount(account, pass);
+        Timestamp modifiedDate = new Timestamp(System.currentTimeMillis());
+        userFromAccount.setModified_date(modifiedDate);
         userFromAccount.setStatus(status);
         UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
     }
