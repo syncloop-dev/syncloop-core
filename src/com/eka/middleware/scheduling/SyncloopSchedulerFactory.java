@@ -1,4 +1,4 @@
-package com.eka.middleware.quartz;
+package com.eka.middleware.scheduling;
 
 import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.service.DataPipeline;
@@ -6,15 +6,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.quartz.*;
 
 import java.util.List;
-import java.util.Map;
 
-public class QuartzCronSchedulerFactory {
+public class SyncloopSchedulerFactory {
 
-    private QuartzCronSchedulerFactory() {
+    private SyncloopSchedulerFactory() {
         super();
     }
 
-    public static Scheduler initScheduler(final String configFile, DataPipeline dataPipeline) throws SchedulerException {
+    public static Scheduler initScheduler(final String configFile) throws SchedulerException {
         SchedulerFactory schedFact = null;
         if (StringUtils.isBlank(configFile)) {
             schedFact = new org.quartz.impl.StdSchedulerFactory();
@@ -23,18 +22,10 @@ public class QuartzCronSchedulerFactory {
         }
         Scheduler scheduler = schedFact.getScheduler();
 
-        Map<String, Object> cache = CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());
-
-        cache.put("configFile", configFile);
-        cache.put("tenant", dataPipeline.rp.getTenant());
-        cache.put("schedulerInstance", scheduler);
-        cache.put("schedulerID", scheduler.getSchedulerInstanceId());
-        cache.put("schedulerName", scheduler.getSchedulerName());
-
         return scheduler;
     }
-    public static void startScheduler(String configfile,DataPipeline dataPipeline) throws SchedulerException {
-        Scheduler scheduler=initScheduler(configfile,dataPipeline);
+    public static void startScheduler(String configfile) throws SchedulerException {
+        Scheduler scheduler=initScheduler(configfile);
         scheduler.start();
     }
     public static void stopScheduler(Scheduler scheduler,DataPipeline dataPipeline) throws SchedulerException {
