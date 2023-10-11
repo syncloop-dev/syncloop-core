@@ -4,9 +4,9 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
-public class updateSchedulerJob implements Job {
+public class StopSchedulerJob implements Job {
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-        System.out.println("update Scheduler.....");
+        System.out.println("stop scheduler...");
     }
 }
