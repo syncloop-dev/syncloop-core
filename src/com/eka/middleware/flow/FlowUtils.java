@@ -193,7 +193,7 @@ public class FlowUtils {
 							value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
 						else
 							throw new SnippetException(dp, "Property not set properly",
-									new Exception("Could not resolve expression '#{" + expressionKey + "}'."));
+									new Exception("Could not resolve expression '#{" + expressionKey + "}' for " + path + "."));
 					}
 				}
             }
@@ -207,7 +207,7 @@ public class FlowUtils {
                     dp.setValueByPointer(path, typeVal, typePath);
                 } catch (Exception e) {
                     throw new SnippetException(dp,
-                            "Could not evaluate: value='" + value + "' and Type='" + typeOfVariable + "'", e);
+                            "Could not evaluate: path = '" + path + "' value='" + value + "' and Type='" + typeOfVariable + "'", e);
                 }
             } else
                 dp.setValueByPointer(path, value, typePath);
