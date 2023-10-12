@@ -8,6 +8,7 @@ import javax.json.JsonObject;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
@@ -119,7 +120,7 @@ public class Api implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid);
+				dp.snapAfter(comment, guid, Maps.newHashMap());
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);

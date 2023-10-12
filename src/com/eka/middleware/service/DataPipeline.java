@@ -12,6 +12,7 @@ import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
+import com.google.common.collect.Maps;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderValues;
 import lombok.Getter;
@@ -491,14 +492,14 @@ public class DataPipeline {
 	}
 
 	public void snapBefore(String comment, String guid) {
-		snap(comment, guid, true);
+		snap(comment, guid, true, Maps.newHashMap());
 	}
 
-	public void snapAfter(String comment, String guid) {
-		snap(comment, guid, false);
+	public void snapAfter(String comment, String guid, Map<String, Object> meta) {
+		snap(comment, guid, false, meta);
 	}
 
-	private void snap(String comment, String guid, boolean beforeExecution) {
+	private void snap(String comment, String guid, boolean beforeExecution, Map<String, Object> meta) {
 		try {
 			HashMap<String, Object> map = new HashMap<>();
 			if (comment == null)
@@ -507,6 +508,7 @@ public class DataPipeline {
 			map.put("guid", guid);
 			map.put("before_execution", beforeExecution);
 			map.put(currentResource, new Map[]{servicePayload,payloadStack,globalPayload});
+			map.putAll(meta);
 			String json = ServiceUtils.toPrettyJson(map);
 			rp.writeSnapshot(resource, json);
 		} catch (Exception e) {

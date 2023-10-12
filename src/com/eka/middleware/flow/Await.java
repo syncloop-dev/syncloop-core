@@ -14,6 +14,7 @@ import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class Await implements FlowBasicInfo {
@@ -232,7 +233,7 @@ public class Await implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid);
+				dp.snapAfter(comment, guid, Maps.newHashMap());
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);

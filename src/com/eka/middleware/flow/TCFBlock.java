@@ -8,6 +8,7 @@ import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class TCFBlock implements FlowBasicInfo {
@@ -104,7 +105,7 @@ public class TCFBlock implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid);
+				dp.snapAfter(comment, guid, Maps.newHashMap());
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);

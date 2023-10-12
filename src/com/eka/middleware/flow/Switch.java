@@ -7,6 +7,7 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.FlowBasicInfo;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.logging.log4j.Level;
 
@@ -149,7 +150,7 @@ public class Switch implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid);
+				dp.snapAfter(comment, guid, Maps.newHashMap());
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);

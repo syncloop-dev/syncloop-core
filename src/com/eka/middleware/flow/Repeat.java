@@ -7,6 +7,7 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.FlowBasicInfo;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -167,7 +168,7 @@ public class Repeat implements FlowBasicInfo {
             throw e;
         } finally {
             if (canSnap) {
-                dp.snapAfter(comment, guid);
+                dp.snapAfter(comment, guid, Maps.newHashMap());
                 dp.drop("*snapshot");
             } else if (snap != null)
                 dp.put("*snapshot", snap);
