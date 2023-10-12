@@ -87,7 +87,7 @@ public class ApplicationSchedulerFactory {
      * @param jobGroup
      * @return
      */
-    private JobDetail buildJobDetail(Class<? extends Job> jobClass, String jobName, String jobGroup) {
+    JobDetail buildJobDetail(Class<? extends Job> jobClass, String jobName, String jobGroup) {
         return JobBuilder.newJob(jobClass)
                 .withIdentity(jobName, jobGroup)
                 .build();
@@ -157,7 +157,7 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-    public <T extends SchedulerJob> JobKey scheduleJob(Class<T> jobClass , String identificationName , String identificationGroup , String cronExpression) throws SchedulerException {
+    public <T extends Job> JobKey scheduleJob(Class<T> jobClass , String identificationName , String identificationGroup , String cronExpression) throws SchedulerException {
         JobDetail job = JobBuilder.newJob(jobClass)
                 .withIdentity(identificationName , identificationGroup).build();
 
