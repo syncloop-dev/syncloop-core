@@ -8,7 +8,7 @@ import org.quartz.JobExecutionException;
 public class AppScheduler implements Job {
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-        System.out.println("App Scheduler.......");
+        System.out.println("App Scheduler......." + jobExecutionContext.getJobDetail().getKey());
 
         run();
     }
