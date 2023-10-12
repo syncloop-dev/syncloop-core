@@ -1,5 +1,6 @@
 package com.eka.middleware.auth.db.entity;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,10 @@ public class Users {
     private String status;
     private Map<String, Object> profile;
     private String user_id;
+    private Timestamp created_date;
+    private Timestamp modified_date;
+    private int deleted;
+
 
     public String getPassword() {
         return password;
@@ -78,6 +83,30 @@ public class Users {
         this.profile = profile;
     }
 
+    public Timestamp getCreated_date() {
+        return created_date;
+    }
+
+    public void setCreated_date(Timestamp created_date) {
+        this.created_date = created_date;
+    }
+
+    public Timestamp getModified_date() {
+        return modified_date;
+    }
+
+    public void setModified_date(Timestamp modified_date) {
+        this.modified_date = modified_date;
+    }
+
+
+    public int getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(int deleted) {
+        this.deleted = deleted;
+    }
     public Users() {
     }
 
@@ -89,6 +118,18 @@ public class Users {
         this.email = email;
         this.tenant = tenant;
         this.status = status;
+    }
+    public Users(String password, String email, int tenant, String name, String status, String user_id, List<Groups> groups,Timestamp created_date,Timestamp modified_date,int deleted) {
+        this.user_id = user_id;
+        this.password = password;
+        this.name = name;
+        this.groups = groups;
+        this.email = email;
+        this.tenant = tenant;
+        this.status = status;
+        this.created_date = created_date;
+        this.modified_date = modified_date;
+        this.deleted = deleted;
     }
 
     public void addGroup(String groupName) {
