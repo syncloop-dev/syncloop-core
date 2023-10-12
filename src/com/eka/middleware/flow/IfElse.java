@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -54,6 +55,7 @@ public class IfElse implements FlowBasicInfo {
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
+		Map<String, Object> snapMeta = Maps.newHashMap();
 		if (dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread",
 					new Exception("Service runtime pipeline destroyed manually"));
@@ -93,12 +95,14 @@ public class IfElse implements FlowBasicInfo {
 					continue;
 
 				// ifLogic=xVal;
+				snapMeta.put("condition", ifLogic);
 				if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
 					Scope scope = new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
 					break;
 				} else {
 					result = FlowUtils.evaluateCondition(ifLogic, dp);
+					snapMeta.put("conditionEvaluation", result);
 					if (result) {
 						Scope scope = new Scope(jsonValue.asJsonObject());
 						scope.process(dp);
@@ -113,7 +117,7 @@ public class IfElse implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if (canSnap) {
-				dp.snapAfter(comment, guid, Maps.newHashMap());
+				dp.snapAfter(comment, guid, snapMeta);
 				dp.drop("*snapshot");
 			} else if (snap != null)
 				dp.put("*snapshot", snap);

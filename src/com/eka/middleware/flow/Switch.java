@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -58,6 +59,8 @@ public class Switch implements FlowBasicInfo {
 
 
 	public void process(DataPipeline dp) throws SnippetException {
+		Map<String, Object> snapMeta = Maps.newHashMap();
+		snapMeta.put("switch", switchXpath);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		}
@@ -119,6 +122,8 @@ public class Switch implements FlowBasicInfo {
 					throw new SnippetException(dp,"The CASE with the xPath("+caseLabel+") has a null value." , new Exception("Exception in Switch CASE with reference."));
 
 				caseLabel=xVal;
+				snapMeta.put("caseLabel", caseLabel + "");
+				snapMeta.put("SwitchValue", xPathValue);
 				if("#null".equals(caseLabel) && xPathValue==null) {
 					Scope scope=new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
@@ -136,8 +141,10 @@ public class Switch implements FlowBasicInfo {
 						scope.process(dp);
 					}
 					return;
-				}else if("#default".equals(caseLabel))
+				}else if("#default".equals(caseLabel)) {
+					snapMeta.put("caseLabel", caseLabel + "");
 					defaultCase=jsonValue.asJsonObject();
+				}
 			}
 			if(defaultCase!=null) {
 				Scope scope=new Scope(defaultCase.asJsonObject());
@@ -150,7 +157,7 @@ public class Switch implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid, Maps.newHashMap());
+				dp.snapAfter(comment, guid, snapMeta);
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);

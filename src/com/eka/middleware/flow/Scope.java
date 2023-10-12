@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -46,6 +47,8 @@ public class Scope implements FlowBasicInfo {
 	}
 	
 	public void process(DataPipeline dp) throws SnippetException{
+		Map<String, Object> snapMeta = Maps.newHashMap();
+		snapMeta.put("evaluateCondition", evaluateCondition);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		}
@@ -84,6 +87,7 @@ public class Scope implements FlowBasicInfo {
 								tcfBlock.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(tcfBlock.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									tcfBlock.process(dp);
 							}
@@ -95,6 +99,7 @@ public class Scope implements FlowBasicInfo {
 								scope.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(scope.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									scope.process(dp);
 							}
@@ -105,6 +110,7 @@ public class Scope implements FlowBasicInfo {
 								swich.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(swich.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									swich.process(dp);
 							}
@@ -115,6 +121,7 @@ public class Scope implements FlowBasicInfo {
 								ifElse.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(ifElse.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									ifElse.process(dp);
 							}
@@ -126,6 +133,7 @@ public class Scope implements FlowBasicInfo {
 								loop.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(loop.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									loop.process(dp);
 							}
@@ -137,6 +145,7 @@ public class Scope implements FlowBasicInfo {
 								repeat.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(repeat.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									repeat.process(dp);
 							}
@@ -148,6 +157,7 @@ public class Scope implements FlowBasicInfo {
 								api.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(api.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									api.process(dp);
 							}
@@ -159,6 +169,7 @@ public class Scope implements FlowBasicInfo {
 								transformer.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(transformer.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									transformer.process(dp);
 							}
@@ -169,6 +180,7 @@ public class Scope implements FlowBasicInfo {
 								await.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
 								if(canExecute)
 									await.process(dp);
 							}
@@ -182,7 +194,7 @@ public class Scope implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid, Maps.newHashMap());
+				dp.snapAfter(comment, guid, snapMeta);
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);

@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -82,6 +83,9 @@ public class Repeat implements FlowBasicInfo {
     }
 
     public void process(DataPipeline dp) throws SnippetException {
+        Map<String, Object> snapMeta = Maps.newHashMap();
+        snapMeta.put("*indexVar", indexVar);
+
         if (dp.isDestroyed()) {
             throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
         }
@@ -111,9 +115,14 @@ public class Repeat implements FlowBasicInfo {
             boolean canExecute = true;
             if (repeatTimes < 0 && getCondition() != null) {
                 canExecute = FlowUtils.evaluateCondition(getCondition(), dp);
+                snapMeta.put("condition", getCondition());
+                snapMeta.put("conditionEvaluation", canExecute);
             } else if (repeatTimes == 0) {
                 canExecute = false;
             }
+            snapMeta.put("repeatTimes", repeatTimes);
+            snapMeta.put("repeatOn", repeatOn);
+            snapMeta.put("interval", interval);
             while (repeatOn != null && canExecute) {
 
                 dp.put(indexVar, index + "");
@@ -168,7 +177,7 @@ public class Repeat implements FlowBasicInfo {
             throw e;
         } finally {
             if (canSnap) {
-                dp.snapAfter(comment, guid, Maps.newHashMap());
+                dp.snapAfter(comment, guid, snapMeta);
                 dp.drop("*snapshot");
             } else if (snap != null)
                 dp.put("*snapshot", snap);

@@ -62,6 +62,8 @@ public class Loop implements FlowBasicInfo {
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
+		Map<String, Object> snapMeta = Maps.newHashMap();
+		snapMeta.put("*indexVar", indexVar);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		}
@@ -240,7 +242,7 @@ public class Loop implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid, Maps.newHashMap());
+				dp.snapAfter(comment, guid, snapMeta);
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);
