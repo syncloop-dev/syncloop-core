@@ -26,7 +26,7 @@ public class JobScheduler {
         MiddlewareServer.appSchedulerFactory.updateScheduler(jobDetail, cronExpression);
     }
 
-    public static void deleteJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
+    public static void deleteJob(String id, DataPipeline dataPipeline) throws SchedulerException {
 
         JobDetail jobDetail = MiddlewareServer.appSchedulerFactory.buildJobDetail(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline));
         MiddlewareServer.appSchedulerFactory.removeJob(jobDetail.getKey());
