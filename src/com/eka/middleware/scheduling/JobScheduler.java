@@ -7,26 +7,26 @@ import org.quartz.*;
 
 public class JobScheduler {
 
-    private String generateIdentification(String id,DataPipeline dataPipeline) {
+    private static String generateIdentification(String id,DataPipeline dataPipeline) {
         return String.format("%s-%s-ID", dataPipeline.rp.getTenant().getName(), id);
     }
 
-    private String generateGroup(String id,DataPipeline dataPipeline) {
+    private static String generateGroup(String id,DataPipeline dataPipeline) {
         return String.format("%s-%s-GROUP", dataPipeline.rp.getTenant().getName(), id);
     }
 
-    public void addJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
+    public static void addJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
 
         MiddlewareServer.appSchedulerFactory.scheduleJob(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline), cronExpression);
     }
 
-    public  void updateJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
+    public static void updateJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
 
         JobDetail jobDetail = MiddlewareServer.appSchedulerFactory.buildJobDetail(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline));
         MiddlewareServer.appSchedulerFactory.updateScheduler(jobDetail, cronExpression);
     }
 
-    public void deleteJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
+    public static void deleteJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
 
         JobDetail jobDetail = MiddlewareServer.appSchedulerFactory.buildJobDetail(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline));
         MiddlewareServer.appSchedulerFactory.removeJob(jobDetail.getKey());
