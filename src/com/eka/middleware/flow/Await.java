@@ -95,7 +95,7 @@ public class Await implements FlowBasicInfo {
 		}
 		if(!canSnap)
 			dp.drop("*snapshot");
-		if(canSnap && snap==null) {
+		if(canSnap ) {
 			dp.snapBefore(comment, guid);
 		}
 		
@@ -226,10 +226,10 @@ public class Await implements FlowBasicInfo {
 						continueLoop.set(false);
 				}
 			}
-			dp.putGlobal("hasError", false);
+			dp.putGlobal("*hasError", false);
 		} catch (Exception e) {
-			dp.putGlobal("error", e.getMessage());
-			dp.putGlobal("hasError", true);
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
 			throw e;
 		} finally {
 			if(canSnap) {

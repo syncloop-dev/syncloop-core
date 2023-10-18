@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -61,6 +62,7 @@ public class Transformer implements FlowBasicInfo {
 	}
 	
     public void process(DataPipeline dp) throws SnippetException {
+		Map<String, Object> snapMeta = Maps.newHashMap();
     	if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
     	if(disabled)
@@ -81,7 +83,7 @@ public class Transformer implements FlowBasicInfo {
 			}
 			if (!canSnap)
 				dp.drop("*snapshot");
-			if (canSnap && snap == null) {
+			if (canSnap ) {
 				dp.snapBefore(comment, guid);
 			}
 			if (transformers != null)
@@ -90,14 +92,14 @@ public class Transformer implements FlowBasicInfo {
 				FlowUtils.setValue(createList, dp);
 			if (dropList != null)
 				FlowUtils.dropValue(dropList, dp);
-			dp.putGlobal("hasError", false);
+			dp.putGlobal("*hasError", false);
 		} catch (Exception e) {
-			dp.putGlobal("error", e.getMessage());
-			dp.putGlobal("hasError", true);
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid, Maps.newHashMap());
+				dp.snapAfter(comment, guid, snapMeta);
 				dp.drop("*snapshot");
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);
