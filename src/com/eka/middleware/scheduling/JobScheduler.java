@@ -15,9 +15,9 @@ public class JobScheduler {
         return String.format("%s-%s-GROUP", dataPipeline.rp.getTenant().getName(), id);
     }
 
-    public static void addJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
+    public static void addJob(String id,String serviceFqn,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
 
-        MiddlewareServer.appSchedulerFactory.scheduleJob(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline), cronExpression);
+        MiddlewareServer.appSchedulerFactory.scheduleJob(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline),serviceFqn ,cronExpression);
     }
 
     public static void updateJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {

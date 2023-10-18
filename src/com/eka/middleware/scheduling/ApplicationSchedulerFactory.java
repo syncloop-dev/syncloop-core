@@ -43,7 +43,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @throws SchedulerException
      */
     public void stopScheduler() throws SchedulerException {
@@ -53,7 +52,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @throws SchedulerException
      */
     public void deleteScheduler() throws SchedulerException {
@@ -63,7 +61,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @return
      * @throws SchedulerException
      */
@@ -72,7 +69,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @return
      * @throws SchedulerException
      */
@@ -81,7 +77,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @param jobClass
      * @param jobName
      * @param jobGroup
@@ -94,7 +89,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @param triggerName
      * @param triggerGroup
      * @param cronExpression
@@ -108,7 +102,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @param jobDetail
      * @return
      * @throws SchedulerException
@@ -118,7 +111,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @param jobKey
      * @throws SchedulerException
      */
@@ -128,7 +120,6 @@ public class ApplicationSchedulerFactory {
     }
 
     /**
-     *
      * @param jobDetail
      * @param newCronExpression
      */
@@ -157,35 +148,28 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-    public <T extends Job> JobKey scheduleJob(Class<T> jobClass , String identificationName , String identificationGroup , String cronExpression) throws SchedulerException {
+    public <T extends Job> JobKey scheduleJob(Class<T> jobClass, String identificationName, String identificationGroup,String serviceFqn, String cronExpression) throws SchedulerException {
         if (cronExpression.split(" ").length == 5) {
             cronExpression = cronExpression + " ? *";
         }
+
         JobDetail job = JobBuilder.newJob(jobClass)
-                .withIdentity(identificationName , identificationGroup).build();
+                .withIdentity(identificationName, identificationGroup).build();
+
+        JobDataMap jobDataMap = job.getJobDataMap();
+        jobDataMap.put("identificationName", identificationName);
+        jobDataMap.put("cronExpression", cronExpression);
+        jobDataMap.put("serviceFqn",serviceFqn);
+        jobDataMap.put("identificationGroup",identificationGroup);
 
         Trigger trigger = TriggerBuilder
                 .newTrigger()
-                .withIdentity(identificationName , identificationGroup)
+                .withIdentity(identificationName, identificationGroup)
                 .withSchedule(
                         CronScheduleBuilder.cronSchedule(cronExpression))
                 .build();
         scheduler.scheduleJob(job, trigger);
         return job.getKey();
-    }
-
-    public static void main(String[] args) throws Exception {
-        ApplicationSchedulerFactory applicationSchedulerFactory = initScheduler(null);
-        applicationSchedulerFactory.startScheduler();
-
-        applicationSchedulerFactory.scheduleJob(SchedulerJob.class, "A", "B", "* * * * *");
-
-        //applicationSchedulerFactory.removeJob(new JobKey("A", "B"));
-
-
-       // JobDetail job = applicationSchedulerFactory.buildJobDetail(SchedulerJob.class, "A", "B");
-
-       // applicationSchedulerFactory.updateScheduler(job, "*/3 * * * * ? *");
     }
 
 }
