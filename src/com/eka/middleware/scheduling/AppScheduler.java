@@ -84,30 +84,15 @@ public class AppScheduler implements Job {
     private static Instant getNextInstant(String cronExpression,ZonedDateTime now) {
         if(cronExpression.equals("0"))
             return now.toInstant();
-
         String[] parts = cronExpression.split("\\s");
-
         if (parts.length == 7) {
             cronExpression = String.join(" ", Arrays.copyOf(parts, 5));
         }
-        System.out.println("cron " + cronExpression);
         CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX);
         CronParser parser = new CronParser(cronDefinition);
-
-        //Calendar cal = Calendar.getInstance();
-        //Date currTime = cal.getTime();
-        //ZonedDateTime now = ZonedDateTime.now();
-        // Get date for last execution
-        // DateTime now = DateTime.now();
         ExecutionTime executionTime = ExecutionTime.forCron(parser.parse(cronExpression));
-        // DateTime lastExecution = executionTime.lastExecution(currTime));
-
-        // Get date for next execution
         Optional<ZonedDateTime> zdt = executionTime.nextExecution(now);
-
         ZonedDateTime next = zdt.get();
-        Instant inst = next.toInstant();
-
-        return inst;
+        return next.toInstant();
     }
 }
