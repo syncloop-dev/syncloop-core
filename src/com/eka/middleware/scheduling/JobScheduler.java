@@ -17,7 +17,7 @@ public class JobScheduler {
 
     public static void addJob(String id,String serviceFqn,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {
 
-        MiddlewareServer.appSchedulerFactory.scheduleJob(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline),serviceFqn ,cronExpression);
+        MiddlewareServer.appSchedulerFactory.scheduleJob(AppScheduler.class, generateIdentification(id,dataPipeline), generateGroup(id,dataPipeline),serviceFqn ,cronExpression,dataPipeline);
     }
 
     public static void updateJob(String id,String cronExpression, DataPipeline dataPipeline) throws SchedulerException {

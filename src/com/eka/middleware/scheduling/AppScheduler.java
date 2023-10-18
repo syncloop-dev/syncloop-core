@@ -33,21 +33,21 @@ public class AppScheduler implements Job {
         String cronExpression = jobDataMap.getString("cronExpression");
         String serviceFqn = jobDataMap.getString("serviceFqn");
         String identificationGroup = jobDataMap.getString("identificationGroup");
-
+        String tenantName = jobDataMap.getString("tenantName");
         try {
-            executeScheduledJob(cronExpression, serviceFqn);
+            executeScheduledJob(tenantName,cronExpression, serviceFqn);
         } catch (SnippetException e) {
             throw new RuntimeException(e);
         }
 
     }
 
-    private void executeScheduledJob(String cronExpression,String serviceFqn) throws SnippetException {
+    private void executeScheduledJob(String tenantName,String cronExpression,String serviceFqn) throws SnippetException {
 
         final String uuidThread = ServiceUtils.generateUUID("Job Scheduler thread - packages.ekaScheduler.cronJob.services.getSchedulerJobData.java" + System.nanoTime());
         final String uuid = ServiceUtils.generateUUID("Job Schedule - packages.ekaScheduler.cronJob.services.getSchedulerJobData.java.main" + System.nanoTime());
 
-        final RuntimePipeline rpThread = RuntimePipeline.create(Tenant.getTenant("default"),uuidThread, null, null, "packages.ekaScheduler.cronJob.services.java.getSchedulerJobData.main", "");
+        final RuntimePipeline rpThread = RuntimePipeline.create(Tenant.getTenant(tenantName),uuidThread, null, null, "packages.ekaScheduler.cronJob.services.java.getSchedulerJobData.main", "");
         final DataPipeline dp=rpThread.dataPipeLine;
         Map<String, String> jobData =new HashMap<>();
         final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss");

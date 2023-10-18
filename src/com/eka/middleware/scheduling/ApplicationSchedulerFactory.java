@@ -148,7 +148,7 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-    public <T extends Job> JobKey scheduleJob(Class<T> jobClass, String identificationName, String identificationGroup,String serviceFqn, String cronExpression) throws SchedulerException {
+    public <T extends Job> JobKey scheduleJob(Class<T> jobClass, String identificationName, String identificationGroup,String serviceFqn, String cronExpression,DataPipeline dataPipeline) throws SchedulerException {
         if (cronExpression.split(" ").length == 5) {
             cronExpression = cronExpression + " ? *";
         }
@@ -161,6 +161,7 @@ public class ApplicationSchedulerFactory {
         jobDataMap.put("cronExpression", cronExpression);
         jobDataMap.put("serviceFqn",serviceFqn);
         jobDataMap.put("identificationGroup",identificationGroup);
+        jobDataMap.put("tenantName",dataPipeline.rp.getTenant().getName());
 
         Trigger trigger = TriggerBuilder
                 .newTrigger()
