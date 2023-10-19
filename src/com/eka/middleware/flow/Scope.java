@@ -68,8 +68,8 @@ public class Scope implements FlowBasicInfo {
 			}else
 				dp.put("*snapshot","enabled");
 		}
-		if(!canSnap)
-			dp.drop("*snapshot");
+		/*if(!canSnap)
+			dp.drop("*snapshot");*/
 		if(canSnap ) {
 			dp.snapBefore(comment, guid);
 		}
@@ -195,7 +195,9 @@ public class Scope implements FlowBasicInfo {
 		} finally {
 			if(canSnap) {
 				dp.snapAfter(comment, guid, snapMeta);
-				dp.drop("*snapshot");
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);
 		}

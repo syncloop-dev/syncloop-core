@@ -84,8 +84,8 @@ public class Loop implements FlowBasicInfo {
 			}else
 				dp.put("*snapshot","enabled");
 		}
-		if(!canSnap)
-			dp.drop("*snapshot");
+		/*if(!canSnap)
+			dp.drop("*snapshot");*/
 		if(canSnap ) {
 			dp.snapBefore(comment, guid);
 		}
