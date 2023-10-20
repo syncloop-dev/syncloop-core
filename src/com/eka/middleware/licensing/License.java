@@ -23,11 +23,7 @@ public class License {
     }
 
     private static LicenseFile validateLicense(DataPipeline dataPipeline, String content) throws IOException, ClassNotFoundException {
-        byte[] obj = Base64.getDecoder().decode(content);
-
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(obj);
-        ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
-        LicenseFile licenseFile = (LicenseFile) inputStream.readObject();
+        LicenseFile licenseFile = parseLicenseFile(content);
 
         File instanceUUID = new File(PropertyManager.getConfigFolderPath() + "INSTANCE.UUID");
         File instanceGroupUUID = new File(PropertyManager.getConfigFolderPath() + "INSTANCE-GROUP.UUID");
@@ -39,6 +35,15 @@ public class License {
         if (!dataPipeline.rp.getTenant().getName().equalsIgnoreCase(licenseFile.getTenant())) {
             throw new RuntimeException("License: Tenant is not matched.");
         }
+        return licenseFile;
+    }
+
+    public static LicenseFile parseLicenseFile(String content) throws IOException, ClassNotFoundException {
+        byte[] obj = Base64.getDecoder().decode(content);
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(obj);
+        ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
+        LicenseFile licenseFile = (LicenseFile) inputStream.readObject();
         return licenseFile;
     }
 

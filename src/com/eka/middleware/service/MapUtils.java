@@ -81,7 +81,7 @@ public class MapUtils {
 			value = Double.parseDouble(value + "");
 			break;
 		case "boolean":
-			value = Boolean.parseBoolean(value + "");
+			value = Boolean.parseBoolean(("1".equals(value + "") ? "true" : value + ""));
 			break;
 		}
 
