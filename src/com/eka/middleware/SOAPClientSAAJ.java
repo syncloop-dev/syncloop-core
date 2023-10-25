@@ -52,7 +52,6 @@ public class SOAPClientSAAJ {
         map.put("soapXml", soapMessage);
         try {
 			String json=ServiceUtils.toPrettyJson(map);
-			System.out.println(json);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -72,13 +71,10 @@ public class SOAPClientSAAJ {
             SOAPMessage soapResponse = soapConnection.call(createSOAPRequest(soapAction), soapEndpointUrl);
 
             // Print the SOAP Response
-            System.out.println("Response SOAP Message:");
             soapResponse.writeTo(System.out);
-            System.out.println();
 
             soapConnection.close();
         } catch (Exception e) {
-            System.err.println("\nError occurred while sending SOAP Request to Server!\nMake sure you have the correct endpoint URL and SOAPAction!\n");
             e.printStackTrace();
         }
     }
@@ -95,9 +91,7 @@ public class SOAPClientSAAJ {
         soapMessage.saveChanges();
 
         /* Print the request message, just for debugging purposes */
-        System.out.println("Request SOAP Message:");
         soapMessage.writeTo(System.out);
-        System.out.println("\n");
 
         return soapMessage;
     }

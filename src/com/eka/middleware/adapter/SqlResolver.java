@@ -119,5 +119,4 @@ public class SqlResolver {
 			FlowUtils.validateDocuments(dp, sqlOutput);
 	}
 	
-	
 }

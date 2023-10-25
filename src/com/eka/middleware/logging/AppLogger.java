@@ -70,6 +70,26 @@ public class AppLogger {
 		}	
 	}
 
+	public void addMul(String key, Object value) {
+		if(StringUtils.isBlank(key) || null == value) return;
+		if(null!=CONTEXT.get()) {
+			if((key.contains("_TT") || key.contains("_QT")) && null != CONTEXT.get().getMAP().get(key)) {
+				long tt = (long) CONTEXT.get().getMAP().get(key);
+				if(tt > (long) value)
+					return;
+			}
+			if (null == CONTEXT.get().getMAP().get(key)) {
+				CONTEXT.get().getMAP().put(key, value);
+			} else {
+				CONTEXT.get().getMAP().put(key, CONTEXT.get().getMAP().get(key) + ", " + value);
+			}
+			if("OPERATION".equals(key)) {
+				CONTEXT.get().getMAP().put(value + "_TS", getTimestamp());
+			}
+			isLoggable = true;
+		}
+	}
+
 	public void finish() {
 		try {
 			if (CONTEXT.get().getMAP().size() == 1) {

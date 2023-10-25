@@ -13,6 +13,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.beust.jcommander.internal.Lists;
+import com.eka.middleware.licensing.License;
+import com.eka.middleware.licensing.LicenseFile;
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowMeta;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -155,8 +160,16 @@ public class ThreadManager {
 
 					rp = RuntimePipeline.create(tenant, uuid, null, exchange, resource, requestPath);
 
-					boolean isAllowed = false;
-					isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account, requestPath, method);
+					boolean isInLicense = true || ResourceAuthenticator.isEnterpriseLicenseValid(rp.dataPipeLine);
+					if (!isInLicense) {
+						LicenseFile licenseFile = License.getLicenseFile(rp.dataPipeLine);
+						exchange.getResponseHeaders().clear();
+						exchange.getResponseHeaders().put(Headers.STATUS, 401);
+						exchange.getResponseSender().send(String.format("Your Enterprise License \"%s\" has expired on %s.", licenseFile.getLicenseName(),
+								licenseFile.getExpiry()));
+						return ;
+					}
+					boolean isAllowed = ResourceAuthenticator.isConsumerAllowed(resource, account, requestPath, method);
 
 					if (!isAllowed && "default".equals(account.getAuthProfile().get("tenant")) && !account.getUserId().equalsIgnoreCase("anonymous")) {
 						exchange.getResponseHeaders().clear();
@@ -170,6 +183,7 @@ public class ThreadManager {
 					}
 
 					if (!isAllowed) {
+
 						if (logTransaction == true)
 							LOGGER.info(ServiceUtils.getFormattedLogLine(rp.getSessionID(), resource, "resource"));
 						String userId = account.getUserId();
@@ -306,11 +320,20 @@ public class ThreadManager {
 					String requestId = rp.getSessionID();
 					String errorName = "Internal Server error";
 					String errorDetail = e.getMessage();
+					DataPipeline dataPipeline = e.getDataPipeLine();
+					List<FlowMeta> errorStack = dataPipeline.getErrorStack();
 
 					Map<String, Object> errorMap = Maps.newHashMap();
 					errorMap.put("request_id", requestId);
 					errorMap.put("error_name", errorName);
 					errorMap.put("error_detail", errorDetail);
+
+					List<String> errorTrace = Lists.newArrayList();
+					for (FlowMeta flowMeta: errorStack) {
+						errorTrace.add(String.format("%s(%s:%s)", flowMeta.getName(), flowMeta.getResource(), flowMeta.getGuid()));
+					}
+
+					errorMap.put("stackTrace", errorTrace);
 
 					exchange.setStatusCode(500);
 
@@ -327,7 +350,7 @@ public class ThreadManager {
 									"    <error>\n" +
 									"        <request_id>" + requestId + "</request_id>\n" +
 									"        <error_name>" + errorName + "</error_name>\n" +
-									"        <error_detail>" + errorDetail + "</error_detail>\n" +
+									"        <error_detail>" + errorDetail + errorStack + "</error_detail>\n" +
 									"    </error>\n" +
 									"</root>";
 						}

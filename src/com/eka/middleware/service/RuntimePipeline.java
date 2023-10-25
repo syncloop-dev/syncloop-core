@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import com.eka.middleware.logging.AppLogger;
+import org.apache.commons.lang3.StringUtils;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
@@ -108,7 +109,12 @@ public class RuntimePipeline {
 						   String urlPath) {
 		//Securitycont
 
-		executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+		String threadAllowed = ServiceUtils.getServerProperty("middleware.server.datapipeline.async.threads");
+		int numberOfThreadAllowed = 50;
+		if (StringUtils.isNotBlank(threadAllowed)) {
+			numberOfThreadAllowed = Integer.parseInt(threadAllowed);
+		}
+		executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numberOfThreadAllowed);
 		this.tenant=tenant;
 		currentThread = Thread.currentThread();
 		sessionId = requestId;
@@ -196,7 +202,7 @@ public class RuntimePipeline {
 
 	public void destroy() {
 		if(bw!=null) try{
-			bw.write("]");
+			bw.write("{}]");
 			bw.flush();
 			bw.close();
 			bw=null;

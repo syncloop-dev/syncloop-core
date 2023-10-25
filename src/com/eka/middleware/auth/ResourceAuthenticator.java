@@ -4,6 +4,9 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
+import com.eka.middleware.licensing.License;
+import com.eka.middleware.licensing.LicenseFile;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.Tenant;
@@ -26,89 +29,97 @@ public class ResourceAuthenticator {
 //	return false;
 //}
 
-public static boolean isConsumerAllowed(String resource, AuthAccount authAccount,String requestPath, String method) {
-	if (requestPath.equalsIgnoreCase("GET/google/login")) {
-		return true;
+	public static boolean isAnEnterpriseLicense(DataPipeline dataPipeline) {
+		return License.isLicenseFound(dataPipeline);
 	}
-	if(authAccount==null)
-		return false;
-	String userID=authAccount.getUserId();
-	requestPath=requestPath.toLowerCase();
-	String serviceAlias=requestPath.split("/")[1];
-	boolean canConsume=false;
-	try {
-		String packagePath=null;
+
+	public static boolean isEnterpriseLicenseValid(DataPipeline dataPipeline) {
+        if (!isAnEnterpriseLicense(dataPipeline)) {
+            return true;
+        }
+		LicenseFile licenseFile = License.getLicenseFile(dataPipeline);
+		return licenseFile.daysLeftInExpiring() > 0;
+	}
+
+    public static boolean isConsumerAllowed(String resource, AuthAccount authAccount, String requestPath, String method) {
+        if (authAccount == null)
+            return false;
+        String userID = authAccount.getUserId();
+        requestPath = requestPath.toLowerCase();
+        String serviceAlias = requestPath.split("/")[1];
+        boolean canConsume = false;
+        try {
+            String packagePath = null;
 //		if(authAccount.getAuthProfile()!=null && authAccount.getAuthProfile().get("tenant")!=null)
 //			packagePath=PropertyManager.getPackagePath((String) authAccount.getAuthProfile().get("tenant"));
 //		else
-		String tenantName=(String)authAccount.getAuthProfile().get("tenant");
-		if(tenantName==null)
-			tenantName="default";
-		packagePath=PropertyManager.getPackagePathByTenantName(tenantName);
-		String path = (packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".service"); 
-		File file=new File(path);
-		if(!file.exists()) {
-			path=(packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".sql");
-			file=new File(path);
-			if(!file.exists()) {
-				path=(packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".flow");
-				file=new File(path);
-				if(!file.exists()) {
-					path=(packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".api");
-					file=new File(path);
-					if (!file.exists()) {
-						file = null;
-					}
-				}
-			}
-		}
-		if(file!=null) {
-			byte[] json=ServiceUtils.readAllBytes(file);
-			Map<String, Object> map=ServiceUtils.jsonToMap(new String(json));
-			String consumers=(String)map.get("consumers");
-			Map<String, Object> profile = authAccount.getAuthProfile();
-            List<String> userGroups=(List<String>)profile.get("groups");
-  			
-            if(consumers==null || consumers.trim().length()==0) {
-            	for(String group: userGroups){
-                    if(AuthAccount.STATIC_ADMIN_GROUP.equals(group)){
-                      canConsume=true;
-                      break;
-                    }else if(AuthAccount.STATIC_DEFAULT_GROUP.equals(group) && (ServiceUtils.isPublicFolder(requestPath) && method.toLowerCase().equals("get")) && requestPath.contains("tenant")) {
-                    	canConsume=true;
+            String tenantName = (String) authAccount.getAuthProfile().get("tenant");
+            if (tenantName == null)
+                tenantName = "default";
+            packagePath = PropertyManager.getPackagePathByTenantName(tenantName);
+            String path = (packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".service");
+            File file = new File(path);
+            if (!file.exists()) {
+                path = (packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".sql");
+                file = new File(path);
+                if (!file.exists()) {
+                    path = (packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".flow");
+                    file = new File(path);
+                    if (!file.exists()) {
+                        path = (packagePath + resource.replace(".main", "#main").replace(".", "/")).replace("//", "/").replace("#main", ".api");
+                        file = new File(path);
+                        if (!file.exists()) {
+                            file = null;
+                        }
+                    }
+                }
+            }
+            if (file != null) {
+                byte[] json = ServiceUtils.readAllBytes(file);
+                Map<String, Object> map = ServiceUtils.jsonToMap(new String(json));
+                String consumers = (String) map.get("consumers");
+                Map<String, Object> profile = authAccount.getAuthProfile();
+                List<String> userGroups = (List<String>) profile.get("groups");
+
+                if (consumers == null || consumers.trim().length() == 0) {
+                    for (String group : userGroups) {
+                        if (AuthAccount.STATIC_ADMIN_GROUP.equals(group)) {
+                            canConsume = true;
+                            break;
+                        } else if (AuthAccount.STATIC_DEFAULT_GROUP.equals(group) && (ServiceUtils.isPublicFolder(requestPath) && method.toLowerCase().equals("get")) && requestPath.contains("tenant")) {
+                            canConsume = true;
+                            break;
+                        }
+                    }
+                } else {
+                    consumers = consumers + ",";
+                    consumers = consumers.toLowerCase();
+                    for (String group : userGroups) {
+                        if (consumers.contains(group.toLowerCase() + ",")) {
+                            canConsume = true;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                Map<String, Object> profile = authAccount.getAuthProfile();
+                List<String> userGroups = (List<String>) profile.get("groups");
+                canConsume = false;
+                for (String group : userGroups) {
+                    if (AuthAccount.STATIC_ADMIN_GROUP.equals(group)) {
+                        canConsume = true;
+                        break;
+                    } else if (AuthAccount.STATIC_DEFAULT_GROUP.equals(group) && serviceAlias.equalsIgnoreCase("files") && requestPath.contains("tenant")) {
+                        canConsume = true;
                         break;
                     }
-               }
+                }
             }
-            else{
-            	consumers=consumers+",";
-            	consumers=consumers.toLowerCase();
-              for(String group: userGroups){
-                   if(consumers.contains(group.toLowerCase()+",")){
-                     canConsume=true;
-                     break;
-                   }
-              }
-            }
-		}else {
-			Map<String, Object> profile = authAccount.getAuthProfile();
-            List<String> userGroups=(List<String>)profile.get("groups");
-            canConsume=false;
-            for(String group: userGroups){
-                    if(AuthAccount.STATIC_ADMIN_GROUP.equals(group)){
-                      canConsume=true;
-                      break;
-                    }else if(AuthAccount.STATIC_DEFAULT_GROUP.equals(group) && serviceAlias.equalsIgnoreCase("files") && requestPath.contains("tenant")) {
-                    	canConsume=true;
-                        break;
-                    }
-               }
-		}
-	} catch (Exception e) {
-		e.printStackTrace();
-	}
-	return canConsume;
-}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return canConsume;
+    }
 
 
 }
