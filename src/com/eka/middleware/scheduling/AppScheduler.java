@@ -34,15 +34,16 @@ public class AppScheduler implements Job {
         String serviceFqn = jobDataMap.getString("serviceFqn");
         String identificationGroup = jobDataMap.getString("identificationGroup");
         String tenantName = jobDataMap.getString("tenantName");
+        String job_name = jobDataMap.getString("job_name");
         try {
-            executeScheduledJob(tenantName,cronExpression, serviceFqn);
+            executeScheduledJob(tenantName,cronExpression, serviceFqn,identificationName,job_name);
         } catch (SnippetException e) {
             throw new RuntimeException(e);
         }
 
     }
 
-    private void executeScheduledJob(String tenantName,String cronExpression,String serviceFqn) throws SnippetException {
+    private void executeScheduledJob(String tenantName,String cronExpression,String serviceFqn,String identificationName,String job_name) throws SnippetException {
 
         final String uuidThread = ServiceUtils.generateUUID("Job Scheduler thread - packages.ekaScheduler.cronJob.services.getSchedulerJobData.java" + System.nanoTime());
         final String uuid = ServiceUtils.generateUUID("Job Schedule - packages.ekaScheduler.cronJob.services.getSchedulerJobData.java.main" + System.nanoTime());
@@ -54,12 +55,16 @@ public class AppScheduler implements Job {
         Map<String, Object> cache = CacheManager.getCacheAsMap(Tenant.getTenant("default"));
 
         ZonedDateTime startedAt = ZonedDateTime.now();
+        jobData.put("id", identificationName.replaceAll(".*-(\\w+)-ID", "$1"));
+        jobData.put("cronExpression", cronExpression);
+        jobData.put("serviceFqn", serviceFqn);
         jobData.put("status", "running");
         jobData.put("internal_status", "running");
         jobData.put("start_time", dtf.format(startedAt));
         jobData.put("end_time", "");
         jobData.put("correlationId", uuid);
         jobData.put("sessionId", uuidThread);
+        jobData.put("job_name", job_name);
 
         jobData.put("next_run", getNextInstant(cronExpression, startedAt) + "");
 

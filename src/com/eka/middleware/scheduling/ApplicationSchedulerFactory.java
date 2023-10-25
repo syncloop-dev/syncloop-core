@@ -7,32 +7,42 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.quartz.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ApplicationSchedulerFactory {
 
-    private ApplicationSchedulerFactory() {
+    private ApplicationSchedulerFactory(String tenantName) {
         super();
     }
-
     @Getter @Setter
-    private Scheduler scheduler;
-
+    private static Scheduler scheduler;
+    private static Map<String, Scheduler> tenantSchedulers = new HashMap<>();
     /**
      * @param configFile
      * @return
      * @throws SchedulerException
      */
-    public static ApplicationSchedulerFactory initScheduler(final String configFile) throws SchedulerException {
-        ApplicationSchedulerFactory applicationSchedulerFactory = new ApplicationSchedulerFactory();
-        SchedulerFactory schedFact = null;
+
+    public static ApplicationSchedulerFactory initScheduler(final String configFile, String tenantName) throws SchedulerException {
+        SchedulerFactory schedFact;
+
         if (StringUtils.isBlank(configFile)) {
             schedFact = new org.quartz.impl.StdSchedulerFactory();
         } else {
             schedFact = new org.quartz.impl.StdSchedulerFactory(configFile);
         }
+        Scheduler tenantScheduler = schedFact.getScheduler();
+        tenantSchedulers.put(tenantName, tenantScheduler);
+        ApplicationSchedulerFactory applicationSchedulerFactory = new ApplicationSchedulerFactory(tenantName);
+       // applicationSchedulerFactory.setScheduler(tenantScheduler);
         applicationSchedulerFactory.setScheduler(schedFact.getScheduler());
         return applicationSchedulerFactory;
+    }
+
+    public static Scheduler getSchedulerForTenant(String tenantName) {
+        return tenantSchedulers.get(tenantName);
     }
 
     /**
@@ -119,6 +129,10 @@ public class ApplicationSchedulerFactory {
         scheduler.deleteJob(jobKey);
     }
 
+    public void startJob(JobKey jobKey) throws SchedulerException {
+        scheduler.triggerJob(jobKey);
+    }
+
     /**
      * @param jobDetail
      * @param newCronExpression
@@ -148,7 +162,7 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-    public <T extends Job> JobKey scheduleJob(Class<T> jobClass, String identificationName, String identificationGroup,String serviceFqn, String cronExpression,DataPipeline dataPipeline) throws SchedulerException {
+    public <T extends Job> JobKey scheduleJob(Class<T> jobClass, String identificationName, String identificationGroup,String serviceFqn, String cronExpression,String job_name,DataPipeline dataPipeline) throws SchedulerException {
         if (cronExpression.split(" ").length == 5) {
             cronExpression = cronExpression + " ? *";
         }
@@ -162,6 +176,7 @@ public class ApplicationSchedulerFactory {
         jobDataMap.put("serviceFqn",serviceFqn);
         jobDataMap.put("identificationGroup",identificationGroup);
         jobDataMap.put("tenantName",dataPipeline.rp.getTenant().getName());
+        jobDataMap.put("job_name",job_name);
 
         Trigger trigger = TriggerBuilder
                 .newTrigger()

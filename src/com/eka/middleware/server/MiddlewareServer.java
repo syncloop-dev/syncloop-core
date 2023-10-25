@@ -83,7 +83,7 @@ public class MiddlewareServer {
 		try {
 			PropertyManager.initConfig(args);
 			local_IP = PropertyManager.getLocal_IP();
-			appSchedulerFactory = ApplicationSchedulerFactory.initScheduler(null);
+			appSchedulerFactory = ApplicationSchedulerFactory.initScheduler(null,"default");
 			appSchedulerFactory.startScheduler();
 			String ports[] = ServiceUtils.getServerProperty("middleware.server.http.ports").split(",");
 			String https = ServiceUtils.getServerProperty("middleware.server.https.ports");
