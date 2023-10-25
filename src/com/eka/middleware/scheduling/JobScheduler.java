@@ -55,7 +55,7 @@ public class JobScheduler {
     public static void deactivateScheduler(DataPipeline dataPipeline) throws SchedulerException {
         Scheduler tenantScheduler =  MiddlewareServer.appSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
         if (tenantScheduler != null) {
-            tenantScheduler.shutdown(true);
+            tenantScheduler.standby();
         }
     }
 
