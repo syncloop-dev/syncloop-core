@@ -666,12 +666,42 @@ public class ServiceUtils {
 		if (alias.matches(invalidCharacters)) {
 			return false; // Alias contains special characters
 		}
-		if (alias.matches(".*\\{.\\}[a-zA-Z].*")) { // Alias does not contains dynamic pattern such as Y in {X}Y
+		if (alias.matches(".*\\{.\\}[a-zA-Z].*")) { // Alias contains dynamic pattern such as Y in {X}Y
+			return false;
+		}
+		if (alias.matches(".*\\{[a-zA-Z0-9]+\\}[a-zA-Z0-9]+.*")) {
+			return false; // The pattern matches "{X}Y" with alphanumeric X and Y.
+		}
+		if (alias.contains("./") || alias.contains("/.") || alias.contains("/./") || alias.contains("/{}") || alias.contains("{}")) {
+			return false; // Restrict If The alias contains one of the specified patterns.
+		}
+
+		if(!areBracesBalanced(alias)){
 			return false;
 		}
 
 		return true;
 	}
+
+	public static boolean areBracesBalanced(String input) {
+		int braceCounter = 0;
+
+		for (char c : input.toCharArray()) {
+			if (c == '{') {
+				braceCounter++;
+			} else if (c == '}') {
+				braceCounter--;
+			}
+
+			if (braceCounter < 0) {
+				return false;
+			}
+		}
+
+		return braceCounter == 0;
+	}
+
+
 
 	private static final void streamResponseFile(final RuntimePipeline rp, final MultiPart mp) throws SnippetException {
 
