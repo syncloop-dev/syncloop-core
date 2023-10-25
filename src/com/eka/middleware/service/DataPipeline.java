@@ -628,7 +628,7 @@ public class DataPipeline {
 	public void apply(String fqnOfMethod) throws SnippetException {
 		apply(fqnOfMethod,null);
 	}
-	
+
 	public void apply(String fqnOfMethod,final JsonArray transformers) throws SnippetException {
 		if(fqnOfMethod==null)
 			return;
@@ -666,6 +666,11 @@ public class DataPipeline {
 				allowGlobal=false;
 			}
 			try {
+
+				appLog("TENANT", rp.getTenant().getName());
+				appLog("URL_PATH", getUrlPath());
+				appLogMul("RESOURCE_NAME", getCurrentResourceName());
+
 				ServiceUtils.execute(fqnOfMethod, this);
 			} catch (SnippetException e) {
 				// currentResource = curResourceBkp;
@@ -894,6 +899,10 @@ public class DataPipeline {
 				// ServiceUtils.execute(fqnOfFunction, dpAsync);
 				dpAsync.callingResource=currResrc;
 				//ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+
+				dpAsync.appLog("TENANT", dpAsync.rp.getTenant().getName());
+				dpAsync.appLog("URL_PATH", dpAsync.getUrlPath());
+				dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResourceName());
 				if (fqnOfFunction.startsWith("packages")) {
 					metaData.put("*sessionID", dpAsync.getSessionId());
 					ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
@@ -901,7 +910,7 @@ public class DataPipeline {
 					ServiceUtils.executeEmbeddedService(dpAsync, CacheManager.getEmbeddedService(fqnOfFunction.replaceAll("embedded.", "")
 							.replaceAll(".main", ""), dpAsync.rp.getTenant()));
 				}
-				
+
 				
 				Map<String, Object> asyncOut = dpAsync.getMap();
 				asyncOut.forEach((k, v) -> {
@@ -1098,6 +1107,10 @@ public class DataPipeline {
 
 	public void appLog(String key, String value) {
 		rp.appLogger.add(key, value);
+	}
+
+	public void appLogMul(String key, String value) {
+		rp.appLogger.addMul(key, value);
 	}
 
 	public void appLogProfile(AuthAccount acc) {
