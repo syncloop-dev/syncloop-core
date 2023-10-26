@@ -243,7 +243,9 @@ public class Loop implements FlowBasicInfo {
 		} finally {
 			if(canSnap) {
 				dp.snapAfter(comment, guid, snapMeta);
-				dp.drop("*snapshot");
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
 			}else if(snap!=null)
 				dp.put("*snapshot",snap);
 		}
