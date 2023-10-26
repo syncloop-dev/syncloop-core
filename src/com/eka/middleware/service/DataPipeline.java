@@ -12,6 +12,7 @@ import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
+import com.google.common.collect.Maps;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderValues;
 import lombok.Getter;
@@ -490,13 +491,24 @@ public class DataPipeline {
 		}
 	}
 
-	public void snap(String comment) {
+	public void snapBefore(String comment, String guid) {
+		snap(comment, guid, true, Maps.newHashMap());
+	}
+
+	public void snapAfter(String comment, String guid, Map<String, Object> meta) {
+		snap(comment, guid, false, meta);
+	}
+
+	private void snap(String comment, String guid, boolean beforeExecution, Map<String, Object> meta) {
 		try {
 			HashMap<String, Object> map = new HashMap<>();
 			if (comment == null)
 				comment = "Commentless step";
 			map.put("comment", comment);
+			map.put("guid", guid);
+			map.put("before_execution", beforeExecution);
 			map.put(currentResource, new Map[]{servicePayload,payloadStack,globalPayload});
+			map.putAll(meta);
 			String json = ServiceUtils.toPrettyJson(map);
 			rp.writeSnapshot(resource, json);
 		} catch (Exception e) {
@@ -616,7 +628,7 @@ public class DataPipeline {
 	public void apply(String fqnOfMethod) throws SnippetException {
 		apply(fqnOfMethod,null);
 	}
-	
+
 	public void apply(String fqnOfMethod,final JsonArray transformers) throws SnippetException {
 		if(fqnOfMethod==null)
 			return;
@@ -654,6 +666,11 @@ public class DataPipeline {
 				allowGlobal=false;
 			}
 			try {
+
+				appLog("TENANT", rp.getTenant().getName());
+				appLog("URL_PATH", getUrlPath());
+				appLogMul("RESOURCE_NAME", getCurrentResourceName());
+
 				ServiceUtils.execute(fqnOfMethod, this);
 			} catch (SnippetException e) {
 				// currentResource = curResourceBkp;
@@ -882,6 +899,10 @@ public class DataPipeline {
 				// ServiceUtils.execute(fqnOfFunction, dpAsync);
 				dpAsync.callingResource=currResrc;
 				//ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
+
+				dpAsync.appLog("TENANT", dpAsync.rp.getTenant().getName());
+				dpAsync.appLog("URL_PATH", dpAsync.getUrlPath());
+				dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResourceName());
 				if (fqnOfFunction.startsWith("packages")) {
 					metaData.put("*sessionID", dpAsync.getSessionId());
 					ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
@@ -889,7 +910,7 @@ public class DataPipeline {
 					ServiceUtils.executeEmbeddedService(dpAsync, CacheManager.getEmbeddedService(fqnOfFunction.replaceAll("embedded.", "")
 							.replaceAll(".main", ""), dpAsync.rp.getTenant()));
 				}
-				
+
 				
 				Map<String, Object> asyncOut = dpAsync.getMap();
 				asyncOut.forEach((k, v) -> {
@@ -1086,6 +1107,10 @@ public class DataPipeline {
 
 	public void appLog(String key, String value) {
 		rp.appLogger.add(key, value);
+	}
+
+	public void appLogMul(String key, String value) {
+		rp.appLogger.addMul(key, value);
 	}
 
 	public void appLogProfile(AuthAccount acc) {

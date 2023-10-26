@@ -202,7 +202,7 @@ public class RuntimePipeline {
 
 	public void destroy() {
 		if(bw!=null) try{
-			bw.write("]");
+			bw.write("{}]");
 			bw.flush();
 			bw.close();
 			bw=null;

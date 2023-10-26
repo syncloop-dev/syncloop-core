@@ -1,12 +1,14 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.FlowBasicInfo;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -81,6 +83,9 @@ public class Repeat implements FlowBasicInfo {
     }
 
     public void process(DataPipeline dp) throws SnippetException {
+        Map<String, Object> snapMeta = Maps.newHashMap();
+        snapMeta.put("*indexVar", indexVar);
+
         if (dp.isDestroyed()) {
             throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
         }
@@ -100,70 +105,85 @@ public class Repeat implements FlowBasicInfo {
             } else
                 dp.put("*snapshot", "enabled");
         }
-        if (!canSnap)
-            dp.drop("*snapshot");
-        if (canSnap && snap == null) {
-            dp.snap(comment);
+        /*if (!canSnap)
+            dp.drop("*snapshot");*/
+        if (canSnap ) {
+            dp.snapBefore(comment, guid);
         }
-        long index = 0;
-        boolean canExecute = true;
-        if (repeatTimes < 0 && getCondition() != null) {
-            canExecute = FlowUtils.evaluateCondition(getCondition(), dp);
-        } else if (repeatTimes == 0) {
-            canExecute = false;
-        }
-        while (repeatOn != null && canExecute) {
-
-            dp.put(indexVar, index + "");
-            index++;
-            Exception throwable = null;
-            try {
-                action(dp);
-                if ("error".equals(repeatOn))
-                    repeatOn = null;
-            } catch (Exception e) {
-                throwable = e;
-                String msg = e.getMessage();
-                if (msg.contains("packages.middleware.pub.service.exitRepeat"))
-                    break;
-                if ("success".equals(repeatOn)) {
-                    repeatOn = null;
-                    SnippetException se = null;
-                    if (e instanceof SnippetException)
-                        se = (SnippetException) e;
-                    else
-                        se = new SnippetException(dp, "Exception on step repeat(" + comment + ")", new Exception(e));
-                    dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(se));
-                    if (se.propagate)
-                        throw se;
-                } else
-                    dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(new Exception(e)));
-            }
-            repeatTimes--;
-            if (repeatTimes == 0)
-                repeatOn = null;
-
-            if (repeatTimes == 0 && null != throwable) {
-                throw new SnippetException(dp, throwable.getMessage(), throwable);
-            }
-
-            try {
-                Thread.sleep(interval);
-            } catch (Exception e) {
-                dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
-            }
-
-            if (repeatTimes < 0 && repeatOn != null)
+        try {
+            long index = 0;
+            boolean canExecute = true;
+            if (repeatTimes < 0 && getCondition() != null) {
                 canExecute = FlowUtils.evaluateCondition(getCondition(), dp);
+                snapMeta.put("condition", getCondition());
+                snapMeta.put("conditionEvaluation", canExecute);
+            } else if (repeatTimes == 0) {
+                canExecute = false;
+            }
+            snapMeta.put("repeatTimes", repeatTimes);
+            snapMeta.put("repeatOn", repeatOn);
+            snapMeta.put("interval", interval);
+            while (repeatOn != null && canExecute) {
 
-            if (dp.isDestroyed())
-                throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+                dp.put(indexVar, index + "");
+                index++;
+                Exception throwable = null;
+                try {
+                    action(dp);
+                    if ("error".equals(repeatOn))
+                        repeatOn = null;
+                } catch (Exception e) {
+                    throwable = e;
+                    String msg = e.getMessage();
+                    if (msg.contains("packages.middleware.pub.service.exitRepeat"))
+                        break;
+                    if ("success".equals(repeatOn)) {
+                        repeatOn = null;
+                        SnippetException se = null;
+                        if (e instanceof SnippetException)
+                            se = (SnippetException) e;
+                        else
+                            se = new SnippetException(dp, "Exception on step repeat(" + comment + ")", new Exception(e));
+                        dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(se));
+                        if (se.propagate)
+                            throw se;
+                    } else
+                        dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(new Exception(e)));
+                }
+                repeatTimes--;
+                if (repeatTimes == 0)
+                    repeatOn = null;
+
+                if (repeatTimes == 0 && null != throwable) {
+                    throw new SnippetException(dp, throwable.getMessage(), throwable);
+                }
+
+                try {
+                    Thread.sleep(interval);
+                } catch (Exception e) {
+                    dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
+                }
+
+                if (repeatTimes < 0 && repeatOn != null)
+                    canExecute = FlowUtils.evaluateCondition(getCondition(), dp);
+
+                if (dp.isDestroyed())
+                    throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+            }
+            dp.putGlobal("*hasError", false);
+        } catch (Exception e) {
+            dp.putGlobal("*error", e.getMessage());
+            dp.putGlobal("*hasError", true);
+            throw e;
+        } finally {
+            if (canSnap) {
+                dp.snapAfter(comment, guid, snapMeta);
+                if (null != snapshot || null != snapCondition) {
+                    dp.drop("*snapshot");
+                }
+            } else if (snap != null)
+                dp.put("*snapshot", snap);
         }
-        if (canSnap) {
-            dp.snap(comment);
-            dp.drop("*snapshot");
-        } else if (snap != null)
-            dp.put("*snapshot", snap);
     }
 
     public void action(DataPipeline dp) throws SnippetException {

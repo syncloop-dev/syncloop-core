@@ -8,6 +8,7 @@ import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class TCFBlock implements FlowBasicInfo {
@@ -68,39 +69,49 @@ public class TCFBlock implements FlowBasicInfo {
 			}else
 				dp.put("*snapshot","enabled");
 		}
-		if(!canSnap)
-			dp.drop("*snapshot");
-		if(canSnap && snap==null) {
-			dp.snap(comment);
-		}
-		JsonArray scopes=tcfBlock.getJsonArray("children");
-		for (JsonValue scope : scopes) {
-			String text=scope.asJsonObject().getString("text",null);
-			switch(text) {
-			case "TRY":
-				TRY=new Scope(scope.asJsonObject());
-				break;
-			case "CATCH":
-				CATCH=new Scope(scope.asJsonObject());
-				break;
-			case "FINALLY":
-				FINALLY=new Scope(scope.asJsonObject());
-				break;
-			}
+		/*if(!canSnap)
+			dp.drop("*snapshot");*/
+		if(canSnap ) {
+			dp.snapBefore(comment, guid);
 		}
 		try {
-			TRY.process(dp);
+			JsonArray scopes=tcfBlock.getJsonArray("children");
+			for (JsonValue scope : scopes) {
+				String text=scope.asJsonObject().getString("text",null);
+				switch(text) {
+					case "TRY":
+						TRY=new Scope(scope.asJsonObject());
+						break;
+					case "CATCH":
+						CATCH=new Scope(scope.asJsonObject());
+						break;
+					case "FINALLY":
+						FINALLY=new Scope(scope.asJsonObject());
+						break;
+				}
+			}
+			try {
+				TRY.process(dp);
+			} catch (Exception e) {
+				dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
+				CATCH.process(dp);
+			}finally {
+				FINALLY.process(dp);
+			}
+			dp.putGlobal("*hasError", false);
 		} catch (Exception e) {
-			dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
-			CATCH.process(dp);
-		}finally {
-			FINALLY.process(dp);
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid, Maps.newHashMap());
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
 		}
-		if(canSnap) {
-			dp.snap(comment);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
 	}
 	
 	public Scope getTRY() {

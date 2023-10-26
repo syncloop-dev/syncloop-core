@@ -14,6 +14,7 @@ import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class Await implements FlowBasicInfo {
@@ -92,144 +93,153 @@ public class Await implements FlowBasicInfo {
 			}else
 				dp.put("*snapshot","enabled");
 		}
-		if(!canSnap)
-			dp.drop("*snapshot");
-		if(canSnap && snap==null) {
-			dp.snap(comment);
+		/*if(!canSnap)
+			dp.drop("*snapshot");*/
+		if(canSnap ) {
+			dp.snapBefore(comment, guid);
 		}
 		
-		final List<Map<String, Object>> list = dp.getFuture();
-		if (list == null || list.size()<=0)
-			return;
-		final AtomicBoolean continueLoop=new AtomicBoolean();
-		continueLoop.set(true);
-		final AtomicInteger listSize=new AtomicInteger(list.size());
-		final Long timeout_ms=timeout_seconds_each_thread*1000;
-		while(continueLoop.get()) {
 		try {
-			//final DataPipeline dp=this;
-			final AtomicInteger index=new AtomicInteger(0);
-			//dp.put(indexVar, index.get());
-			list.forEach(map->{
-				//futureList.add(map);
-				dp.clearServicePayload();
-				int indexValue=index.getAndIncrement();
-				dp.getServicePayload().put(indexVar, indexValue);
-				Map<String, Object> asyncOutputDoc=map;
-				final Map<String, Object> metaData=(Map<String, Object>) asyncOutputDoc.get("*metaData");
-				final JsonArray transformers=(JsonArray) asyncOutputDoc.get("*futureTransformers");
-				String status=(String)metaData.get("status");
-				String batchID=(String)metaData.get("batchId");
-				Long timeOut=(Long)metaData.get("*timeout_ms");
-				Long timedOut=0l;
-				Long startTime=(Long)metaData.get("*start_time_ms");
-				Boolean closed=(Boolean)metaData.get("*Closed");
-				if(timeOut==null)
-					metaData.put("*timeout_ms", timeout_ms);
-				if(startTime!=null) {
-					timedOut=(long)(((timeout_ms)+startTime)-System.currentTimeMillis());
-				}
-				if(startTime!=null && timedOut<=0 && metaData.get("*timedout")==null) { 
-					listSize.decrementAndGet();
-					metaData.put("*timedout",Boolean.TRUE);
-				}
-				if(startTime!=null && timedOut>0 && !Boolean.TRUE.equals(closed)) {
-					try {
-						Thread.sleep(1);
-						if(!"Active".equals(status)) {
-							listSize.decrementAndGet();
-							metaData.put("*Closed",Boolean.TRUE);
-						}
-						if("Completed".equals(status)) {
-							
-							//dp.clearServicePayload();
-							//servicePayload.clear();
-							asyncOutputDoc.forEach((k,v)->{
-								if(k!=null & v!=null)
-									dp.getServicePayload().put(k, v);
-							});
-							dp.getServicePayload().put("asyncOutputDoc", asyncOutputDoc);
-							if(transformers!=null)
-								FlowUtils.mapAfter(transformers, dp);
-							
-							//dp.getServicePayload().put(indexVar, );
-							JsonArray flows = await.getJsonArray("children");
-							for (JsonValue jsonValue : flows) {
-								final String type = jsonValue.asJsonObject().getString("type");
-								JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-								String stepStatus=jov.getString("status",null);
-								if(!"disabled".equals(stepStatus))
-								switch (type) {
-								case "try-catch":
-									TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
-									tcfBlock.process(dp);
-									break;
-								case "sequence":
-									case "group":
-									Scope scope = new Scope(jsonValue.asJsonObject());
-									scope.process(dp);
-									break;
-								case "switch":
-									Switch swich = new Switch(jsonValue.asJsonObject());
-									swich.process(dp);
-									break;
-								case "ifelse":
-									IfElse ifElse = new IfElse(jsonValue.asJsonObject());
-									ifElse.process(dp);
-									break;
-								case "loop":
-									case "foreach":
-									Loop loop = new Loop(jsonValue.asJsonObject());
-									loop.process(dp);
-									break;
-								case "repeat":
-									case "redo":
-									Repeat repeat = new Repeat(jsonValue.asJsonObject());
-									repeat.process(dp);
-									break;
-								case "invoke":
-									case "service":
-									Api api = new Api(jsonValue.asJsonObject());
-									api.process(dp);
-									break;
-								case "map":
-									case "transformer":
-									Transformer transformer = new Transformer(jsonValue.asJsonObject());
-									transformer.process(dp);
-									break;
-								}
-							}
-							//dp.drop("asyncOutputDoc");
-							//dp.clearServicePayload();
-						}
-						if("Failed".equals(status))
-							dp.log("Batch ID : "+batchID+" "+status);
-					} catch (Exception e) {
-						try {
-							ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
-						} catch (Exception e2) {
-							ServiceUtils.printException("Nested exception in await", e);
-						}
-					}finally {
-						//index.getAndIncrement();
+			final List<Map<String, Object>> list = dp.getFuture();
+			if (list == null || list.size()<=0)
+				return;
+			final AtomicBoolean continueLoop=new AtomicBoolean();
+			continueLoop.set(true);
+			final AtomicInteger listSize=new AtomicInteger(list.size());
+			final Long timeout_ms=timeout_seconds_each_thread*1000;
+			while(continueLoop.get()) {
+				try {
+					//final DataPipeline dp=this;
+					final AtomicInteger index=new AtomicInteger(0);
+					//dp.put(indexVar, index.get());
+					list.forEach(map->{
+						//futureList.add(map);
 						dp.clearServicePayload();
-					}
-				}
-			});
-			}catch (Exception e) {
-				ServiceUtils.printException("Internal error inside async service call", e);
-			}finally {
-				dp.drop("asyncOutputDoc");
-				if(listSize.get()<=0)
-					continueLoop.set(false);
-			}
-		}
+						int indexValue=index.getAndIncrement();
+						dp.getServicePayload().put(indexVar, indexValue);
+						Map<String, Object> asyncOutputDoc=map;
+						final Map<String, Object> metaData=(Map<String, Object>) asyncOutputDoc.get("*metaData");
+						final JsonArray transformers=(JsonArray) asyncOutputDoc.get("*futureTransformers");
+						String status=(String)metaData.get("status");
+						String batchID=(String)metaData.get("batchId");
+						Long timeOut=(Long)metaData.get("*timeout_ms");
+						Long timedOut=0l;
+						Long startTime=(Long)metaData.get("*start_time_ms");
+						Boolean closed=(Boolean)metaData.get("*Closed");
+						if(timeOut==null)
+							metaData.put("*timeout_ms", timeout_ms);
+						if(startTime!=null) {
+							timedOut=(long)(((timeout_ms)+startTime)-System.currentTimeMillis());
+						}
+						if(startTime!=null && timedOut<=0 && metaData.get("*timedout")==null) {
+							listSize.decrementAndGet();
+							metaData.put("*timedout",Boolean.TRUE);
+						}
+						if(startTime!=null && timedOut>0 && !Boolean.TRUE.equals(closed)) {
+							try {
+								Thread.sleep(1);
+								if(!"Active".equals(status)) {
+									listSize.decrementAndGet();
+									metaData.put("*Closed",Boolean.TRUE);
+								}
+								if("Completed".equals(status)) {
 
-		if(canSnap) {
-			dp.snap(comment);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
+									//dp.clearServicePayload();
+									//servicePayload.clear();
+									asyncOutputDoc.forEach((k,v)->{
+										if(k!=null & v!=null)
+											dp.getServicePayload().put(k, v);
+									});
+									dp.getServicePayload().put("asyncOutputDoc", asyncOutputDoc);
+									if(transformers!=null)
+										FlowUtils.mapAfter(transformers, dp);
+
+									//dp.getServicePayload().put(indexVar, );
+									JsonArray flows = await.getJsonArray("children");
+									for (JsonValue jsonValue : flows) {
+										final String type = jsonValue.asJsonObject().getString("type");
+										JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+										String stepStatus=jov.getString("status",null);
+										if(!"disabled".equals(stepStatus))
+											switch (type) {
+												case "try-catch":
+													TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
+													tcfBlock.process(dp);
+													break;
+												case "sequence":
+												case "group":
+													Scope scope = new Scope(jsonValue.asJsonObject());
+													scope.process(dp);
+													break;
+												case "switch":
+													Switch swich = new Switch(jsonValue.asJsonObject());
+													swich.process(dp);
+													break;
+												case "ifelse":
+													IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+													ifElse.process(dp);
+													break;
+												case "loop":
+												case "foreach":
+													Loop loop = new Loop(jsonValue.asJsonObject());
+													loop.process(dp);
+													break;
+												case "repeat":
+												case "redo":
+													Repeat repeat = new Repeat(jsonValue.asJsonObject());
+													repeat.process(dp);
+													break;
+												case "invoke":
+												case "service":
+													Api api = new Api(jsonValue.asJsonObject());
+													api.process(dp);
+													break;
+												case "map":
+												case "transformer":
+													Transformer transformer = new Transformer(jsonValue.asJsonObject());
+													transformer.process(dp);
+													break;
+											}
+									}
+									//dp.drop("asyncOutputDoc");
+									//dp.clearServicePayload();
+								}
+								if("Failed".equals(status))
+									dp.log("Batch ID : "+batchID+" "+status);
+							} catch (Exception e) {
+								try {
+									ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
+								} catch (Exception e2) {
+									ServiceUtils.printException("Nested exception in await", e);
+								}
+							}finally {
+								//index.getAndIncrement();
+								dp.clearServicePayload();
+							}
+						}
+					});
+				}catch (Exception e) {
+					ServiceUtils.printException("Internal error inside async service call", e);
+				}finally {
+					dp.drop("asyncOutputDoc");
+					if(listSize.get()<=0)
+						continueLoop.set(false);
+				}
+			}
+			dp.putGlobal("*hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid, Maps.newHashMap());
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
+		}
 	}
 
 	public boolean isDisabled() {

@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -9,6 +10,7 @@ import javax.json.JsonValue;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class IfElse implements FlowBasicInfo {
@@ -53,6 +55,7 @@ public class IfElse implements FlowBasicInfo {
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
+		Map<String, Object> snapMeta = Maps.newHashMap();
 		if (dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread",
 					new Exception("Service runtime pipeline destroyed manually"));
@@ -73,42 +76,54 @@ public class IfElse implements FlowBasicInfo {
 			} else
 				dp.put("*snapshot", "enabled");
 		}
-		if (!canSnap)
-			dp.drop("*snapshot");
-		if (canSnap && snap == null) {
-			dp.snap(comment);
+		/*if (!canSnap)
+			dp.drop("*snapshot");*/
+		if (canSnap ) {
+			dp.snapBefore(comment, guid);
 		}
-		//String text = ifelse.get("data").asJsonObject().getString("text", null);
-		JsonArray flows = ifelse.getJsonArray("children");
+		try {
+			//String text = ifelse.get("data").asJsonObject().getString("text", null);
+			JsonArray flows = ifelse.getJsonArray("children");
 
-		for (JsonValue jsonValue : flows) {
-			String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
-			boolean result = false;
+			for (JsonValue jsonValue : flows) {
+				String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
+				boolean result = false;
 
-			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-			String status=jov.getString("status",null);
-			if("disabled".equalsIgnoreCase(status))
-				continue;
+				JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+				String status=jov.getString("status",null);
+				if("disabled".equalsIgnoreCase(status))
+					continue;
 
-			// ifLogic=xVal;
-			if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
-				Scope scope = new Scope(jsonValue.asJsonObject());
-				scope.process(dp);
-				break;
-			} else {
-				result = FlowUtils.evaluateCondition(ifLogic, dp);
-				if (result) {
+				// ifLogic=xVal;
+				snapMeta.put("condition", ifLogic);
+				if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
 					Scope scope = new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
 					break;
+				} else {
+					result = FlowUtils.evaluateCondition(ifLogic, dp);
+					snapMeta.put("conditionEvaluation", result);
+					if (result) {
+						Scope scope = new Scope(jsonValue.asJsonObject());
+						scope.process(dp);
+						break;
+					}
 				}
 			}
+			dp.putGlobal("*hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
+			throw e;
+		} finally {
+			if (canSnap) {
+				dp.snapAfter(comment, guid, snapMeta);
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
+			} else if (snap != null)
+				dp.put("*snapshot", snap);
 		}
-		if (canSnap) {
-			dp.snap(comment);
-			dp.drop("*snapshot");
-		} else if (snap != null)
-			dp.put("*snapshot", snap);
 	}
 
 	public List<Scope> getCases() {

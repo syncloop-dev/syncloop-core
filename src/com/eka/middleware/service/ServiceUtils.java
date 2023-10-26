@@ -1355,6 +1355,7 @@ public class ServiceUtils {
 		Date dateTimeStmp = null;
 		Set<String> keys = passThroughData.keySet();
 		dp.put("*currentResourceFQN", fqn);
+		dp.appLogMul("RESOURCE_NAME", fqn);
 		String gqlEnabled = (String) dp.getMyProperties().get("GraphQL");
 		String GraphQLDBC=(String) dp.getMyProperties().get("GraphQL.DBC");
 		String GraphQLSchema=(String) dp.getMyProperties().get("GraphQL.Schema");

@@ -254,14 +254,17 @@ public class Client {
 			response = httpClientBuilder.build().send(builder.build(), HttpResponse.BodyHandlers.ofString());
 		}
 
+		int redirectCount = settings.containsKey("redirectCount") ? (int) settings.get("redirectCount") : 0;
 		if (response.statusCode() == 301 || response.statusCode() == 302) {
+			if (redirectCount >= 5) {
+				throw new RuntimeException("Too many redirects");
+			}
 			String redirectUrl = response.headers().firstValue("Location").orElse(null);
 			if (StringUtils.isNotBlank(redirectUrl)) {
-				return invoke(redirectUrl, method, formData, reqHeaders, payload, inputStream, queryParameters,
-						settings, sslValidation);
+				settings.put("redirectCount", redirectCount + 1);
+				return invoke(redirectUrl, method, formData, reqHeaders, payload, inputStream, queryParameters, settings, sslValidation);
 			}
 		}
-
 		Map<String, List<String>> responseHeaderFields = response.headers().map();
 
 		Map<String, String> responseHeaders = Maps.newHashMap();
