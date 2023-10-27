@@ -82,8 +82,6 @@ public class MiddlewareServer {
 		try {
 			PropertyManager.initConfig(args);
 			local_IP = PropertyManager.getLocal_IP();
-			Scheduler scheduler = ApplicationSchedulerFactory.initScheduler(null,"default");
-			ApplicationSchedulerFactory.startScheduler(scheduler);
 			String ports[] = ServiceUtils.getServerProperty("middleware.server.http.ports").split(",");
 			String https = ServiceUtils.getServerProperty("middleware.server.https.ports");
 			String keyStoreFilePath = ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
