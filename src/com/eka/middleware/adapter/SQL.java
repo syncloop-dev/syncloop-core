@@ -253,9 +253,7 @@ public class SQL {
                 int colType = md.getColumnType(i);
                 byte[] byteData = rs.getBytes(i);
 
-                if(colType == Types.DATE) {
-                    row.put(md.getColumnName(i), rs.getDate(i));
-                }else if (colType == Types.BINARY || colType == Types.BLOB || colType == Types.VARBINARY){
+                if (colType == Types.BINARY || colType == Types.BLOB || colType == Types.VARBINARY){
                     row.put(md.getColumnName(i), byteData);
                 }else if (colType == Types.BIGINT || colType == Types.INTEGER) {
                     row.put(md.getColumnName(i), rs.getInt(i));
@@ -263,6 +261,8 @@ public class SQL {
                     row.put(md.getColumnName(i), rs.getString(i));
                 }else if (colType == Types.BOOLEAN) {
                     row.put(md.getColumnName(i), rs.getBoolean(i));
+                } else if(colType == Types.DATE) {
+                    row.put(md.getColumnName(i), rs.getDate(i));
                 }else{
                     row.put(md.getColumnName(i), rs.getObject(i));
                 }
