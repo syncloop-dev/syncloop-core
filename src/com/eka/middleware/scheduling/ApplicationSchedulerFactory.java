@@ -13,11 +13,6 @@ import java.util.Map;
 
 public class ApplicationSchedulerFactory {
 
-    private ApplicationSchedulerFactory(String tenantName) {
-        super();
-    }
-    @Getter @Setter
-    private static Scheduler scheduler;
     private static Map<String, Scheduler> tenantSchedulers = new HashMap<>();
     /**
      * @param configFile
@@ -25,7 +20,7 @@ public class ApplicationSchedulerFactory {
      * @throws SchedulerException
      */
 
-    public static ApplicationSchedulerFactory initScheduler(final String configFile, String tenantName) throws SchedulerException {
+    public static Scheduler initScheduler(final String configFile, String tenantName) throws SchedulerException {
         SchedulerFactory schedFact;
 
         if (StringUtils.isBlank(configFile)) {
@@ -35,10 +30,7 @@ public class ApplicationSchedulerFactory {
         }
         Scheduler tenantScheduler = schedFact.getScheduler();
         tenantSchedulers.put(tenantName, tenantScheduler);
-        ApplicationSchedulerFactory applicationSchedulerFactory = new ApplicationSchedulerFactory(tenantName);
-       // applicationSchedulerFactory.setScheduler(tenantScheduler);
-        applicationSchedulerFactory.setScheduler(schedFact.getScheduler());
-        return applicationSchedulerFactory;
+        return tenantScheduler;
     }
 
     public static Scheduler getSchedulerForTenant(String tenantName) {
@@ -48,14 +40,14 @@ public class ApplicationSchedulerFactory {
     /**
      * @throws SchedulerException
      */
-    public void startScheduler() throws SchedulerException {
+    public static void startScheduler(Scheduler scheduler) throws SchedulerException {
         scheduler.start();
     }
 
     /**
      * @throws SchedulerException
      */
-    public void stopScheduler() throws SchedulerException {
+    public static void stopScheduler(Scheduler scheduler) throws SchedulerException {
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.standby();
         }
@@ -64,7 +56,7 @@ public class ApplicationSchedulerFactory {
     /**
      * @throws SchedulerException
      */
-    public void deleteScheduler() throws SchedulerException {
+    public static void deleteScheduler(Scheduler scheduler) throws SchedulerException {
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdown();
         }
@@ -74,7 +66,7 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-    public SchedulerMetaData getSchedulerMetaData() throws SchedulerException {
+    public static SchedulerMetaData getSchedulerMetaData(Scheduler scheduler) throws SchedulerException {
         return scheduler.getMetaData();
     }
 
@@ -92,7 +84,7 @@ public class ApplicationSchedulerFactory {
      * @param jobGroup
      * @return
      */
-    JobDetail buildJobDetail(Class<? extends Job> jobClass, String jobName, String jobGroup) {
+    static JobDetail buildJobDetail(Class<? extends Job> jobClass, String jobName, String jobGroup) {
         return JobBuilder.newJob(jobClass)
                 .withIdentity(jobName, jobGroup)
                 .build();
@@ -104,7 +96,7 @@ public class ApplicationSchedulerFactory {
      * @param cronExpression
      * @return
      */
-    private Trigger buildCronTrigger(String triggerName, String triggerGroup, String cronExpression) {
+    private static Trigger buildCronTrigger(String triggerName, String triggerGroup, String cronExpression) {
         return TriggerBuilder.newTrigger()
                 .withIdentity(triggerName, triggerGroup)
                 .withSchedule(CronScheduleBuilder.cronSchedule(cronExpression))
@@ -116,20 +108,22 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-    public JobKey getKey(JobDetail jobDetail) throws SchedulerException {
+    public static JobKey getKey(JobDetail jobDetail) throws SchedulerException {
         return jobDetail.getKey();
     }
 
     /**
+     *
      * @param jobKey
+     * @param scheduler
      * @throws SchedulerException
      */
-    public void removeJob(JobKey jobKey) throws SchedulerException {
+    public static void removeJob(JobKey jobKey, Scheduler scheduler) throws SchedulerException {
         scheduler.unscheduleJob(TriggerKey.triggerKey(jobKey.getName(), jobKey.getGroup()));
         scheduler.deleteJob(jobKey);
     }
 
-    public void startJob(JobKey jobKey) throws SchedulerException {
+    public static void startJob(JobKey jobKey, Scheduler scheduler) throws SchedulerException {
         scheduler.triggerJob(jobKey);
     }
 
@@ -137,7 +131,7 @@ public class ApplicationSchedulerFactory {
      * @param jobDetail
      * @param newCronExpression
      */
-    public void updateScheduler(JobDetail jobDetail, String newCronExpression) {
+    public static void updateScheduler(JobDetail jobDetail, String newCronExpression, Scheduler scheduler) {
         try {
             JobKey jobKey = getKey(jobDetail);
             String jobName = jobKey.getName();
@@ -162,7 +156,10 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-    public <T extends Job> JobKey scheduleJob(Class<T> jobClass, String identificationName, String identificationGroup,String serviceFqn, String cronExpression,String job_name,DataPipeline dataPipeline) throws SchedulerException {
+    public static <T extends Job> JobKey scheduleJob(Class<T> jobClass, String identificationName, String identificationGroup, String serviceFqn,
+                                                     String cronExpression, String job_name, DataPipeline dataPipeline) throws SchedulerException {
+        Scheduler scheduler = ApplicationSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
+
         if (cronExpression.split(" ").length == 5) {
             cronExpression = cronExpression + " ? *";
         }
@@ -187,5 +184,4 @@ public class ApplicationSchedulerFactory {
         scheduler.scheduleJob(job, trigger);
         return job.getKey();
     }
-
 }
