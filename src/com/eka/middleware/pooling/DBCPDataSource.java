@@ -24,6 +24,7 @@ public class DBCPDataSource {
         ds.setMaxIdle(pool + 1);
         ds.setMaxOpenPreparedStatements((pool + 1) * 5);
         ds.setDefaultQueryTimeout(timeOut);
+        ds.setMaxTotal(pool + 1);
     }
 
     public static Connection getConnection(String name, String url, String user, String password, int pool, int timeOut, ClassLoader cl, Driver driver, String driverClassName) throws SQLException {
