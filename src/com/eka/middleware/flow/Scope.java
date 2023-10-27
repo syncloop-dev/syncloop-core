@@ -1,6 +1,7 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -9,6 +10,7 @@ import javax.json.JsonValue;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class Scope implements FlowBasicInfo {
@@ -45,6 +47,8 @@ public class Scope implements FlowBasicInfo {
 	}
 	
 	public void process(DataPipeline dp) throws SnippetException{
+		Map<String, Object> snapMeta = Maps.newHashMap();
+		snapMeta.put("evaluateCondition", evaluateCondition);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		}
@@ -64,120 +68,139 @@ public class Scope implements FlowBasicInfo {
 			}else
 				dp.put("*snapshot","enabled");
 		}
-		if(!canSnap)
-			dp.drop("*snapshot");
-		if(canSnap && snap==null) {
+		/*if(!canSnap)
+			dp.drop("*snapshot");*/
+		if(canSnap ) {
 			dp.snapBefore(comment, guid);
 		}
-		JsonArray flows= scope.getJsonArray("children");
-		for (JsonValue jsonValue : flows) {
-			String type=jsonValue.asJsonObject().getString("type",null);
-			JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-			String status=jov.getString("status",null);
-			if(!"disabled".equals(status))
-			switch(type) {
-				case "try-catch":
-					TCFBlock tcfBlock=new TCFBlock(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						tcfBlock.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(tcfBlock.getCondition(),dp);
-						if(canExecute)
-							tcfBlock.process(dp);
+		try {
+			JsonArray flows= scope.getJsonArray("children");
+			for (JsonValue jsonValue : flows) {
+				String type=jsonValue.asJsonObject().getString("type",null);
+				JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+				String status=jov.getString("status",null);
+				if(!"disabled".equals(status))
+					switch(type) {
+						case "try-catch":
+							TCFBlock tcfBlock=new TCFBlock(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								tcfBlock.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(tcfBlock.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									tcfBlock.process(dp);
+							}
+							break;
+						case "sequence":
+						case "group":
+							Scope scope=new Scope(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								scope.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(scope.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									scope.process(dp);
+							}
+							break;
+						case "switch":
+							Switch swich=new Switch(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								swich.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(swich.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									swich.process(dp);
+							}
+							break;
+						case "ifelse":
+							IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								ifElse.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(ifElse.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									ifElse.process(dp);
+							}
+							break;
+						case "loop":
+						case "foreach":
+							Loop loop=new Loop(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								loop.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(loop.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									loop.process(dp);
+							}
+							break;
+						case "repeat":
+						case "redo":
+							Repeat repeat=new Repeat(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								repeat.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(repeat.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									repeat.process(dp);
+							}
+							break;
+						case "invoke":
+						case "service":
+							Api api=new Api(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								api.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(api.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									api.process(dp);
+							}
+							break;
+						case "map":
+						case "transformer":
+							Transformer transformer=new Transformer(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								transformer.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(transformer.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									transformer.process(dp);
+							}
+							break;
+						case "await":
+							Await await=new Await(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								await.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									await.process(dp);
+							}
+							break;
 					}
-				break;
-				case "sequence":
-				case "group":
-					Scope scope=new Scope(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						scope.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(scope.getCondition(),dp);
-						if(canExecute)
-							scope.process(dp);
-					}
-				break;
-				case "switch":
-					Switch swich=new Switch(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						swich.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(swich.getCondition(),dp);
-						if(canExecute)
-							swich.process(dp);
-					}
-				break;
-				case "ifelse":
-					IfElse ifElse = new IfElse(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						ifElse.process(dp);
-					}else {
-						boolean canExecute =FlowUtils.evaluateCondition(ifElse.getCondition(),dp);
-						if(canExecute)
-							ifElse.process(dp);
-					}
-					break;
-				case "loop":
-				case "foreach":
-					Loop loop=new Loop(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						loop.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(loop.getCondition(),dp);
-						if(canExecute)
-							loop.process(dp);
-					}
-				break;
-				case "repeat":
-				case "redo":
-					Repeat repeat=new Repeat(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						repeat.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(repeat.getCondition(),dp);
-						if(canExecute)
-							repeat.process(dp);
-					}
-				break;
-				case "invoke":
-				case "service":
-					Api api=new Api(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						api.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(api.getCondition(),dp);
-						if(canExecute)
-							api.process(dp);
-					}
-				break;
-				case "map":
-				case "transformer":
-					Transformer transformer=new Transformer(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						transformer.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(transformer.getCondition(),dp);
-						if(canExecute)
-							transformer.process(dp);
-					}
-				break;	
-				case "await":
-					Await await=new Await(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						await.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
-						if(canExecute)
-							await.process(dp);
-					}
-				break;
 			}
+			dp.putGlobal("*hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid, snapMeta);
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
 		}
-		if(canSnap) {
-			dp.snapAfter(comment, guid);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
 	}
 	
 	public List<Scope> getScopes() {

@@ -1,10 +1,6 @@
 package com.eka.middleware.flow;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 //import java.util.HashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,7 +37,25 @@ public class FlowUtils {
                 for (String param : params) {
                     // if (param.contains("#{")) {
                     // param = param.split(Pattern.quote("#{"))[1];// replace("#{", "");
-                    String val = dp.getValueByPointer(param) + "";
+                    Object obj = dp.getValueByPointer(param);
+                    String val = "";
+                    Integer size = null;
+                    if (null != obj && obj instanceof Map) {
+                        size = ((Map) obj).size();
+                    } else if (null != obj && (obj instanceof List)) {
+                        size = ((List) obj).size();
+                    } else  {
+                        val = dp.getValueByPointer(param) + "";
+                    }
+
+                    if (null != size) {
+                        if (size == 0) {
+                            val = "null";
+                        } else {
+                            val = "true";
+                        }
+                    }
+
                     String value = val.replace("\"", "");
                     // System.out.println(value);
                     xPathValues = xPathValues.replace("#{" + param + "}", value);// cond=evaluatedParam+"="+value;
