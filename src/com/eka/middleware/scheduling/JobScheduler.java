@@ -50,16 +50,12 @@ public class JobScheduler {
 
     public static void activateScheduler(DataPipeline dataPipeline) throws SchedulerException {
         Scheduler tenantScheduler = ApplicationSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
-        if (tenantScheduler != null && !tenantScheduler.isStarted()) {
-            tenantScheduler.start();
-        }
+        ApplicationSchedulerFactory.startScheduler(tenantScheduler);
     }
 
     public static void deactivateScheduler(DataPipeline dataPipeline) throws SchedulerException {
         Scheduler tenantScheduler = ApplicationSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
-        if (tenantScheduler != null) {
-            tenantScheduler.standby();
-        }
+        ApplicationSchedulerFactory.stopScheduler(tenantScheduler);
     }
 
 }

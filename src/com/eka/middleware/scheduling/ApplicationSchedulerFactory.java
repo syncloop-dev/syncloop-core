@@ -41,14 +41,26 @@ public class ApplicationSchedulerFactory {
      * @throws SchedulerException
      */
     public static void startScheduler(Scheduler scheduler) throws SchedulerException {
+        if (scheduler.isStarted()) {
+            return ;
+        }
         scheduler.start();
+    }
+
+    /**
+     * @param scheduler
+     * @return
+     * @throws SchedulerException
+     */
+    public static boolean isSchedulerAlive(Scheduler scheduler) throws SchedulerException {
+        return !scheduler.isInStandbyMode();
     }
 
     /**
      * @throws SchedulerException
      */
     public static void stopScheduler(Scheduler scheduler) throws SchedulerException {
-        if (scheduler != null && !scheduler.isShutdown()) {
+        if (scheduler != null && !scheduler.isInStandbyMode()) {
             scheduler.standby();
         }
     }
