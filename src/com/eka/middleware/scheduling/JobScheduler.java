@@ -33,7 +33,7 @@ public class JobScheduler {
         ApplicationSchedulerFactory.removeJob(jobDetail.getKey(), scheduler);
     }
 
-    public static void enableOrDisableScheduler(String id,String enabled,DataPipeline dataPipeline) throws SchedulerException {
+    public static void enableOrDisableScheduler(String id,String enabled,String serviceFqn,String cronExpression, String job_name,DataPipeline dataPipeline) throws SchedulerException {
         Scheduler scheduler = ApplicationSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
 
         if ("N".equals(enabled)) {
@@ -41,21 +41,9 @@ public class JobScheduler {
             JobKey jobKey = ApplicationSchedulerFactory.getKey(jobDetail);
             ApplicationSchedulerFactory.removeJob(jobKey, scheduler);
         } else if ("Y".equals(enabled)) {
-            JobDetail jobDetail = ApplicationSchedulerFactory.buildJobDetail(AppScheduler.class, generateIdentification(id, dataPipeline), generateGroup(id, dataPipeline));
-            JobKey jobKey = ApplicationSchedulerFactory.getKey(jobDetail);
-            ApplicationSchedulerFactory.startJob(jobKey, scheduler);
-
+            ApplicationSchedulerFactory.scheduleJob(AppScheduler.class, generateIdentification(id, dataPipeline), generateGroup(id, dataPipeline),serviceFqn,cronExpression,job_name,dataPipeline);
         }
     }
 
-    public static void activateScheduler(DataPipeline dataPipeline) throws SchedulerException {
-        Scheduler tenantScheduler = ApplicationSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
-        ApplicationSchedulerFactory.startScheduler(tenantScheduler);
-    }
-
-    public static void deactivateScheduler(DataPipeline dataPipeline) throws SchedulerException {
-        Scheduler tenantScheduler = ApplicationSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
-        ApplicationSchedulerFactory.stopScheduler(tenantScheduler);
-    }
 
 }
