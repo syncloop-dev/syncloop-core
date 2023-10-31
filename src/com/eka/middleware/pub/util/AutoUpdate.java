@@ -179,7 +179,7 @@ public class AutoUpdate {
 
             if (jsonValue != null && jsonValue.equals("true")) {
                 String coreDirPath = packagePath + "builds/core";
-                moveFolder(coreDirPath, "E:/move");
+                moveFolder(coreDirPath, "E:/move/core");
             }
 
             // Create restore point
