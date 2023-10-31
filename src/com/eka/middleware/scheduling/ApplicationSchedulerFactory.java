@@ -1,6 +1,7 @@
 package com.eka.middleware.scheduling;
 
 import com.beust.jcommander.internal.Lists;
+import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
 import lombok.Getter;
 import lombok.Setter;
@@ -40,28 +41,32 @@ public class ApplicationSchedulerFactory {
     /**
      * @throws SchedulerException
      */
-    public static void startScheduler(Scheduler scheduler) throws SchedulerException {
-        if (scheduler.isStarted()) {
-            return ;
+    public static void startScheduler(DataPipeline dataPipeline) throws SchedulerException {
+        Scheduler tenantScheduler = MiddlewareServer.appSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
+
+        if (tenantScheduler.isInStandbyMode()) {
+            tenantScheduler.start();
+            System.out.println("Scheduler started.");
         }
-        scheduler.start();
     }
 
     /**
-     * @param scheduler
+     * @param dataPipeline
      * @return
      * @throws SchedulerException
      */
-    public static boolean isSchedulerAlive(Scheduler scheduler) throws SchedulerException {
+    public static boolean isSchedulerAlive(DataPipeline dataPipeline) throws SchedulerException {
+        Scheduler scheduler = getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
         return !scheduler.isInStandbyMode();
     }
-
     /**
      * @throws SchedulerException
      */
-    public static void stopScheduler(Scheduler scheduler) throws SchedulerException {
-        if (scheduler != null && !scheduler.isInStandbyMode()) {
-            scheduler.standby();
+    public static void stopScheduler(DataPipeline dataPipeline) throws SchedulerException {
+        Scheduler tenantScheduler =  MiddlewareServer.appSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
+        if (tenantScheduler != null && !tenantScheduler.isInStandbyMode()) {
+            System.out.println("scheduler stopped.....");
+            tenantScheduler.standby();
         }
     }
 
