@@ -16,6 +16,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
@@ -170,13 +171,21 @@ public class AutoUpdate {
             String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
             boolean importSuccessful = importURLAliases(urlAliasFilePath, dataPipeline);
 
-
-            // Create restore point
-            createRestorePoint(fileName, dataPipeline);
-
             String jsonContent = readJsonFromUrl(returnTenantUpdateUrl());
             String extractedJsonString = extractJsonPart(jsonContent, "latest");
             String tenantUpdateFileLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/tenant-update.json";
+
+            String jsonValue = jsonValueFetch(returnTenantUpdateUrl(), "latest.update_core_jar");
+
+            boolean updatedCoreJar = false;
+
+            if (jsonValue != null && jsonValue.equals("true")) {
+                String coreDirPath = packagePath + "builds/core";
+                updatedCoreJar = moveFolder(coreDirPath, "/lib");
+            }
+
+            // Create restore point
+            createRestorePoint(fileName, dataPipeline);
 
             try {
                 writeJsonToFile(extractedJsonString, tenantUpdateFileLocation);
@@ -184,8 +193,10 @@ public class AutoUpdate {
                 e.printStackTrace();
             }
             dataPipeline.put("status", true);
-        }else{
+            dataPipeline.put("updatedCoreJar", updatedCoreJar);
+        } else{
             dataPipeline.put("status", false);
+            dataPipeline.put("updatedCoreJar", false);
         }
 
     }
@@ -324,7 +335,6 @@ public class AutoUpdate {
         }
     }
 
-
     public static String returnTenantUpdateUrl() throws Exception {
 
         if (MiddlewareServer.IS_COMMUNITY_VERSION)
@@ -360,5 +370,15 @@ public class AutoUpdate {
 
         dataPipeline.rp.getExecutor().execute(task);
         return uniqueId;
+    }
+    public static boolean moveFolder(String sourceDir, String destDir) throws IOException {
+        Path sourcePath = Paths.get(sourceDir);
+        Path destPath = Paths.get(destDir);
+
+        if (Files.exists(sourcePath)) {
+            Files.move(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        }
+        return false;
     }
 }
