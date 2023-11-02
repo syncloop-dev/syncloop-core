@@ -180,7 +180,7 @@ public class ApplicationSchedulerFactory {
         String[] expression = cronExpression.split(" ");
 
         if (expression.length == 5) {
-            if (expression[4] != "*") {
+            if (expression[4].equals("*")) {
                 cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " " + "? *";
             } else {
                 cronExpression = "0 " + cronExpression + " *";
