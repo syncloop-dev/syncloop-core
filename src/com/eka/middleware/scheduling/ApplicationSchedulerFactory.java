@@ -180,15 +180,15 @@ public class ApplicationSchedulerFactory {
         String[] expression = cronExpression.split(" ");
 
         if (expression.length == 5) {
-            if (expression[2].equals("*") && (!expression[4].equals("*"))) {
-                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + "?" + " " + expression[3] + " " + expression[4];
+            if (cronExpression.equals("* * * * *")) {
+                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + "*" + " " + expression[3] + " " + "? *";
+            } else if (expression[2].equals("*") && (!expression[4].equals("*"))) {
+                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + "?" + " " + expression[3] + " " + expression[4] + " *";
             } else if (!expression[2].equals("*") && (expression[4].equals("*"))) {
                 cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " " + "? *";
-            }
-            else if (!expression[2].equals("*") && !expression[4].equals("*")) {
-                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " ? * " ;
-            }
-            else {
+            } else if (!expression[2].equals("*") && !expression[4].equals("*")) {
+                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " ? * ";
+            } else {
                 cronExpression = "0 " + cronExpression + " *";
             }
         }
