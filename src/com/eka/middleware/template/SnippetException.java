@@ -1,5 +1,6 @@
 package com.eka.middleware.template;
 
+import com.eka.middleware.service.FlowMeta;
 import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
@@ -9,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 
+import java.util.List;
 import java.util.Map;
 
 public class SnippetException extends Exception {
@@ -18,7 +20,7 @@ public class SnippetException extends Exception {
     private final String message;
 
     @Getter
-    private final DataPipeline dataPipeLine;
+    private final List<FlowMeta> errorStack;
     private String code = "SY_0001";
     private final Map<String, Object> meta;
 
@@ -27,7 +29,7 @@ public class SnippetException extends Exception {
         meta = Maps.newHashMap();
         propagate = !errMsg.equals(e.getMessage());
         message = e.getMessage();
-        this.dataPipeLine = dataPipeLine;
+        this.errorStack = dataPipeLine.getErrorStack();
         if (propagate) {
             ServiceUtils.printException(dataPipeLine.getSessionId() + "    " + dataPipeLine.getCorrelationId() + "    " + errMsg, this);
             ServiceUtils.printException(dataPipeLine, errMsg, this);
@@ -45,7 +47,7 @@ public class SnippetException extends Exception {
         this.meta = meta;
         propagate = !errMsg.equals(e.getMessage());
         message = e.getMessage();
-        this.dataPipeLine = dataPipeLine;
+        this.errorStack = dataPipeLine.getErrorStack();
 
         if (StringUtils.isNotBlank(code)) {
             this.code = code;

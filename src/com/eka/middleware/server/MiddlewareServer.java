@@ -19,10 +19,12 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
+import com.eka.middleware.scheduling.ApplicationSchedulerFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.quartz.Scheduler;
 import org.xnio.CompressionType;
 import org.xnio.Options;
 
@@ -80,6 +82,7 @@ public class MiddlewareServer {
 		try {
 			PropertyManager.initConfig(args);
 			local_IP = PropertyManager.getLocal_IP();
+			Scheduler scheduler = ApplicationSchedulerFactory.initScheduler(null, "default");
 			String ports[] = ServiceUtils.getServerProperty("middleware.server.http.ports").split(",");
 			String https = ServiceUtils.getServerProperty("middleware.server.https.ports");
 			String keyStoreFilePath = ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
