@@ -253,15 +253,16 @@ public class SQL {
                 int colType = md.getColumnType(i);
                 byte[] byteData = rs.getBytes(i);
 
-                if (colType == Types.BINARY || colType == Types.BLOB || colType == Types.VARBINARY){
+                if (colType == Types.BINARY || colType == Types.BLOB || colType == Types.VARBINARY
+                        || colType == Types.LONGVARBINARY) {
                     row.put(md.getColumnName(i), byteData);
                 }else if (colType == Types.BIGINT || colType == Types.INTEGER) {
                     row.put(md.getColumnName(i), rs.getInt(i));
                 }else if (colType == Types.VARCHAR || colType == Types.CHAR) {
                     row.put(md.getColumnName(i), rs.getString(i));
-                }else if (colType == Types.BOOLEAN) {
+                }else if (colType == Types.BOOLEAN || colType == Types.TINYINT || colType == Types.BIT) {
                     row.put(md.getColumnName(i), rs.getBoolean(i));
-                } else if(colType == Types.DATE) {
+                } else if(colType == Types.DATE || colType == Types.TIME || colType == Types.TIMESTAMP) {
                     row.put(md.getColumnName(i), rs.getDate(i));
                 }else{
                     row.put(md.getColumnName(i), rs.getObject(i));
