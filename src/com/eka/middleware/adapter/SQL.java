@@ -54,7 +54,7 @@ public class SQL {
                 for (String k : map.keySet()) {
                     String v = map.get(k) + "";
                     //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
-                    query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
+                    query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v.replaceAll("'", ""));
                 }
                 query = removeUninitialized(query);
                 if (logQuery)

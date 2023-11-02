@@ -320,8 +320,7 @@ public class ThreadManager {
 					String requestId = rp.getSessionID();
 					String errorName = "Internal Server error";
 					String errorDetail = e.getMessage();
-					DataPipeline dataPipeline = e.getDataPipeLine();
-					List<FlowMeta> errorStack = dataPipeline.getErrorStack();
+					List<FlowMeta> errorStack = e.getErrorStack();
 
 					Map<String, Object> errorMap = Maps.newHashMap();
 					errorMap.put("request_id", requestId);

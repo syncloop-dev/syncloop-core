@@ -42,7 +42,7 @@ public class ApplicationSchedulerFactory {
      * @throws SchedulerException
      */
     public static void startScheduler(DataPipeline dataPipeline) throws SchedulerException {
-        Scheduler tenantScheduler = MiddlewareServer.appSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
+        Scheduler tenantScheduler = getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
 
         if (tenantScheduler.isInStandbyMode()) {
             tenantScheduler.start();
@@ -63,7 +63,7 @@ public class ApplicationSchedulerFactory {
      * @throws SchedulerException
      */
     public static void stopScheduler(DataPipeline dataPipeline) throws SchedulerException {
-        Scheduler tenantScheduler =  MiddlewareServer.appSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
+        Scheduler tenantScheduler =  getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
         if (tenantScheduler != null && !tenantScheduler.isInStandbyMode()) {
             System.out.println("scheduler stopped.....");
             tenantScheduler.standby();
@@ -177,8 +177,14 @@ public class ApplicationSchedulerFactory {
                                                      String cronExpression, String job_name, DataPipeline dataPipeline) throws SchedulerException {
         Scheduler scheduler = ApplicationSchedulerFactory.getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
 
-        if (cronExpression.split(" ").length == 5) {
-            cronExpression = cronExpression + " ? *";
+        String[] expression = cronExpression.split(" ");
+
+        if (expression.length == 5) {
+            if (expression[4] != "*") {
+                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " " + " ? *";
+            } else {
+                cronExpression = "0 " + cronExpression + " *";
+            }
         }
 
         JobDetail job = JobBuilder.newJob(jobClass)
