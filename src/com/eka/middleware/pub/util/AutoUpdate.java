@@ -177,9 +177,11 @@ public class AutoUpdate {
 
             String jsonValue = jsonValueFetch(returnTenantUpdateUrl(), "latest.update_core_jar");
 
+            boolean updatedCoreJar = false;
+
             if (jsonValue != null && jsonValue.equals("true")) {
                 String coreDirPath = packagePath + "builds/core";
-                moveFolder(coreDirPath, "E:/move/core");
+                updatedCoreJar = moveFolder(coreDirPath, "/lib");
             }
 
             // Create restore point
@@ -191,8 +193,10 @@ public class AutoUpdate {
                 e.printStackTrace();
             }
             dataPipeline.put("status", true);
-        }else{
+            dataPipeline.put("updatedCoreJar", updatedCoreJar);
+        } else{
             dataPipeline.put("status", false);
+            dataPipeline.put("updatedCoreJar", false);
         }
 
     }
@@ -367,12 +371,14 @@ public class AutoUpdate {
         dataPipeline.rp.getExecutor().execute(task);
         return uniqueId;
     }
-    public static void moveFolder(String sourceDir, String destDir) throws IOException {
+    public static boolean moveFolder(String sourceDir, String destDir) throws IOException {
         Path sourcePath = Paths.get(sourceDir);
         Path destPath = Paths.get(destDir);
 
         if (Files.exists(sourcePath)) {
             Files.move(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
+            return true;
         }
+        return false;
     }
 }
