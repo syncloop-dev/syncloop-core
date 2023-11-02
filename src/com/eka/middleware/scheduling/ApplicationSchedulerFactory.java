@@ -181,7 +181,7 @@ public class ApplicationSchedulerFactory {
 
         if (expression.length == 5) {
             if (expression[4] != "*") {
-                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " " + " ? *";
+                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " " + "? *";
             } else {
                 cronExpression = "0 " + cronExpression + " *";
             }
