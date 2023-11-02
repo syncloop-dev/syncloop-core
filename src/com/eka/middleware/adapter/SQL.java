@@ -250,7 +250,22 @@ public class SQL {
         while (rs.next()) {
             Map<String, Object> row = new HashMap<String, Object>(columns);
             for (int i = 1; i <= columns; ++i) {
-                row.put(md.getColumnName(i), rs.getObject(i));
+                int colType = md.getColumnType(i);
+                byte[] byteData = rs.getBytes(i);
+
+                if (colType == Types.BINARY || colType == Types.BLOB || colType == Types.VARBINARY){
+                    row.put(md.getColumnName(i), byteData);
+                }else if (colType == Types.BIGINT || colType == Types.INTEGER) {
+                    row.put(md.getColumnName(i), rs.getInt(i));
+                }else if (colType == Types.VARCHAR || colType == Types.CHAR) {
+                    row.put(md.getColumnName(i), rs.getString(i));
+                }else if (colType == Types.BOOLEAN) {
+                    row.put(md.getColumnName(i), rs.getBoolean(i));
+                } else if(colType == Types.DATE) {
+                    row.put(md.getColumnName(i), rs.getDate(i));
+                }else{
+                    row.put(md.getColumnName(i), rs.getObject(i));
+                }
             }
             rows.add(row);
         }
