@@ -133,6 +133,7 @@ public class SQL {
         return rows;
     }
 
+
     private static String getColumnTypeFromDatabase(String sqlCode,String columnName, Connection myCon) throws SQLException {
         DatabaseMetaData databaseMetaData = myCon.getMetaData();
         ResultSet rs = databaseMetaData.getColumns(null, null, getTableNameFromQuery(sqlCode), null);
@@ -150,6 +151,8 @@ public class SQL {
         rs.close();
         return "STRING";
     }
+
+
 
     public static String getTableNameFromQuery(String query) {
         String tableName = null;
