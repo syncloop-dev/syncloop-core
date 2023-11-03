@@ -152,8 +152,6 @@ public class SQL {
         return "STRING";
     }
 
-
-
     public static String getTableNameFromQuery(String query) {
         String tableName = null;
         query = query.trim().toUpperCase();
