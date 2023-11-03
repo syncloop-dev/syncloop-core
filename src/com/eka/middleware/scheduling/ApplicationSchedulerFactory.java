@@ -187,7 +187,9 @@ public class ApplicationSchedulerFactory {
             } else if (!expression[2].equals("*") && (expression[4].equals("*"))) {
                 cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " " + "? *";
             } else if (!expression[2].equals("*") && !expression[4].equals("*")) {
-                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " ? * ";
+                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " ? * " ;
+            } else if (expression[2].equals("*") && expression[4].equals("*")) {
+                cronExpression = "0 " + expression[0] + " " + expression[1] + " " + expression[2] + " " + expression[3] + " ? * " ;
             } else {
                 cronExpression = "0 " + cronExpression + " *";
             }
