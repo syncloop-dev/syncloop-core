@@ -379,7 +379,9 @@ public class SQL {
                 }else if (colType == Types.BOOLEAN || colType == Types.TINYINT || colType == Types.BIT) {
                     row.put(md.getColumnName(i), rs.getBoolean(i));
                 } else if(colType == Types.DATE || colType == Types.TIME || colType == Types.TIMESTAMP) {
-                    row.put(md.getColumnName(i), rs.getDate(i));
+                    java.util.Date date = new java.util.Date();
+                    date.setTime(rs.getDate(i).getTime());
+                    row.put(md.getColumnName(i), date);
                 }else{
                     row.put(md.getColumnName(i), rs.getObject(i));
                 }
