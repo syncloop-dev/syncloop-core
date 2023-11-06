@@ -9,7 +9,10 @@ import org.apache.logging.log4j.Level;
 import java.io.File;
 import java.io.FileInputStream;
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SQL {
     //public static Logger LOGGER = LogManager.getLogger(SQL.class);
@@ -48,28 +51,143 @@ public class SQL {
 
     public static int DML(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         int rows = 0;
+
         if (sqlParameters != null && sqlParameters.size() > 0) {
             for (Map<String, Object> map : sqlParameters) {
                 String query = sqlCode;
-                for (String k : map.keySet()) {
-                    String v = map.get(k) + "";
-                    //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
-                    query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v.replaceAll("'", ""));
+                String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
+
+                if (parameterNames != null) {
+                    for (String paramName : parameterNames) {
+                        String valuePlaceholder = "'{" + paramName + "}'";
+                        if (map.containsKey(paramName)) {
+                            Object value = map.get(paramName);
+                            query = query.replace(valuePlaceholder, "?");
+                        }
+                    }
                 }
+
                 query = removeUninitialized(query);
                 if (logQuery)
                     dp.log(query);
-                PreparedStatement myStmt = myCon.prepareStatement(query);
-                rows += myStmt.executeUpdate();
+
+                try (PreparedStatement myStmt = myCon.prepareStatement(query)) {
+                    int paramIndex = 1;
+                    for (String paramName : parameterNames) {
+                        if (map.containsKey(paramName)) {
+                            Object value = map.get(paramName);
+                            String columnName = paramName;
+                            String columnType = getColumnTypeFromDatabase(sqlCode, columnName, myCon);
+
+                            if (value == null) {
+                                myStmt.setNull(paramIndex, Types.VARCHAR);
+                            } else {
+                                switch (columnType) {
+                                    case "INT":
+                                        myStmt.setInt(paramIndex, (Integer) value);
+                                        break;
+                                    case "DOUBLE":
+                                        myStmt.setDouble(paramIndex, (Double) value);
+                                        break;
+                                    case "VARCHAR":
+                                        myStmt.setString(paramIndex, value.toString());
+                                        break;
+                                    case "BIT":
+                                    case "BOOLEAN":
+                                        myStmt.setBoolean(paramIndex, (Boolean) value);
+                                        break;
+                                    case "BLOB":
+                                        myStmt.setBytes(paramIndex, (byte[]) value);
+                                        break;
+                                    case "DATE":
+                                        myStmt.setDate(paramIndex, (Date) value);
+                                        break;
+                                    case "STRING":
+                                        myStmt.setString(paramIndex, (String) value);
+                                        break;
+                                    default:
+                                        myStmt.setObject(paramIndex, value);
+                                        break;
+                                }
+                            }
+                            paramIndex++;
+                        }
+                    }
+
+                    rows += myStmt.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         } else {
             sqlCode = removeUninitialized(sqlCode);
             if (logQuery)
                 dp.log(sqlCode);
-            PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
-            rows = myStmt.executeUpdate();
+
+            try (PreparedStatement myStmt = myCon.prepareStatement(sqlCode)) {
+                rows = myStmt.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         return rows;
+    }
+
+
+    private static String getColumnTypeFromDatabase(String sqlCode,String columnName, Connection myCon) throws SQLException {
+        DatabaseMetaData databaseMetaData = myCon.getMetaData();
+        ResultSet rs = databaseMetaData.getColumns(null, null, getTableNameFromQuery(sqlCode), null);
+
+        while (rs.next()) {
+            String colName = rs.getString("COLUMN_NAME");
+            String colType = rs.getString("TYPE_NAME");
+
+            if (colName.equals(columnName)) {
+                rs.close();
+                return colType;
+            }
+        }
+
+        rs.close();
+        return "STRING";
+    }
+
+
+
+    public static String getTableNameFromQuery(String query) {
+        String tableName = null;
+        query = query.trim().toUpperCase();
+
+        if (query.startsWith("INSERT INTO ")) {
+            int tableNameStart = 12;
+            int tableNameEnd = query.indexOf(" ", tableNameStart);
+            if (tableNameEnd == -1) {
+                tableName = query.substring(tableNameStart);
+            } else {
+                tableName = query.substring(tableNameStart, tableNameEnd);
+            }
+        } else if (query.startsWith("UPDATE ")) {
+            int tableNameStart = 7;
+            int tableNameEnd = query.indexOf(" SET ");
+            if (tableNameEnd != -1) {
+                tableName = query.substring(tableNameStart, tableNameEnd);
+            }
+        } else if (query.startsWith("DELETE FROM ")) {
+            int tableNameStart = 12;
+            int tableNameEnd = query.indexOf(" WHERE ");
+            if (tableNameEnd != -1) {
+                tableName = query.substring(tableNameStart, tableNameEnd);
+            }
+        }
+        else if (query.startsWith("ALTER TABLE ")) {
+            Pattern pattern = Pattern.compile("ALTER TABLE\\s+(\\w+)", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(query);
+            if (matcher.find()) {
+                tableName = matcher.group(1);
+            }
+        }
+
+        return tableName;
     }
 
     public static String[] DML_RGKs(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
@@ -78,9 +196,8 @@ public class SQL {
             for (Map<String, Object> map : sqlParameters) {
                 String query = sqlCode;
                 for (String k : map.keySet()) {
-                    String v = map.get(k) + "";
-                    //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
-                    query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
+                    query = query.replace("'{" + k + "}'", "?");
+
                 }
                 query = removeUninitialized(query);
                 if (logQuery)
