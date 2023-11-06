@@ -61,7 +61,7 @@ public class SQL {
                     for (String paramName : parameterNames) {
                         String valuePlaceholder = "'{" + paramName + "}'";
                         if (map.containsKey(paramName)) {
-                            Object value = map.get(paramName);
+                            //Object value = map.get(paramName);
                             query = query.replace(valuePlaceholder, "?");
                         }
                     }
@@ -368,11 +368,10 @@ public class SQL {
             Map<String, Object> row = new HashMap<String, Object>(columns);
             for (int i = 1; i <= columns; ++i) {
                 int colType = md.getColumnType(i);
-                byte[] byteData = rs.getBytes(i);
 
                 if (colType == Types.BINARY || colType == Types.BLOB || colType == Types.VARBINARY
                         || colType == Types.LONGVARBINARY) {
-                    row.put(md.getColumnName(i), byteData);
+                    row.put(md.getColumnName(i), rs.getBytes(i));
                 }else if (colType == Types.BIGINT || colType == Types.INTEGER) {
                     row.put(md.getColumnName(i), rs.getInt(i));
                 }else if (colType == Types.VARCHAR || colType == Types.CHAR) {
