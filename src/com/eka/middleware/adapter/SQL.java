@@ -17,6 +17,7 @@ import java.io.FileInputStream;
 import java.sql.*;
 import java.util.*;
 
+
 public class SQL {
     //public static Logger LOGGER = LogManager.getLogger(SQL.class);
     public static List<Map<String, Object>> DQL(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
@@ -104,6 +105,7 @@ public class SQL {
         }
         return outputDocList;
     }
+
     public static int DML(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         int rows = 0;
 
@@ -121,9 +123,7 @@ public class SQL {
                         }
                     }
                 }
-
                 query = StringUtils.replace(query, "'", "");
-
                 query = removeUninitialized(query);
                 if (logQuery)
                     dp.log(query);
@@ -204,10 +204,12 @@ public class SQL {
                 return colType;
             }
         }
+
         rs.close();
-        return "OBJECT";
+        return "STRING";
     }
     public static String getTableNameFromQuery(String sqlQuery) {
+
         try {
             net.sf.jsqlparser.statement.Statement statement = CCJSqlParserUtil.parse(sqlQuery);
 
@@ -231,7 +233,6 @@ public class SQL {
             return null;
         }
     }
-
 
     private static String removeUninitialized(String sqlCode) {
         String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
@@ -259,7 +260,7 @@ public class SQL {
                         }
                     }
                 }
-
+                query = StringUtils.replace(query, "'?'", "?");
                 query = removeUninitialized(query);
                 if (logQuery)
                     dp.log(query);
@@ -462,6 +463,7 @@ public class SQL {
         return myCon;
     }
 
+
     private static List<Map<String, Object>> resultSetToList(ResultSet rs) throws SQLException {
         ResultSetMetaData md = rs.getMetaData();
         int columns = md.getColumnCount();
@@ -492,5 +494,4 @@ public class SQL {
         }
         return rows;
     }
-
 }
