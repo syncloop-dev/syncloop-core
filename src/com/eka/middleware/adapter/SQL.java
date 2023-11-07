@@ -64,13 +64,15 @@ public class SQL {
 
                 if (parameterNames != null) {
                     for (String paramName : parameterNames) {
-                        String valuePlaceholder = "'{" + paramName + "}'";
+                        String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
                         if (map.containsKey(paramName)) {
                             //Object value = map.get(paramName);
                             query = query.replace(valuePlaceholder, "?");
                         }
                     }
                 }
+
+                query = StringUtils.replace(query, "'", "");
 
                 query = removeUninitialized(query);
                 if (logQuery)
