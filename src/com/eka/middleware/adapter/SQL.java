@@ -3,6 +3,12 @@ package com.eka.middleware.adapter;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.service.*;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.delete.Delete;
+import net.sf.jsqlparser.statement.insert.Insert;
+import net.sf.jsqlparser.statement.update.Update;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 
@@ -47,7 +53,6 @@ public class SQL {
         }
         return outputDocList;
     }
-
 
     public static int DML(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         int rows = 0;
@@ -100,7 +105,8 @@ public class SQL {
                                         myStmt.setBytes(paramIndex, (byte[]) value);
                                         break;
                                     case "DATE":
-                                        myStmt.setDate(paramIndex, (Date) value);
+                                        java.util.Date date = (java.util.Date) value;
+                                        myStmt.setDate(paramIndex, new java.sql.Date(date.getTime()));
                                         break;
                                     case "STRING":
                                         myStmt.setString(paramIndex, (String) value);
@@ -133,7 +139,6 @@ public class SQL {
         return rows;
     }
 
-
     private static String getColumnTypeFromDatabase(String sqlCode,String columnName, Connection myCon) throws SQLException {
         DatabaseMetaData databaseMetaData = myCon.getMetaData();
         ResultSet rs = databaseMetaData.getColumns(null, null, getTableNameFromQuery(sqlCode), null);
@@ -151,85 +156,31 @@ public class SQL {
         rs.close();
         return "STRING";
     }
+    public static String getTableNameFromQuery(String sqlQuery) {
+        try {
+            net.sf.jsqlparser.statement.Statement statement = CCJSqlParserUtil.parse(sqlQuery);
 
-
-
-    public static String getTableNameFromQuery(String query) {
-        String tableName = null;
-        query = query.trim().toUpperCase();
-
-        if (query.startsWith("INSERT INTO ")) {
-            int tableNameStart = 12;
-            int tableNameEnd = query.indexOf(" ", tableNameStart);
-            if (tableNameEnd == -1) {
-                tableName = query.substring(tableNameStart);
+            if (statement instanceof Update) {
+                Update updateStatement = (Update) statement;
+                Table table = updateStatement.getTable();
+                return table.getName();
+            } else if (statement instanceof Insert) {
+                Insert insertStatement = (Insert) statement;
+                Table table = insertStatement.getTable();
+                return table.getName();
+            } else if (statement instanceof Delete) {
+                Delete deleteStatement = (Delete) statement;
+                Table table = deleteStatement.getTable();
+                return table.getName();
             } else {
-                tableName = query.substring(tableNameStart, tableNameEnd);
+                return null;
             }
-        } else if (query.startsWith("UPDATE ")) {
-            int tableNameStart = 7;
-            int tableNameEnd = query.indexOf(" SET ");
-            if (tableNameEnd != -1) {
-                tableName = query.substring(tableNameStart, tableNameEnd);
-            }
-        } else if (query.startsWith("DELETE FROM ")) {
-            int tableNameStart = 12;
-            int tableNameEnd = query.indexOf(" WHERE ");
-            if (tableNameEnd != -1) {
-                tableName = query.substring(tableNameStart, tableNameEnd);
-            }
+        } catch (JSQLParserException e) {
+            e.printStackTrace();
+            return null;
         }
-        else if (query.startsWith("ALTER TABLE ")) {
-            Pattern pattern = Pattern.compile("ALTER TABLE\\s+(\\w+)", Pattern.CASE_INSENSITIVE);
-            Matcher matcher = pattern.matcher(query);
-            if (matcher.find()) {
-                tableName = matcher.group(1);
-            }
-        }
-
-        return tableName;
     }
 
-    public static String[] DML_RGKs(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
-        String ids = "";
-        if (sqlParameters != null && sqlParameters.size() > 0) {
-            for (Map<String, Object> map : sqlParameters) {
-                String query = sqlCode;
-                for (String k : map.keySet()) {
-                    query = query.replace("'{" + k + "}'", "?");
-
-                }
-                query = removeUninitialized(query);
-                if (logQuery)
-                    dp.log(query);
-                PreparedStatement myStmt = myCon.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-                if (myStmt.executeUpdate() > 0) {
-                    ResultSet keys = myStmt.getGeneratedKeys();
-                    if (keys.next()) {
-                        ids += keys.getObject(1) + ",";
-                    }
-                    else {
-                        ids += "null,";
-                    }
-                }
-               // rows += myStmt.executeUpdate();
-            }
-        } else {
-            sqlCode = removeUninitialized(sqlCode);
-            if (logQuery)
-                dp.log(sqlCode);
-            PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
-            if (myStmt.executeUpdate() > 0) {
-                ResultSet keys = myStmt.getGeneratedKeys();
-                if (keys.next())
-                    ids = keys.getObject(1) + ",";
-                else
-                    ids = "null";
-            }
-        }
-        ids = (ids + "_").replace(",_", "");
-        return ids.split(",");
-    }
 
     private static String removeUninitialized(String sqlCode) {
         String[] placeholders = StringUtils.substringsBetween(sqlCode, "{", "}");
@@ -240,6 +191,105 @@ public class SQL {
             }
         }
         return sqlCode;
+    }
+    public static String[] DML_RGKs(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
+        String ids = "";
+
+        if (sqlParameters != null && sqlParameters.size() > 0) {
+            for (Map<String, Object> map : sqlParameters) {
+                String query = sqlCode;
+                String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
+
+                if (parameterNames != null) {
+                    for (String paramName : parameterNames) {
+                        String valuePlaceholder = "'{" + paramName + "}'";
+                        query = query.replace(valuePlaceholder, "?");
+                    }
+                }
+
+                query = removeUninitialized(query);
+                if (logQuery)
+                    dp.log(query);
+
+                try (PreparedStatement myStmt = myCon.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+                    int paramIndex = 1;
+                    for (String paramName : parameterNames) {
+                        if (map.containsKey(paramName)) {
+                            Object value = map.get(paramName);
+                            String columnName = paramName;
+                            String columnType = getColumnTypeFromDatabase(sqlCode, columnName, myCon);
+
+                            if (value == null) {
+                                myStmt.setNull(paramIndex, Types.VARCHAR);
+                            } else {
+                                switch (columnType) {
+                                    case "INT":
+                                        myStmt.setInt(paramIndex, (Integer) value);
+                                        break;
+                                    case "DOUBLE":
+                                        myStmt.setDouble(paramIndex, (Double) value);
+                                        break;
+                                    case "VARCHAR":
+                                        myStmt.setString(paramIndex, value.toString());
+                                        break;
+                                    case "BIT":
+                                    case "BOOLEAN":
+                                        myStmt.setBoolean(paramIndex, (Boolean) value);
+                                        break;
+                                    case "BLOB":
+                                        myStmt.setBytes(paramIndex, (byte[]) value);
+                                        break;
+                                    case "DATE":
+                                        java.util.Date date = (java.util.Date) value;
+                                        myStmt.setDate(paramIndex, new java.sql.Date(date.getTime()));
+                                        break;
+                                    case "STRING":
+                                        myStmt.setString(paramIndex, (String) value);
+                                        break;
+                                    default:
+                                        myStmt.setObject(paramIndex, value);
+                                        break;
+                                }
+                            }
+                            paramIndex++;
+                        }
+                    }
+
+                    int rows = myStmt.executeUpdate();
+                    if (rows > 0) {
+                        ResultSet keys = myStmt.getGeneratedKeys();
+                        if (keys.next()) {
+                            ids += keys.getObject(1) + ",";
+                        }
+                        else {
+                            ids += "null,";
+                        }
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            sqlCode = removeUninitialized(sqlCode);
+            if (logQuery)
+                dp.log(sqlCode);
+
+            try (PreparedStatement myStmt = myCon.prepareStatement(sqlCode, Statement.RETURN_GENERATED_KEYS)) {
+                int rows = myStmt.executeUpdate();
+                if (rows > 0) {
+                    ResultSet keys = myStmt.getGeneratedKeys();
+                    if (keys.next())
+                        ids = keys.getObject(1) + ",";
+                    else
+                        ids = "null";
+
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return ids.split(",");
     }
 
     public static Boolean DDL(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
