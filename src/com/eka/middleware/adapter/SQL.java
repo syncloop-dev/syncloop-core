@@ -46,7 +46,7 @@ public class SQL {
                     for (String paramName : parameterNames) {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
-                            String columnType = getColumnTypeFromDatabase(sqlCode, paramName, myCon);
+                            String columnType = getColumnTypeFromDatabase(query, paramName, myCon);
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
                             } else {
@@ -134,13 +134,14 @@ public class SQL {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
                             String columnName = paramName;
-                            String columnType = getColumnTypeFromDatabase(sqlCode, columnName, myCon);
+                            String columnType = getColumnTypeFromDatabase(query, columnName, myCon);
 
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
                             } else {
                                 switch (columnType) {
                                     case "INT":
+                                    case "INTEGER":
                                         myStmt.setInt(paramIndex, (Integer) value);
                                         break;
                                     case "DOUBLE":
@@ -209,7 +210,9 @@ public class SQL {
         return "STRING";
     }
     public static String getTableNameFromQuery(String sqlQuery) {
-
+        if (sqlQuery.trim().toLowerCase().startsWith("insert")) {
+            sqlQuery = sqlQuery.replaceAll("(?i)WHERE[^;]+;", ";");
+        }
         try {
             net.sf.jsqlparser.statement.Statement statement = CCJSqlParserUtil.parse(sqlQuery);
 
@@ -271,7 +274,7 @@ public class SQL {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
                             String columnName = paramName;
-                            String columnType = getColumnTypeFromDatabase(sqlCode, columnName, myCon);
+                            String columnType = getColumnTypeFromDatabase(query, columnName, myCon);
 
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
