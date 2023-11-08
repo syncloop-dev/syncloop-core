@@ -209,7 +209,10 @@ public class SQL {
         return "STRING";
     }
     public static String getTableNameFromQuery(String sqlQuery) {
-
+        if (sqlQuery.trim().toLowerCase().startsWith("insert")) {
+            sqlQuery = sqlQuery.replaceAll("\\{[a-zA-Z0-9_]+\\}", "?");
+            sqlQuery = sqlQuery.replaceAll("(?i)WHERE[^;]+;", ";");
+        }
         try {
             net.sf.jsqlparser.statement.Statement statement = CCJSqlParserUtil.parse(sqlQuery);
 
