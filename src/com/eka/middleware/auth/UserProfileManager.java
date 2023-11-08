@@ -116,8 +116,8 @@ public class UserProfileManager implements IdentityManager {
     }
 
     public static boolean isUserExist(String user) throws SystemException {
-        try {
-            return UsersRepository.isUserExist(SQL.getProfileConnection(false), user);
+        try (Connection connection = SQL.getProfileConnection(false);) {
+            return UsersRepository.isUserExist(connection, user);
         } catch (SQLException e) {
             throw new SystemException("EKA_MWS_1001", e);
         }
@@ -171,7 +171,7 @@ public class UserProfileManager implements IdentityManager {
                 .collect(Collectors.toList());
         String tenant = profile.get("tenant").toString();
         String userId = account.getUserId();
-        String passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
+        String passHash = "[#]" + ServiceUtils.generateUUID(new String(((null == password) ? "".getBytes() : password)) + userId);
 
         return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups);
     }
