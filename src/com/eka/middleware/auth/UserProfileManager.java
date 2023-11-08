@@ -239,7 +239,7 @@ public class UserProfileManager implements IdentityManager {
     }
 
     private UserProfileManager() throws SystemException {
-        getUsers();
+        //getUsers();
     }
 
     @Override
