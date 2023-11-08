@@ -81,6 +81,7 @@ public class MiddlewareServer {
 
 		try {
 			PropertyManager.initConfig(args);
+			UserProfileManager.migrationProfiles();
 			local_IP = PropertyManager.getLocal_IP();
 			Scheduler scheduler = ApplicationSchedulerFactory.initScheduler(null, "default");
 			String ports[] = ServiceUtils.getServerProperty("middleware.server.http.ports").split(",");
