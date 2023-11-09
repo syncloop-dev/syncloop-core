@@ -154,6 +154,8 @@ public class UserProfileManager implements IdentityManager {
             byte[] password = null;
             if (account.getUserId().equals("admin")) {
                 password = "admin".getBytes();
+            } else {
+                password = "".getBytes();
             }
             UsersRepository.addUser(createUserFromAccount(account, password,dataPipeline));
         } catch (Exception e) {
@@ -190,7 +192,10 @@ public class UserProfileManager implements IdentityManager {
                 .collect(Collectors.toList());
         String tenant = dataPipeline.rp.getTenant().getName();
         String userId = account.getUserId();
-        String passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
+        String passHash = null;
+        if (null != password) {
+            passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
+        }
         Timestamp createdDate = new Timestamp(System.currentTimeMillis());
         System.out.println("create user complete........... ");
         return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups, createdDate, createdDate, 0);

@@ -148,16 +148,22 @@ public class UsersRepository {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
             }
             String sql = "INSERT INTO users (password, name, email, tenant_id, status, user_id, created_date, modified_date, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            if (null == user.getPassword()) {
+                sql = "INSERT INTO users (name, email, tenant_id, status, user_id, created_date, modified_date, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            }
             try (PreparedStatement statement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                statement.setString(1, user.getPassword());
-                statement.setString(2, user.getName());
-                statement.setString(3, user.getEmail());
-                statement.setInt(4, user.getTenant());
-                statement.setString(5, user.getStatus());
-                statement.setString(6, user.getUser_id());
-                statement.setTimestamp(7, user.getCreated_date());
-                statement.setTimestamp(8, user.getModified_date());
-                statement.setInt(9, user.getDeleted());
+                int index=0;
+                if (null != user.getPassword()) {
+                    statement.setString(++index, user.getPassword());
+                }
+                statement.setString(++index, user.getName());
+                statement.setString(++index, user.getEmail());
+                statement.setInt(++index, user.getTenant());
+                statement.setString(++index, user.getStatus());
+                statement.setString(++index, user.getUser_id());
+                statement.setTimestamp(++index, user.getCreated_date());
+                statement.setTimestamp(++index, user.getModified_date());
+                statement.setInt(++index, user.getDeleted());
                 statement.executeUpdate();
                 ResultSet generatedKeys = statement.getGeneratedKeys();
                 if (generatedKeys.next()) {
