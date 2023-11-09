@@ -171,7 +171,10 @@ public class UserProfileManager implements IdentityManager {
                 .collect(Collectors.toList());
         String tenant = profile.get("tenant").toString();
         String userId = account.getUserId();
-        String passHash = "[#]" + ServiceUtils.generateUUID(new String(((null == password) ? "".getBytes() : password)) + userId);
+        String passHash = null;
+        if (null != password) {
+            passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
+        }
 
         return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups);
     }
