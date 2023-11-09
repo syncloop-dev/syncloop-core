@@ -427,7 +427,7 @@ public class SQL {
 
         try {
             Class.forName("org.sqlite.JDBC");
-            Connection connection = DBCPDataSource.getConnection(connectionURL, connectionURL, null, null, 0, 0, null, null, "org.sqlite.JDBC");
+            Connection connection = DBCPDataSource.getConnection(connectionURL, connectionURL, null, null, 5, 0, null, null, "org.sqlite.JDBC");
             if (isTransactional) {
                 connection.setAutoCommit(false);
             }
