@@ -5,6 +5,7 @@ import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.service.*;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.parser.ParseException;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
@@ -505,12 +506,16 @@ public class SQL {
                 }else if (colType == Types.BOOLEAN || colType == Types.TINYINT || colType == Types.BIT) {
                     row.put(md.getColumnName(i), rs.getBoolean(i));
                 } else if(colType == Types.DATE || colType == Types.TIME || colType == Types.TIMESTAMP) {
-                    java.util.Date date = new java.util.Date();
-                    Date sqlDate = rs.getDate(i);
-                    if (null !=  sqlDate) {
-                        date.setTime(sqlDate.getTime());
+                    try {
+                        java.util.Date date = new java.util.Date();
+                        Date sqlDate = rs.getDate(i);
+                        if (null !=  sqlDate) {
+                            date.setTime(sqlDate.getTime());
+                        }
+                        row.put(md.getColumnName(i), date);
+                    } catch (SQLException e) {
+                        row.put(md.getColumnName(i), rs.getObject(i));
                     }
-                    row.put(md.getColumnName(i), date);
                 }else{
                     row.put(md.getColumnName(i), rs.getObject(i));
                 }
