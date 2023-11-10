@@ -142,17 +142,18 @@ public class SQL {
                                 switch (columnType) {
                                     case "INT":
                                     case "INTEGER":
-                                        myStmt.setInt(paramIndex, (Integer) value);
+                                        myStmt.setInt(paramIndex, Integer.parseInt(value.toString()));
                                         break;
                                     case "DOUBLE":
-                                        myStmt.setDouble(paramIndex, (Double) value);
+                                        myStmt.setDouble(paramIndex, Double.parseDouble(value.toString()));
                                         break;
                                     case "VARCHAR":
+                                    case "STRING":
                                         myStmt.setString(paramIndex, value.toString());
                                         break;
                                     case "BIT":
                                     case "BOOLEAN":
-                                        myStmt.setBoolean(paramIndex, (Boolean) value);
+                                        myStmt.setBoolean(paramIndex, Boolean.parseBoolean(value.toString()));
                                         break;
                                     case "BLOB":
                                         myStmt.setBytes(paramIndex, (byte[]) value);
@@ -160,9 +161,6 @@ public class SQL {
                                     case "DATE":
                                         java.util.Date date = (java.util.Date) value;
                                         myStmt.setDate(paramIndex, new java.sql.Date(date.getTime()));
-                                        break;
-                                    case "STRING":
-                                        myStmt.setString(paramIndex, (String) value);
                                         break;
                                     default:
                                         myStmt.setObject(paramIndex, value);
@@ -281,17 +279,19 @@ public class SQL {
                             } else {
                                 switch (columnType) {
                                     case "INT":
-                                        myStmt.setInt(paramIndex, (Integer) value);
+                                    case "INTEGER":
+                                        myStmt.setInt(paramIndex, Integer.parseInt(value.toString()));
                                         break;
                                     case "DOUBLE":
-                                        myStmt.setDouble(paramIndex, (Double) value);
+                                        myStmt.setDouble(paramIndex, Double.parseDouble(value.toString()));
                                         break;
                                     case "VARCHAR":
+                                    case "STRING":
                                         myStmt.setString(paramIndex, value.toString());
                                         break;
                                     case "BIT":
                                     case "BOOLEAN":
-                                        myStmt.setBoolean(paramIndex, (Boolean) value);
+                                        myStmt.setBoolean(paramIndex, Boolean.parseBoolean(value.toString()));
                                         break;
                                     case "BLOB":
                                         myStmt.setBytes(paramIndex, (byte[]) value);
@@ -299,9 +299,6 @@ public class SQL {
                                     case "DATE":
                                         java.util.Date date = (java.util.Date) value;
                                         myStmt.setDate(paramIndex, new java.sql.Date(date.getTime()));
-                                        break;
-                                    case "STRING":
-                                        myStmt.setString(paramIndex, (String) value);
                                         break;
                                     default:
                                         myStmt.setObject(paramIndex, value);
