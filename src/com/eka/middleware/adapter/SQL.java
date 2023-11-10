@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Level;
 import java.io.File;
 import java.io.FileInputStream;
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 
 
@@ -505,7 +506,10 @@ public class SQL {
                     row.put(md.getColumnName(i), rs.getBoolean(i));
                 } else if(colType == Types.DATE || colType == Types.TIME || colType == Types.TIMESTAMP) {
                     java.util.Date date = new java.util.Date();
-                    date.setTime(rs.getDate(i).getTime());
+                    Date sqlDate = rs.getDate(i);
+                    if (null !=  sqlDate) {
+                        date.setTime(sqlDate.getTime());
+                    }
                     row.put(md.getColumnName(i), date);
                 }else{
                     row.put(md.getColumnName(i), rs.getObject(i));
