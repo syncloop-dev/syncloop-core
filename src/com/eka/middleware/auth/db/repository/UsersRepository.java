@@ -10,6 +10,7 @@ import org.ldaptive.auth.User;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,6 +98,7 @@ public class UsersRepository {
                     String name = userResultSet.getString("name");
                     String email = userResultSet.getString("email");
                     String status = userResultSet.getString("status");
+                    String verification_secret = userResultSet.getString("verification_secret");
 
                     String tenantSql = "SELECT name FROM tenant WHERE tenant_id = ?";
                     try (PreparedStatement tenantStatement = conn.prepareStatement(tenantSql)) {
@@ -126,6 +128,7 @@ public class UsersRepository {
                         profile.put("name", name);
                         profile.put("groups", groupNames);
                         profile.put("email", email);
+                        profile.put("verification_secret", verification_secret);
                         profile.put("tenant", tenantName);
 
                         userMap.put("password", passwordHash);
@@ -147,9 +150,9 @@ public class UsersRepository {
             if (isUserExist(conn, user.getEmail())) {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
             }
-            String sql = "INSERT INTO users (password, name, email, tenant_id, status, user_id, created_date, modified_date, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO users (password, name, email, tenant_id, status, user_id, created_date, modified_date, deleted, verification_secret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             if (null == user.getPassword()) {
-                sql = "INSERT INTO users (name, email, tenant_id, status, user_id, created_date, modified_date, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO users (name, email, tenant_id, status, user_id, created_date, modified_date, deleted, verification_secret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             }
             try (PreparedStatement statement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 int index=0;
@@ -164,6 +167,7 @@ public class UsersRepository {
                 statement.setTimestamp(++index, user.getCreated_date());
                 statement.setTimestamp(++index, user.getModified_date());
                 statement.setInt(++index, user.getDeleted());
+                statement.setString(++index, user.getVerificationSecret());
                 statement.executeUpdate();
                 ResultSet generatedKeys = statement.getGeneratedKeys();
                 if (generatedKeys.next()) {
@@ -179,10 +183,25 @@ public class UsersRepository {
         }
     }
 
+    public static void updateVerificationSecret(String email, String verificationSecret) throws SystemException {
+        try (Connection conn = SQL.getProfileConnection(false)) {
+            String sql = "UPDATE \"users\" SET  modified_date = ? , verification_secret = ? WHERE email = ?";
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+//                    statement.setString(1, user.getPassword());
+                statement.setTimestamp(1, new Timestamp(new Date().getTime()));
+                statement.setString(2, verificationSecret);
+                statement.setString(3, email);
+                statement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            throw new SystemException("EKA_MWS_1001", e);
+        }
+    }
+
     public static void updateUser(String email, Users user) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
             if (null == user.getPassword()) {
-                String sql = "UPDATE \"users\" SET name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ? WHERE email = ?";
+                String sql = "UPDATE \"users\" SET name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ? , verification_secret = ? WHERE email = ?";
                 try (PreparedStatement statement = conn.prepareStatement(sql)) {
 //                    statement.setString(1, user.getPassword());
                     statement.setString(1, user.getName());
@@ -190,11 +209,12 @@ public class UsersRepository {
                     statement.setInt(3, user.getTenant());
                     statement.setString(4, user.getStatus());
                     statement.setTimestamp(5, user.getModified_date());
-                    statement.setString(6, email);
+                    statement.setString(6, user.getVerificationSecret());
+                    statement.setString(7, email);
                     statement.executeUpdate();
                 }
             } else {
-                String sql = "UPDATE \"users\" SET password = ?, name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ? WHERE email = ?";
+                String sql = "UPDATE \"users\" SET password = ?, name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ?, verification_secret = ? WHERE email = ?";
                 try (PreparedStatement statement = conn.prepareStatement(sql)) {
                     statement.setString(1, user.getPassword());
                     statement.setString(2, user.getName());
@@ -202,7 +222,8 @@ public class UsersRepository {
                     statement.setInt(4, user.getTenant());
                     statement.setString(5, user.getStatus());
                     statement.setTimestamp(6, user.getModified_date());
-                    statement.setString(7, email);
+                    statement.setString(7, user.getVerificationSecret());
+                    statement.setString(8, email);
                     statement.executeUpdate();
                 }
             }

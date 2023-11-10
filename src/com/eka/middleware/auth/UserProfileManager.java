@@ -18,6 +18,7 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.ldaptive.auth.User;
 import org.pac4j.core.profile.UserProfile;
 
 import java.io.File;
@@ -123,7 +124,7 @@ public class UserProfileManager implements IdentityManager {
         }
     }
 
-    public static void addUser(AuthAccount account) throws SystemException {
+    public static void addUser(AuthAccount account, String passwordStr) throws SystemException {
         try {
             if (isUserExist(account.getUserId())) {
                 throw new Exception("User already exists: " + account.getUserId());
@@ -131,11 +132,8 @@ public class UserProfileManager implements IdentityManager {
             Map<String, Object> user = new HashMap();
             user.put("profile", account.getAuthProfile());
 
-            byte[] password = null;
+            byte[] password = passwordStr.getBytes();
 
-            if (account.getUserId().equals("admin")) {
-                password = "admin".getBytes();
-            }
             UsersRepository.addUser(createUserFromAccount(account, password));
 
         } catch (Exception e) {
@@ -178,7 +176,18 @@ public class UserProfileManager implements IdentityManager {
             passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
         }
 
-        return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups);
+        int tenantId = getTenantIdByName(tenant);
+
+        if (tenantId == -1) {
+            tenantId = TenantRepository.create(tenant);
+        }
+
+        Users users = new Users(passHash, email, tenantId, name, "1", userId, groups);
+        if (null != account.getAuthProfile() && null != account.getAuthProfile().get("verification_secret")) {
+            users.setVerificationSecret(account.getAuthProfile().get("verification_secret").toString());
+        }
+
+        return users;
     }
 
     //createUserFromAccount with datapipeline
@@ -198,7 +207,18 @@ public class UserProfileManager implements IdentityManager {
         }
         Timestamp createdDate = new Timestamp(System.currentTimeMillis());
         System.out.println("create user complete........... ");
-        return new Users(passHash, email, getTenantIdByName(tenant), name, "1", userId, groups, createdDate, createdDate, 0);
+
+        int tenantId = getTenantIdByName(tenant);
+
+        if (tenantId == -1) {
+            tenantId = TenantRepository.create(tenant);
+        }
+
+        Users users = new Users(passHash, email, tenantId, name, "1", userId, groups, createdDate, createdDate, 0);
+        if (null != account.getAuthProfile() && null != account.getAuthProfile().get("verification_secret")) {
+            users.setVerificationSecret(account.getAuthProfile().get("verification_secret").toString());
+        }
+        return users;
     }
 
     public static void updateUser(AuthAccount account, final byte[] pass) throws SystemException {
@@ -230,6 +250,10 @@ public class UserProfileManager implements IdentityManager {
         userFromAccount.setModified_date(modifiedDate);
         userFromAccount.setStatus(status);
         UsersRepository.updateUser(userFromAccount.getEmail(), userFromAccount);
+    }
+
+    public static void updateVerificationSecret(String email, String verification) throws Exception {
+        UsersRepository.updateVerificationSecret(email, verification);
     }
 
     public static void removeUser(String id) throws SystemException {

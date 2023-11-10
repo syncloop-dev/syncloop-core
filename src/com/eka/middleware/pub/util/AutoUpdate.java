@@ -1,5 +1,6 @@
 package com.eka.middleware.pub.util;
 
+import com.eka.middleware.server.ApplicationShutdownHook;
 import com.eka.middleware.server.Build;
 import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
@@ -182,6 +183,7 @@ public class AutoUpdate {
             if (jsonValue != null && jsonValue.equals("true")) {
                 String coreDirPath = packagePath + "builds/core";
                 updatedCoreJar = moveFolder(coreDirPath, "/lib");
+                ApplicationShutdownHook.restartServer(dataPipeline);
             }
 
             // Create restore point

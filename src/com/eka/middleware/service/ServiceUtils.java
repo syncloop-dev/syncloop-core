@@ -999,7 +999,7 @@ public class ServiceUtils {
 	}
 	
 
-	public static String initNewTenant(String name, AuthAccount account) {
+	public static String initNewTenant(String name, AuthAccount account, String password) {
 		try {
 			if (Tenant.exists(name)) {
 				String msg = ("Tenant already exists or null. Tenant Name : " + name);
@@ -1024,7 +1024,7 @@ public class ServiceUtils {
 			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
 			account.getAuthProfile().put("groups", groups);
 			account.getAuthProfile().put("tenant", name);
-			UserProfileManager.addUser(account);
+			UserProfileManager.addUser(account, password);
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
 

@@ -1,5 +1,8 @@
 package com.eka.middleware.auth.db.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +20,10 @@ public class Users {
     private Timestamp created_date;
     private Timestamp modified_date;
     private int deleted;
+
+    @Getter
+    @Setter
+    private String verificationSecret;
 
 
     public String getPassword() {
