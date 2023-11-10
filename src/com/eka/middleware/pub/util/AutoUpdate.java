@@ -179,10 +179,15 @@ public class AutoUpdate {
             String jsonValue = jsonValueFetch(returnTenantUpdateUrl(), "latest.update_core_jar");
 
             boolean updatedCoreJar = false;
+            boolean jarUpdated = false;
 
             if (jsonValue != null && jsonValue.equals("true")) {
                 String coreDirPath = packagePath + "builds/core";
                 updatedCoreJar = moveFolder(coreDirPath, "/lib");
+                jarUpdated = true;
+            }
+
+            if (jarUpdated) {
                 ApplicationShutdownHook.restartServer(dataPipeline);
             }
 
