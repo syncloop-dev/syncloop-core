@@ -24,6 +24,7 @@ import org.pac4j.core.profile.UserProfile;
 import java.io.File;
 import java.security.Principal;
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -595,7 +596,7 @@ public class UserProfileManager implements IdentityManager {
 							Map<String, Object> user = (Map<String, Object>) userObj;
 							Map<String, Object> profile = (Map<String, Object>) user.get("profile");
 							try {
-								String insertUserSQL = "INSERT INTO users (password, email, tenant_id, status, user_id, name) VALUES (?, ?, ?, ?, ?, ?)";
+								String insertUserSQL = "INSERT INTO users (password, email, tenant_id, status, user_id, name, deleted, created_date, modified_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 								String insertUserGroupMappingSQL = "INSERT INTO user_group_mapping (user_id, group_id) VALUES (?, ?)";
 
 								int tenantId = getOrCreateTenant(profile.get("tenant").toString(), connection);
@@ -609,6 +610,9 @@ public class UserProfileManager implements IdentityManager {
 									userStatement.setString(4, user.get("status") != null ? user.get("status").toString() : "0");
 									userStatement.setString(5, username);
 									userStatement.setString(6, profile.get("name") != null ? profile.get("name").toString() : username);
+									userStatement.setBoolean(7, false);
+                                    userStatement.setDate(8, new Date(new java.util.Date().getTime()));
+                                    userStatement.setDate(9, new Date(new java.util.Date().getTime()));
 
 									userStatement.executeUpdate();
 
