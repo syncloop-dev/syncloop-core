@@ -147,9 +147,9 @@ public class UsersRepository {
 
     public static void addUser(Users user) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
-            if (isUserExist(conn, user.getEmail())) {
+            /*if (isUserExist(conn, user.getEmail())) {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
-            }
+            }*/
             String sql = "INSERT INTO users (password, name, email, tenant_id, status, user_id, created_date, modified_date, deleted, verification_secret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             if (null == user.getPassword()) {
                 sql = "INSERT INTO users (name, email, tenant_id, status, user_id, created_date, modified_date, deleted, verification_secret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
