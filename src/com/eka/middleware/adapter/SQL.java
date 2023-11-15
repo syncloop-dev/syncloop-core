@@ -3,6 +3,7 @@ package com.eka.middleware.adapter;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.service.*;
+import com.google.common.collect.Maps;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.parser.ParseException;
@@ -48,7 +49,7 @@ public class SQL {
                     for (String paramName : parameterNames) {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
-                            String columnType = getColumnTypeFromDatabase(query, paramName, myCon);
+                            String columnType = getColumnTypeFromDatabase(query, paramName, myCon.getMetaData());
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
                             } else {
@@ -112,31 +113,35 @@ public class SQL {
         int rows = 0;
 
         if (sqlParameters != null && sqlParameters.size() > 0) {
-            for (Map<String, Object> map : sqlParameters) {
-                String query = sqlCode;
-                String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
+            DatabaseMetaData databaseMetaData = myCon.getMetaData();
+            Map<String, Object> mapObject = sqlParameters.get(0);
+            Map<String, String> columnsType = Maps.newHashMap();
+            String query = sqlCode;
+            String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
 
-                if (parameterNames != null) {
-                    for (String paramName : parameterNames) {
-                        String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
-                        if (map.containsKey(paramName)) {
-                            //Object value = map.get(paramName);
-                            query = query.replace(valuePlaceholder, "?");
-                        }
+            if (parameterNames != null) {
+                for (String paramName : parameterNames) {
+                    String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
+                    if (mapObject.containsKey(paramName)) {
+                        query = query.replace(valuePlaceholder, "?");
+                        columnsType.put(paramName, getColumnTypeFromDatabase(query, paramName, databaseMetaData));
                     }
                 }
-                query = StringUtils.replace(query, "'", "");
-                query = removeUninitialized(query);
-                if (logQuery)
-                    dp.log(query);
+            }
+            query = StringUtils.replace(query, "'", "");
+            query = removeUninitialized(query);
+            if (logQuery)
+                dp.log(query);
 
-                try (PreparedStatement myStmt = myCon.prepareStatement(query)) {
+
+            try (PreparedStatement myStmt = myCon.prepareStatement(query)) {
+                for (Map<String, Object> map : sqlParameters) {
                     int paramIndex = 1;
                     for (String paramName : parameterNames) {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
                             String columnName = paramName;
-                            String columnType = getColumnTypeFromDatabase(query, columnName, myCon);
+                            String columnType = columnsType.get(columnName);
 
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
@@ -172,11 +177,11 @@ public class SQL {
                             paramIndex++;
                         }
                     }
-
+//                    myStmt.addBatch();
                     rows += myStmt.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
                 }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         } else {
             sqlCode = removeUninitialized(sqlCode);
@@ -192,8 +197,7 @@ public class SQL {
         return rows;
     }
 
-    private static String getColumnTypeFromDatabase(String sqlCode,String columnName, Connection myCon) throws SQLException {
-        DatabaseMetaData databaseMetaData = myCon.getMetaData();
+    private static String getColumnTypeFromDatabase(String sqlCode, String columnName, DatabaseMetaData databaseMetaData) throws SQLException {
         ResultSet rs = databaseMetaData.getColumns(null, null, getTableNameFromQuery(sqlCode), null);
 
         while (rs.next()) {
@@ -209,6 +213,7 @@ public class SQL {
         rs.close();
         return "STRING";
     }
+
     public static String getTableNameFromQuery(String sqlQuery) {
         if (sqlQuery.trim().toLowerCase().startsWith("insert")) {
             sqlQuery = sqlQuery.replaceAll("(?i)WHERE[^;]+;", ";");
@@ -247,6 +252,7 @@ public class SQL {
         }
         return sqlCode;
     }
+
     public static String[] DML_RGKs(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         String ids = "";
 
@@ -274,7 +280,7 @@ public class SQL {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
                             String columnName = paramName;
-                            String columnType = getColumnTypeFromDatabase(query, columnName, myCon);
+                            String columnType = getColumnTypeFromDatabase(query, columnName, myCon.getMetaData());
 
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
@@ -323,8 +329,7 @@ public class SQL {
                         ResultSet keys = myStmt.getGeneratedKeys();
                         if (keys.next()) {
                             ids += keys.getObject(1) + ",";
-                        }
-                        else {
+                        } else {
                             ids += "null,";
                         }
                     }
@@ -414,19 +419,19 @@ public class SQL {
         myCon.rollback();
     }
 
-	public static void rollbackTransaction(Connection myCon, Savepoint savepoint) throws SQLException {
-		myCon.rollback(savepoint);
-	}
+    public static void rollbackTransaction(Connection myCon, Savepoint savepoint) throws SQLException {
+        myCon.rollback(savepoint);
+    }
 
-	public static Savepoint createSavepoint(Connection myCon, String savePointName) throws SQLException {
-    	Savepoint savepoint = null;
-    	if (StringUtils.isBlank(savePointName)) {
-    		savepoint = myCon.setSavepoint();
-		} else {
-    		savepoint = myCon.setSavepoint(savePointName);
-		}
-		return savepoint;
-	}
+    public static Savepoint createSavepoint(Connection myCon, String savePointName) throws SQLException {
+        Savepoint savepoint = null;
+        if (StringUtils.isBlank(savePointName)) {
+            savepoint = myCon.setSavepoint();
+        } else {
+            savepoint = myCon.setSavepoint(savePointName);
+        }
+        return savepoint;
+    }
 
     public static Connection getProfileConnection(boolean isTransactional) {
         String connectionURL = "jdbc:sqlite:" + PropertyManager.getConfigFolderPath() + "profiles.db";
@@ -471,8 +476,8 @@ public class SQL {
             timeOt = Integer.parseInt(timeOut.trim());
         }
 
-        Driver driverObj=null;
-        CustomClassLoader ccl=null;
+        Driver driverObj = null;
+        CustomClassLoader ccl = null;
         try {
             Class.forName(driver);
         } catch (Exception e) {
@@ -506,24 +511,24 @@ public class SQL {
                 if (colType == Types.BINARY || colType == Types.BLOB || colType == Types.VARBINARY
                         || colType == Types.LONGVARBINARY) {
                     row.put(md.getColumnName(i), rs.getBytes(i));
-                }else if (colType == Types.BIGINT || colType == Types.INTEGER) {
+                } else if (colType == Types.BIGINT || colType == Types.INTEGER) {
                     row.put(md.getColumnName(i), rs.getInt(i));
-                }else if (colType == Types.VARCHAR || colType == Types.CHAR) {
+                } else if (colType == Types.VARCHAR || colType == Types.CHAR) {
                     row.put(md.getColumnName(i), rs.getString(i));
-                }else if (colType == Types.BOOLEAN || colType == Types.TINYINT || colType == Types.BIT) {
+                } else if (colType == Types.BOOLEAN || colType == Types.TINYINT || colType == Types.BIT) {
                     row.put(md.getColumnName(i), rs.getBoolean(i));
-                } else if(colType == Types.DATE || colType == Types.TIME || colType == Types.TIMESTAMP) {
+                } else if (colType == Types.DATE || colType == Types.TIME || colType == Types.TIMESTAMP) {
                     try {
                         java.util.Date date = new java.util.Date();
                         Date sqlDate = rs.getDate(i);
-                        if (null !=  sqlDate) {
+                        if (null != sqlDate) {
                             date.setTime(sqlDate.getTime());
                         }
                         row.put(md.getColumnName(i), date);
                     } catch (SQLException e) {
                         row.put(md.getColumnName(i), rs.getObject(i));
                     }
-                }else{
+                } else {
                     row.put(md.getColumnName(i), rs.getObject(i));
                 }
             }
