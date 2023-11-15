@@ -269,11 +269,10 @@ public class SQL {
 
         if (sqlParameters != null && sqlParameters.size() > 0) {
             DatabaseMetaData metaData = myCon.getMetaData();
-            Map<String, String> columnsType = null;
+            Map<String, String> columnsType = new HashMap<>();
             String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
 
             if (parameterNames != null) {
-                columnsType = new HashMap<>();
                 Map<String, Object> firstMap = sqlParameters.get(0);
 
                 for (String paramName : parameterNames) {
