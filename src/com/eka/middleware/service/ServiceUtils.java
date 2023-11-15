@@ -39,6 +39,7 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.json.Json;
 import javax.json.JsonObject;
 
+import com.eka.middleware.auth.db.repository.TenantRepository;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.heap.CacheManager;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -1001,7 +1002,7 @@ public class ServiceUtils {
 
 	public static String initNewTenant(String name, AuthAccount account, String password) {
 		try {
-			if (Tenant.exists(name)) {
+			if (TenantRepository.exists(name)) {
 				String msg = ("Tenant already exists or null. Tenant Name : " + name);
 				LOGGER.error(msg);
 				return msg;

@@ -74,6 +74,10 @@ public class TenantRepository {
         return -1;
     }
 
+    public static boolean exists(String name) throws SystemException {
+        return getTenantIdByName(name) == -1 ? false : true;
+    }
+
     public static int getOrCreateTenant(String tenantName, Connection connection) throws SQLException {
         String checkTenantSQL = "SELECT tenant_id FROM tenant WHERE name = ?";
         try (PreparedStatement checkStatement = connection.prepareStatement(checkTenantSQL)) {

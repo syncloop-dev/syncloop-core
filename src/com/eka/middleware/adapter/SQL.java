@@ -282,7 +282,14 @@ public class SQL {
                                 switch (columnType) {
                                     case "INT":
                                     case "INTEGER":
-                                        myStmt.setInt(paramIndex, Integer.parseInt(value.toString()));
+                                        if ("true".equalsIgnoreCase(value.toString())) {
+                                            myStmt.setInt(paramIndex, 1);
+                                        } else if ("false".equalsIgnoreCase(value.toString())) {
+                                            myStmt.setInt(paramIndex, 0);
+                                        } else {
+                                            myStmt.setInt(paramIndex, Integer.parseInt(value.toString()));
+                                        }
+
                                         break;
                                     case "DOUBLE":
                                         myStmt.setDouble(paramIndex, Double.parseDouble(value.toString()));
