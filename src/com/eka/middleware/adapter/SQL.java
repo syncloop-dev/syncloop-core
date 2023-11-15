@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Level;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.StringReader;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
@@ -27,29 +28,36 @@ public class SQL {
         List<Map<String, Object>> outputDocList = new ArrayList<>();
 
         if (sqlParameters != null && sqlParameters.size() > 0) {
-            for (Map<String, Object> map : sqlParameters) {
-                String query = sqlCode;
-                String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
-                if (parameterNames != null) {
-                    for (String paramName : parameterNames) {
-                        String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
-                        if (map.containsKey(paramName)) {
-                            query = query.replace(valuePlaceholder, "?");
-                        }
+            String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
+            Map<String, String> columnsType = null;
+
+            if (parameterNames != null) {
+                columnsType = new HashMap<>();
+                Map<String, Object> firstMap = sqlParameters.get(0);
+
+                for (String paramName : parameterNames) {
+                    String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
+                    if (firstMap.containsKey(paramName)) {
+                        sqlCode = sqlCode.replace(valuePlaceholder, "?");
+                        columnsType.put(paramName, getColumnTypeFromDatabase(sqlCode, paramName, myCon.getMetaData()));
                     }
                 }
-                query = StringUtils.replace(query, "'", "");
-                query = removeUninitialized(query);
+            }
 
-                if (logQuery)
-                    dp.log(query);
+            sqlCode = StringUtils.replace(sqlCode, "'", "");
+            sqlCode = removeUninitialized(sqlCode);
 
-                try (PreparedStatement myStmt = myCon.prepareStatement(query)) {
+            if (logQuery)
+                dp.log(sqlCode);
+
+            try (PreparedStatement myStmt = myCon.prepareStatement(sqlCode)) {
+                for (Map<String, Object> map : sqlParameters) {
                     int paramIndex = 1;
                     for (String paramName : parameterNames) {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
-                            String columnType = getColumnTypeFromDatabase(query, paramName, myCon.getMetaData());
+                            String columnType = columnsType.get(paramName);
+
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
                             } else {
@@ -84,13 +92,14 @@ public class SQL {
                             paramIndex++;
                         }
                     }
+
                     ResultSet myRs = myStmt.executeQuery();
                     List<Map<String, Object>> docList = resultSetToList(myRs);
                     if (docList != null && docList.size() > 0)
                         outputDocList.addAll(docList);
-                } catch (SQLException e) {
-                    e.printStackTrace();
                 }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         } else {
             sqlCode = removeUninitialized(sqlCode);
@@ -106,6 +115,7 @@ public class SQL {
                 e.printStackTrace();
             }
         }
+
         return outputDocList;
     }
 
@@ -215,6 +225,9 @@ public class SQL {
     }
 
     public static String getTableNameFromQuery(String sqlQuery) {
+        sqlQuery = sqlQuery.replaceAll("[{}]", "");
+        sqlQuery = removeUninitialized(sqlQuery);
+
         if (sqlQuery.trim().toLowerCase().startsWith("insert")) {
             sqlQuery = sqlQuery.replaceAll("(?i)WHERE[^;]+;", ";");
         }
@@ -257,30 +270,35 @@ public class SQL {
         String ids = "";
 
         if (sqlParameters != null && sqlParameters.size() > 0) {
-            for (Map<String, Object> map : sqlParameters) {
-                String query = sqlCode;
-                String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
+            DatabaseMetaData metaData = myCon.getMetaData();
+            Map<String, String> columnsType = null;
+            String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
 
-                if (parameterNames != null) {
-                    for (String paramName : parameterNames) {
-                        String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
-                        if (map.containsKey(paramName)) {
-                            query = query.replace(valuePlaceholder, "?");
-                        }
+            if (parameterNames != null) {
+                columnsType = new HashMap<>();
+                Map<String, Object> firstMap = sqlParameters.get(0);
+
+                for (String paramName : parameterNames) {
+                    String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
+                    if (firstMap.containsKey(paramName)) {
+                        sqlCode = sqlCode.replace(valuePlaceholder, "?");
+                        columnsType.put(paramName, getColumnTypeFromDatabase(sqlCode, paramName, metaData));
                     }
                 }
-                query = StringUtils.replace(query, "'?'", "?");
-                query = removeUninitialized(query);
-                if (logQuery)
-                    dp.log(query);
+            }
 
-                try (PreparedStatement myStmt = myCon.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            sqlCode = StringUtils.replace(sqlCode, "'?'", "?");
+            sqlCode = removeUninitialized(sqlCode);
+            if (logQuery)
+                dp.log(sqlCode);
+
+            try (PreparedStatement myStmt = myCon.prepareStatement(sqlCode, Statement.RETURN_GENERATED_KEYS)) {
+                for (Map<String, Object> map : sqlParameters) {
                     int paramIndex = 1;
                     for (String paramName : parameterNames) {
                         if (map.containsKey(paramName)) {
                             Object value = map.get(paramName);
-                            String columnName = paramName;
-                            String columnType = getColumnTypeFromDatabase(query, columnName, myCon.getMetaData());
+                            String columnType = columnsType.get(paramName);
 
                             if (value == null) {
                                 myStmt.setNull(paramIndex, Types.VARCHAR);
@@ -295,7 +313,6 @@ public class SQL {
                                         } else {
                                             myStmt.setInt(paramIndex, Integer.parseInt(value.toString()));
                                         }
-
                                         break;
                                     case "DOUBLE":
                                         myStmt.setDouble(paramIndex, Double.parseDouble(value.toString()));
@@ -333,9 +350,9 @@ public class SQL {
                             ids += "null,";
                         }
                     }
-                } catch (SQLException e) {
-                    e.printStackTrace();
                 }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         } else {
             sqlCode = removeUninitialized(sqlCode);
