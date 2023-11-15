@@ -6,7 +6,6 @@ import com.eka.middleware.service.*;
 import com.google.common.collect.Maps;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.parser.ParseException;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
@@ -16,7 +15,6 @@ import org.apache.logging.log4j.Level;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.StringReader;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
