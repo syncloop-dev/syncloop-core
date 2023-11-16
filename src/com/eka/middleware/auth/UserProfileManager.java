@@ -615,6 +615,9 @@ public class UserProfileManager implements IdentityManager {
                                     userStatement.setDate(9, new Date(new java.util.Date().getTime()));
 
 									userStatement.executeUpdate();
+                                    ResultSet generatedKeys = userStatement.getGeneratedKeys();
+                                    generatedKeys.next();
+                                    int id = generatedKeys.getInt(1);
 
 									List<String> userGroups = (List<String>) profile.get("groups");
 									if (userGroups != null) {
@@ -622,7 +625,7 @@ public class UserProfileManager implements IdentityManager {
 											int groupId = getOrCreateGroup(groupName, tenantId, connection);
 
 											if (!doesMappingExist(username, groupId, connection)) {
-												mappingStatement.setString(1, username);
+												mappingStatement.setInt(1, id);
 												mappingStatement.setInt(2, groupId);
 												mappingStatement.executeUpdate();
 											}

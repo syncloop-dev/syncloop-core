@@ -98,6 +98,7 @@ public class UsersRepository {
                     String name = userResultSet.getString("name");
                     String email = userResultSet.getString("email");
                     String status = userResultSet.getString("status");
+                    int id = userResultSet.getInt("id");
                     String verification_secret = userResultSet.getString("verification_secret");
 
                     String tenantSql = "SELECT name FROM tenant WHERE tenant_id = ?";
@@ -115,7 +116,7 @@ public class UsersRepository {
                                 "JOIN user_group_mapping ug ON g.group_id = ug.group_id " +
                                 "WHERE ug.user_id = ?";
                         try (PreparedStatement groupStatement = conn.prepareStatement(groupSql)) {
-                            groupStatement.setString(1, userId);
+                            groupStatement.setInt(1, id);
                             ResultSet groupResultSet = groupStatement.executeQuery();
 
                             while (groupResultSet.next()) {
@@ -172,8 +173,7 @@ public class UsersRepository {
                 ResultSet generatedKeys = statement.getGeneratedKeys();
                 if (generatedKeys.next()) {
                     int userId = generatedKeys.getInt(1);
-                    String user_id = user.getUser_id();
-                    addGroupsForUser(conn, user_id, user.getGroups());
+                    addGroupsForUser(conn, userId, user.getGroups());
                     return userId;
                 } else {
                     throw new SystemException("EKA_MWS_1002", new Exception("Failed to add user"));
@@ -201,8 +201,9 @@ public class UsersRepository {
 
     public static void updateUser(String email, Users user) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
+            Users users = getUserByUserId(email);
             if (null == user.getPassword()) {
-                String sql = "UPDATE \"users\" SET name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ? , verification_secret = ? WHERE email = ?";
+                String sql = "UPDATE \"users\" SET name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ? , verification_secret = ? WHERE id = ?";
                 try (PreparedStatement statement = conn.prepareStatement(sql)) {
 //                    statement.setString(1, user.getPassword());
                     statement.setString(1, user.getName());
@@ -211,11 +212,11 @@ public class UsersRepository {
                     statement.setString(4, user.getStatus());
                     statement.setTimestamp(5, user.getModified_date());
                     statement.setString(6, user.getVerificationSecret());
-                    statement.setString(7, email);
+                    statement.setInt(7, users.getId());
                     statement.executeUpdate();
                 }
             } else {
-                String sql = "UPDATE \"users\" SET password = ?, name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ?, verification_secret = ? WHERE email = ?";
+                String sql = "UPDATE \"users\" SET password = ?, name = ?, email = ?, tenant_id = ?, status = ?, modified_date = ?, verification_secret = ? WHERE id = ?";
                 try (PreparedStatement statement = conn.prepareStatement(sql)) {
                     statement.setString(1, user.getPassword());
                     statement.setString(2, user.getName());
@@ -224,12 +225,11 @@ public class UsersRepository {
                     statement.setString(5, user.getStatus());
                     statement.setTimestamp(6, user.getModified_date());
                     statement.setString(7, user.getVerificationSecret());
-                    statement.setString(8, email);
+                    statement.setInt(8, users.getId());
                     statement.executeUpdate();
                 }
             }
-            String userId = getUserIdByEmail(conn, user.getEmail());
-            updateGroupsForUser(conn, userId, user.getGroups());
+            updateGroupsForUser(conn, users.getId(), user.getGroups());
         } catch (SQLException e) {
             throw new SystemException("EKA_MWS_1001", e);
         }
@@ -237,13 +237,13 @@ public class UsersRepository {
 
     public static void deleteUser(String email) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
-            String userId = getUserIdByEmail(conn, email);
-            deleteGroupsForUser(conn, userId);
+            Users users = getUserByUserId(email);
+            deleteGroupsForUser(conn, users.getId());
             Timestamp modifiedDate = new Timestamp(System.currentTimeMillis());
-            String sql = "UPDATE users SET deleted = 1, modified_date = ? WHERE email = ?";
+            String sql = "UPDATE users SET deleted = 1, modified_date = ? WHERE id = ?";
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setTimestamp(1, modifiedDate);
-                statement.setString(2, email);
+                statement.setInt(2, users.getId());
                 statement.executeUpdate();
             }
         } catch (SQLException e) {
@@ -261,6 +261,22 @@ public class UsersRepository {
         }
     }
 
+    public static Users getUserByUserId(String userIdOrEmail) throws SQLException {
+        String userIdSql = "SELECT id, email, tenant_id, status, user_id, name, deleted, created_date, modified_date, verification_secret FROM users WHERE email = ? or user_id = ?";
+        Users users = new Users();
+        try (Connection conn = SQL.getProfileConnection(false);
+                PreparedStatement userIdStatement = conn.prepareStatement(userIdSql)) {
+            userIdStatement.setString(1, userIdOrEmail);
+            userIdStatement.setString(2, userIdOrEmail);
+            try (ResultSet resultSet = userIdStatement.executeQuery()) {
+
+                users.setId(resultSet.getInt(1));
+            }
+        }
+        return users;
+    }
+
+
     public static boolean isUserExist(Connection conn, String userIdOrEmail) throws SQLException {
         String userIdSql = "SELECT user_id FROM \"users\" WHERE email = ? OR user_id = ?";
         try (PreparedStatement userIdStatement = conn.prepareStatement(userIdSql)) {
@@ -272,13 +288,13 @@ public class UsersRepository {
         }
     }
 
-    public static void addGroupsForUser(Connection conn, String userId, List<Groups> groups) throws SQLException {
+    public static void addGroupsForUser(Connection conn, int userId, List<Groups> groups) throws SQLException {
         String insertGroupSql = "INSERT INTO user_group_mapping (user_id, group_id) VALUES (?, ?)";
         try (PreparedStatement insertGroupStatement = conn.prepareStatement(insertGroupSql)) {
             for (Groups group : groups) {
                 int groupId = getGroupIdByName(conn, group.getGroupName());
                 if (groupId != -1) {
-                    insertGroupStatement.setString(1, userId);
+                    insertGroupStatement.setInt(1, userId);
                     insertGroupStatement.setInt(2, groupId);
                     insertGroupStatement.executeUpdate();
                 } else {
@@ -288,20 +304,20 @@ public class UsersRepository {
         }
     }
 
-    private static void updateGroupsForUser(Connection conn, String userId, List<Groups> groups) throws SQLException {
+    private static void updateGroupsForUser(Connection conn, int userId, List<Groups> groups) throws SQLException {
         String deleteGroupSql = "DELETE FROM user_group_mapping WHERE user_id = ?";
         try (PreparedStatement deleteGroupStatement = conn.prepareStatement(deleteGroupSql)) {
-            deleteGroupStatement.setString(1, userId);
+            deleteGroupStatement.setInt(1, userId);
             deleteGroupStatement.executeUpdate();
         }
 
         addGroupsForUser(conn, userId, groups);
     }
 
-    private static void deleteGroupsForUser(Connection conn, String userId) throws SQLException {
+    private static void deleteGroupsForUser(Connection conn, int userId) throws SQLException {
         String deleteGroupSql = "DELETE FROM user_group_mapping WHERE user_id = ?";
         try (PreparedStatement deleteGroupStatement = conn.prepareStatement(deleteGroupSql)) {
-            deleteGroupStatement.setString(1, userId);
+            deleteGroupStatement.setInt(1, userId);
             deleteGroupStatement.executeUpdate();
         }
     }

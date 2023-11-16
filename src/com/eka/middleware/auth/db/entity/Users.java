@@ -9,6 +9,9 @@ import java.util.Map;
 
 public class Users {
 
+    @Getter
+    @Setter
+    private int id;
     private String password;
     private String name;
     private List<Groups> groups;
