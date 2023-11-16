@@ -145,7 +145,7 @@ public class UsersRepository {
         return userMap;
     }
 
-    public static void addUser(Users user) throws SystemException {
+    public static int addUser(Users user) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
             /*if (isUserExist(conn, user.getEmail())) {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
@@ -174,6 +174,7 @@ public class UsersRepository {
                     int userId = generatedKeys.getInt(1);
                     String user_id = user.getUser_id();
                     addGroupsForUser(conn, user_id, user.getGroups());
+                    return userId;
                 } else {
                     throw new SystemException("EKA_MWS_1002", new Exception("Failed to add user"));
                 }
@@ -271,7 +272,7 @@ public class UsersRepository {
         }
     }
 
-    private static void addGroupsForUser(Connection conn, String userId, List<Groups> groups) throws SQLException {
+    public static void addGroupsForUser(Connection conn, String userId, List<Groups> groups) throws SQLException {
         String insertGroupSql = "INSERT INTO user_group_mapping (user_id, group_id) VALUES (?, ?)";
         try (PreparedStatement insertGroupStatement = conn.prepareStatement(insertGroupSql)) {
             for (Groups group : groups) {

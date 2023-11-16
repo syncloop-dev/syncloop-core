@@ -60,8 +60,8 @@ public class UserProfileManager implements IdentityManager {
         return TenantRepository.getAllTenants();
     }
 
-    public static void newTenant(String name) throws Exception {
-        TenantRepository.create(name);
+    public static int newTenant(String name) throws Exception {
+        return TenantRepository.create(name);
     }
 
     public static void newGroup(String name) throws Exception {
@@ -125,7 +125,7 @@ public class UserProfileManager implements IdentityManager {
         }
     }
 
-    public static void addUser(AuthAccount account, String passwordStr) throws SystemException {
+    public static int addUser(AuthAccount account, String passwordStr) throws SystemException {
         try {
             if (isUserExist(account.getUserId())) {
                 throw new Exception("User already exists: " + account.getUserId());
@@ -135,7 +135,7 @@ public class UserProfileManager implements IdentityManager {
 
             byte[] password = passwordStr.getBytes();
 
-            UsersRepository.addUser(createUserFromAccount(account, password));
+            return UsersRepository.addUser(createUserFromAccount(account, password));
 
         } catch (Exception e) {
             throw new SystemException("EKA_MWS_1001", e);

@@ -16,6 +16,8 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -39,7 +41,12 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.json.Json;
 import javax.json.JsonObject;
 
+import com.beust.jcommander.internal.Lists;
+import com.eka.middleware.adapter.SQL;
+import com.eka.middleware.auth.db.entity.Groups;
+import com.eka.middleware.auth.db.repository.GroupsRepository;
 import com.eka.middleware.auth.db.repository.TenantRepository;
+import com.eka.middleware.auth.db.repository.UsersRepository;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.heap.CacheManager;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -1025,7 +1032,8 @@ public class ServiceUtils {
 			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
 			account.getAuthProfile().put("groups", groups);
 			account.getAuthProfile().put("tenant", name);
-			UserProfileManager.addUser(account, password);
+			int userId = UserProfileManager.addUser(account, password);
+
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
 
@@ -1041,9 +1049,32 @@ public class ServiceUtils {
 						LOGGER.info("Starting newly created tenant(" + name + ")......................");
 						Tenant.getTenant(name).logInfo(null, "Starting newly created tenant(" + name + ")......................");
 						startTenantServices(name);
-						UserProfileManager.newTenant(name);
+						int tenantId = UserProfileManager.newTenant(name);
 						LOGGER.info("New tenant with name " + name + " created successfully.");
 						Tenant.getTenant(name).logInfo(null, "New tenant with name " + name + " created and started successfully.");
+
+						List<Groups> groupList = Lists.newArrayList();
+						Groups group = new Groups();
+						group.setGroupName(AuthAccount.STATIC_ADMIN_GROUP);
+						group.setTenantId(tenantId);
+						group.setDeleted(0);
+						group.setCreated_date(new Timestamp(new Date().getTime()));
+						group.setModified_date(new Timestamp(new Date().getTime()));
+						groupList.add(group);
+						GroupsRepository.addGroup(group);
+
+						group = new Groups();
+						group.setGroupName(AuthAccount.STATIC_DEVELOPER_GROUP);
+						group.setTenantId(tenantId);
+						group.setDeleted(0);
+						group.setCreated_date(new Timestamp(new Date().getTime()));
+						group.setModified_date(new Timestamp(new Date().getTime()));
+						groupList.add(group);
+						GroupsRepository.addGroup(group);
+
+						try (Connection conn = SQL.getProfileConnection(false)) {
+							UsersRepository.addGroupsForUser(conn, "admin", groupList);
+						}
 
 					} catch (Exception e) {
 						throw new RuntimeException(e);
