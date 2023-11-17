@@ -146,7 +146,7 @@ public class UsersRepository {
         return userMap;
     }
 
-    public static int addUser(Users user) throws SystemException {
+    public static Users addUser(Users user) throws SystemException {
         try (Connection conn = SQL.getProfileConnection(false)) {
             /*if (isUserExist(conn, user.getEmail())) {
                 throw new SystemException("EKA_MWS_1002", new Exception("User already exists with email: " + user.getEmail()));
@@ -165,8 +165,8 @@ public class UsersRepository {
                 statement.setInt(++index, user.getTenant());
                 statement.setString(++index, user.getStatus());
                 statement.setString(++index, user.getUser_id());
-                statement.setTimestamp(++index, user.getCreated_date());
-                statement.setTimestamp(++index, user.getModified_date());
+                statement.setTimestamp(++index, new Timestamp(new Date().getTime()));
+                statement.setTimestamp(++index, new Timestamp(new Date().getTime()));
                 statement.setInt(++index, user.getDeleted());
                 statement.setString(++index, user.getVerificationSecret());
                 statement.executeUpdate();
@@ -174,7 +174,8 @@ public class UsersRepository {
                 if (generatedKeys.next()) {
                     int userId = generatedKeys.getInt(1);
                     addGroupsForUser(conn, userId, user.getGroups());
-                    return userId;
+                    user.setId(userId);
+                    return user;
                 } else {
                     throw new SystemException("EKA_MWS_1002", new Exception("Failed to add user"));
                 }

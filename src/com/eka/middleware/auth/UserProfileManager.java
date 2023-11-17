@@ -125,7 +125,7 @@ public class UserProfileManager implements IdentityManager {
         }
     }
 
-    public static int addUser(AuthAccount account, String passwordStr) throws SystemException {
+    public static Users addUser(AuthAccount account, String passwordStr) throws SystemException {
         try {
             if (isUserExist(account.getUserId())) {
                 throw new Exception("User already exists: " + account.getUserId());

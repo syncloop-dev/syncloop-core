@@ -44,6 +44,7 @@ import javax.json.JsonObject;
 import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.adapter.SQL;
 import com.eka.middleware.auth.db.entity.Groups;
+import com.eka.middleware.auth.db.entity.Users;
 import com.eka.middleware.auth.db.repository.GroupsRepository;
 import com.eka.middleware.auth.db.repository.TenantRepository;
 import com.eka.middleware.auth.db.repository.UsersRepository;
@@ -1005,7 +1006,6 @@ public class ServiceUtils {
 		String tenantName=tokenize[0];
 		return tenantName;
 	}
-	
 
 	public static String initNewTenant(String name, AuthAccount account, String password) {
 		try {
@@ -1032,7 +1032,7 @@ public class ServiceUtils {
 			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
 			account.getAuthProfile().put("groups", groups);
 			account.getAuthProfile().put("tenant", name);
-			int userId = UserProfileManager.addUser(account, password);
+			Users user = UserProfileManager.addUser(account, password);
 
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
@@ -1049,7 +1049,7 @@ public class ServiceUtils {
 						LOGGER.info("Starting newly created tenant(" + name + ")......................");
 						Tenant.getTenant(name).logInfo(null, "Starting newly created tenant(" + name + ")......................");
 						startTenantServices(name);
-						int tenantId = UserProfileManager.newTenant(name);
+						int tenantId = user.getTenant();//UserProfileManager.newTenant(name);
 						LOGGER.info("New tenant with name " + name + " created successfully.");
 						Tenant.getTenant(name).logInfo(null, "New tenant with name " + name + " created and started successfully.");
 
@@ -1073,7 +1073,7 @@ public class ServiceUtils {
 						GroupsRepository.addGroup(group);
 
 						try (Connection conn = SQL.getProfileConnection(false)) {
-							UsersRepository.addGroupsForUser(conn, userId, groupList);
+							UsersRepository.addGroupsForUser(conn, user.getId(), groupList);
 						}
 
 					} catch (Exception e) {
