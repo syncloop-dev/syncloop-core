@@ -14,6 +14,6 @@ public class AppUpdate {
     }
 
     public static void updateStatus(String uniqueId, String status, DataPipeline dataPipeline) {
-
+        UpdatingStatus.put(String.format("%s_%s", dataPipeline.rp.getTenant().getName(), uniqueId), status);
     }
 }

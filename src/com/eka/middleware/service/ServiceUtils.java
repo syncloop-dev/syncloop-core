@@ -16,6 +16,8 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -39,6 +41,13 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.json.Json;
 import javax.json.JsonObject;
 
+import com.beust.jcommander.internal.Lists;
+import com.eka.middleware.adapter.SQL;
+import com.eka.middleware.auth.db.entity.Groups;
+import com.eka.middleware.auth.db.entity.Users;
+import com.eka.middleware.auth.db.repository.GroupsRepository;
+import com.eka.middleware.auth.db.repository.TenantRepository;
+import com.eka.middleware.auth.db.repository.UsersRepository;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.heap.CacheManager;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -666,12 +675,42 @@ public class ServiceUtils {
 		if (alias.matches(invalidCharacters)) {
 			return false; // Alias contains special characters
 		}
-		if (alias.matches(".*\\{.\\}[a-zA-Z].*")) { // Alias does not contains dynamic pattern such as Y in {X}Y
+		if (alias.matches(".*\\{.\\}[a-zA-Z].*")) { // Alias contains dynamic pattern such as Y in {X}Y
+			return false;
+		}
+		if (alias.matches(".*\\{[a-zA-Z0-9]+\\}[a-zA-Z0-9]+.*")) {
+			return false; // The pattern matches "{X}Y" with alphanumeric X and Y.
+		}
+		if (alias.contains("./") || alias.contains("/.") || alias.contains("/./") || alias.contains("/{}") || alias.contains("{}")) {
+			return false; // Restrict If The alias contains one of the specified patterns.
+		}
+
+		if(!areBracesBalanced(alias)){
 			return false;
 		}
 
 		return true;
 	}
+
+	public static boolean areBracesBalanced(String input) {
+		int braceCounter = 0;
+
+		for (char c : input.toCharArray()) {
+			if (c == '{') {
+				braceCounter++;
+			} else if (c == '}') {
+				braceCounter--;
+			}
+
+			if (braceCounter < 0) {
+				return false;
+			}
+		}
+
+		return braceCounter == 0;
+	}
+
+
 
 	private static final void streamResponseFile(final RuntimePipeline rp, final MultiPart mp) throws SnippetException {
 
@@ -967,11 +1006,10 @@ public class ServiceUtils {
 		String tenantName=tokenize[0];
 		return tenantName;
 	}
-	
 
-	public static String initNewTenant(String name, AuthAccount account) {
+	public static String initNewTenant(String name, AuthAccount account, String password) {
 		try {
-			if (Tenant.exists(name)) {
+			if (TenantRepository.exists(name)) {
 				String msg = ("Tenant already exists or null. Tenant Name : " + name);
 				LOGGER.error(msg);
 				return msg;
@@ -994,7 +1032,8 @@ public class ServiceUtils {
 			groups.add(AuthAccount.STATIC_DEVELOPER_GROUP);
 			account.getAuthProfile().put("groups", groups);
 			account.getAuthProfile().put("tenant", name);
-			UserProfileManager.addUser(account);
+			Users user = UserProfileManager.addUser(account, password);
+
 			LOGGER.info("New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
 			// }
 
@@ -1010,9 +1049,32 @@ public class ServiceUtils {
 						LOGGER.info("Starting newly created tenant(" + name + ")......................");
 						Tenant.getTenant(name).logInfo(null, "Starting newly created tenant(" + name + ")......................");
 						startTenantServices(name);
-						UserProfileManager.newTenant(name);
+						int tenantId = user.getTenant();//UserProfileManager.newTenant(name);
 						LOGGER.info("New tenant with name " + name + " created successfully.");
 						Tenant.getTenant(name).logInfo(null, "New tenant with name " + name + " created and started successfully.");
+
+						List<Groups> groupList = Lists.newArrayList();
+						Groups group = new Groups();
+						group.setGroupName(AuthAccount.STATIC_ADMIN_GROUP);
+						group.setTenantId(tenantId);
+						group.setDeleted(0);
+						group.setCreated_date(new Timestamp(new Date().getTime()));
+						group.setModified_date(new Timestamp(new Date().getTime()));
+						groupList.add(group);
+						GroupsRepository.addGroup(group);
+
+						group = new Groups();
+						group.setGroupName(AuthAccount.STATIC_DEVELOPER_GROUP);
+						group.setTenantId(tenantId);
+						group.setDeleted(0);
+						group.setCreated_date(new Timestamp(new Date().getTime()));
+						group.setModified_date(new Timestamp(new Date().getTime()));
+						groupList.add(group);
+						GroupsRepository.addGroup(group);
+
+						try (Connection conn = SQL.getProfileConnection(false)) {
+							UsersRepository.addGroupsForUser(conn, user.getId(), groupList);
+						}
 
 					} catch (Exception e) {
 						throw new RuntimeException(e);
@@ -1355,6 +1417,7 @@ public class ServiceUtils {
 		Date dateTimeStmp = null;
 		Set<String> keys = passThroughData.keySet();
 		dp.put("*currentResourceFQN", fqn);
+		dp.appLogMul("RESOURCE_NAME", fqn);
 		String gqlEnabled = (String) dp.getMyProperties().get("GraphQL");
 		String GraphQLDBC=(String) dp.getMyProperties().get("GraphQL.DBC");
 		String GraphQLSchema=(String) dp.getMyProperties().get("GraphQL.Schema");
@@ -1392,8 +1455,10 @@ public class ServiceUtils {
 					gqlData.put("rootName", rootName);
 
 					if (rootName.toLowerCase().equals("introspectionquery")) {
-						dp.put("*gqlData", gqlData);
+						//dp.put("*gqlData", gqlData);
+						dp.map("*gqlData", gqlData);
 						dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
+						dp.clearServicePayload();
 						rootObject = dp.get("*multiPart");
 						if (rootObject != null)
 							dp.put("*multiPart", rootObject);
@@ -1431,7 +1496,8 @@ public class ServiceUtils {
 			FlowResolver.execute(dp, mainflowJsonObject);
 
 		if (StringUtils.isNotBlank(gql) && StringUtils.isBlank(GraphQLDBC)) {
-			dp.put("*gqlData", gqlData);
+			//dp.put("*gqlData", gqlData);
+			dp.map("*gqlData", gqlData);
 			Map<String, Object> data = new HashMap<>();
 			String rootName = (String) gqlData.get("rootName");
 			rootObject = dp.get(rootName);
@@ -1440,13 +1506,16 @@ public class ServiceUtils {
 			dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
 			// dp.drop("*gqlData");
 			rootObject = dp.getValueByPointer("executionResult/rootObject");
-			if (rootObject != null)
+			if (rootObject != null) {
 				dp.put(rootName, rootObject);
+			}
 			Object errors = dp.getValueByPointer("executionResult/errors");
-			if (errors != null)
+			if (errors != null) {
 				dp.put(rootName, errors);
+			}
 			dp.drop("executionResult");
 			dp.drop("*gqlData");
+			dp.clearServicePayload();
 		}
 	}
 
@@ -1517,6 +1586,48 @@ public class ServiceUtils {
 			mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
 		}
 		return mainflowJsonObject;
+	}
+	
+	public static Map<String, Object> decodeJWT(String jwtToken) {
+        // Splitting the JWT Token into parts
+        String[] parts = jwtToken.split("\\.");
+        if (parts.length < 2) {
+            return new HashMap<>(); // Not enough parts for a valid JWT
+        }
+
+        // Decoding the payload
+        String payload = parts[1];
+        byte[] decodedBytes = Base64.getUrlDecoder().decode(payload);
+        String decodedString = new String(decodedBytes);
+
+        // Converting JSON string to Map
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> tokenData = new HashMap<>();
+        try {
+            tokenData = objectMapper.readValue(decodedString, Map.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return tokenData;
+    }
+	
+	public static boolean isValid(String token) {
+		Map<String, Object> jwtData = ServiceUtils.decodeJWT(token);
+		if(jwtData==null)
+			return false;
+        String id=(String) jwtData.get("username");
+		Map<String, Object> usersMap = null;
+		try {
+			usersMap = (Map<String, Object>) UserProfileManager.getUsers();
+		} catch (SystemException e) {
+			ServiceUtils.printException("Could not load users list: " + id, e);
+			return false;
+		}
+		Map<String, Object> user = (Map<String, Object>) usersMap.get(id);
+		if(user!=null && user.getOrDefault("salt","").equals(jwtData.getOrDefault("salt", "")))
+			return true;
+		return false;
 	}
 
 	public static void saveServerProperties(DataPipeline dataPipeline) throws Exception {

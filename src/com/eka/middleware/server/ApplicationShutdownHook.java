@@ -21,8 +21,6 @@ public class ApplicationShutdownHook implements Runnable {
     @Override
     public void run() {
         if (EXIT_CODE == 1) {
-            System.out.println("Hook Exec");
-
         }
     }
 

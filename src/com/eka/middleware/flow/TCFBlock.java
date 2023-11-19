@@ -1,17 +1,17 @@
 package com.eka.middleware.flow;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
+import com.google.common.collect.Maps;
+import lombok.Getter;
 
-public class TCFBlock {
+public class TCFBlock implements FlowBasicInfo {
 	private Scope TRY;
 	private Scope CATCH;
 	private Scope FINALLY;
@@ -23,6 +23,16 @@ public class TCFBlock {
 	private JsonObject data=null;
 	private String snapshot=null;
 	private String snapCondition=null;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
+
 	public TCFBlock(JsonObject jo) {
 		tcfBlock=jo;	
 		data=tcfBlock.get("data").asJsonObject();
@@ -35,13 +45,18 @@ public class TCFBlock {
 		if(snapshot!=null && snapshot.equals("disabled"))
 			snapshot=null;
 		snapCondition=data.getString("snapCondition",null);
+
+		guid = data.getString("guid",null);
+		name = tcfBlock.getString("text",null);
+		type = tcfBlock.getString("type",null);
 	}
 	
-	public void process(DataPipeline dp) throws SnippetException {	
+	public void process(DataPipeline dp) throws SnippetException {
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		if(disabled)
 			return;
+		dp.addErrorStack(this);
 		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		if(snap!=null || snapshot!=null) {
@@ -54,39 +69,49 @@ public class TCFBlock {
 			}else
 				dp.put("*snapshot","enabled");
 		}
-		if(!canSnap)
-			dp.drop("*snapshot");
-		if(canSnap && snap==null) {
-			dp.snap(comment);
-		}
-		JsonArray scopes=tcfBlock.getJsonArray("children");
-		for (JsonValue scope : scopes) {
-			String text=scope.asJsonObject().getString("text",null);
-			switch(text) {
-			case "TRY":
-				TRY=new Scope(scope.asJsonObject());
-				break;
-			case "CATCH":
-				CATCH=new Scope(scope.asJsonObject());
-				break;
-			case "FINALLY":
-				FINALLY=new Scope(scope.asJsonObject());
-				break;
-			}
+		/*if(!canSnap)
+			dp.drop("*snapshot");*/
+		if(canSnap ) {
+			dp.snapBefore(comment, guid);
 		}
 		try {
-			TRY.process(dp);
+			JsonArray scopes=tcfBlock.getJsonArray("children");
+			for (JsonValue scope : scopes) {
+				String text=scope.asJsonObject().getString("text",null);
+				switch(text) {
+					case "TRY":
+						TRY=new Scope(scope.asJsonObject());
+						break;
+					case "CATCH":
+						CATCH=new Scope(scope.asJsonObject());
+						break;
+					case "FINALLY":
+						FINALLY=new Scope(scope.asJsonObject());
+						break;
+				}
+			}
+			try {
+				TRY.process(dp);
+			} catch (Exception e) {
+				dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(e));
+				CATCH.process(dp);
+			}finally {
+				FINALLY.process(dp);
+			}
+			dp.putGlobal("*hasError", false);
 		} catch (Exception e) {
-			dp.put("lastErrorDump", ServiceUtils.getExceptionMap(e));
-			CATCH.process(dp);
-		}finally {
-			FINALLY.process(dp);
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
+			throw e;
+		} finally {
+			if(canSnap) {
+				dp.snapAfter(comment, guid, Maps.newHashMap());
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
+			}else if(snap!=null)
+				dp.put("*snapshot",snap);
 		}
-		if(canSnap) {
-			dp.snap(comment);
-			dp.drop("*snapshot");
-		}else if(snap!=null)
-			dp.put("*snapshot",snap);
 	}
 	
 	public Scope getTRY() {

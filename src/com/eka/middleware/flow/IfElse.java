@@ -1,15 +1,19 @@
 package com.eka.middleware.flow;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
+import com.google.common.collect.Maps;
+import lombok.Getter;
 
-public class IfElse {
+public class IfElse implements FlowBasicInfo {
 	private List<Scope> conditions;
 	private boolean disabled = false;
 	private String condition;
@@ -21,6 +25,15 @@ public class IfElse {
 	private String snapCondition = null;
 	private JsonObject data = null;
 	private String comment;
+
+	@Getter
+	private String name;
+
+	@Getter
+	private String type;
+
+	@Getter
+	private String guid;
 
 	public IfElse(JsonObject jo) {
 		ifelse = jo;
@@ -35,14 +48,22 @@ public class IfElse {
 			snapshot = null;
 		snapCondition = data.getString("snapCondition", null);
 		comment = data.getString("comment", null);
+
+		guid = data.getString("guid",null);
+		name = ifelse.getString("text",null);
+		type = ifelse.getString("type",null);
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
-		if (dp.isDestroyed())
+		Map<String, Object> snapMeta = Maps.newHashMap();
+		if (dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread",
 					new Exception("Service runtime pipeline destroyed manually"));
-		if (disabled)
+		}
+		if (disabled) {
 			return;
+		}
+		dp.addErrorStack(this);
 		String snap = dp.getString("*snapshot");
 		boolean canSnap = false;
 		if (snap != null || snapshot != null) {
@@ -55,37 +76,54 @@ public class IfElse {
 			} else
 				dp.put("*snapshot", "enabled");
 		}
-		if (!canSnap)
-			dp.drop("*snapshot");
-		if (canSnap && snap == null) {
-			dp.snap(comment);
+		/*if (!canSnap)
+			dp.drop("*snapshot");*/
+		if (canSnap ) {
+			dp.snapBefore(comment, guid);
 		}
-		//String text = ifelse.get("data").asJsonObject().getString("text", null);
-		JsonArray flows = ifelse.getJsonArray("children");
+		try {
+			//String text = ifelse.get("data").asJsonObject().getString("text", null);
+			JsonArray flows = ifelse.getJsonArray("children");
 
-		for (JsonValue jsonValue : flows) {
-			String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
-			boolean result = false;
+			for (JsonValue jsonValue : flows) {
+				String ifLogic = jsonValue.asJsonObject().get("data").asJsonObject().getString("ifcondition", null);
+				boolean result = false;
 
-			// ifLogic=xVal;
-			if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
-				Scope scope = new Scope(jsonValue.asJsonObject());
-				scope.process(dp);
-				break;
-			} else {
-				result = FlowUtils.evaluateCondition(ifLogic, dp);
-				if (result) {
+				JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+				String status=jov.getString("status",null);
+				if("disabled".equalsIgnoreCase(status))
+					continue;
+
+				// ifLogic=xVal;
+				snapMeta.put("condition", ifLogic);
+				if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
 					Scope scope = new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
 					break;
+				} else {
+					result = FlowUtils.evaluateCondition(ifLogic, dp);
+					snapMeta.put("conditionEvaluation", result);
+					if (result) {
+						Scope scope = new Scope(jsonValue.asJsonObject());
+						scope.process(dp);
+						break;
+					}
 				}
 			}
+			dp.putGlobal("*hasError", false);
+		} catch (Exception e) {
+			dp.putGlobal("*error", e.getMessage());
+			dp.putGlobal("*hasError", true);
+			throw e;
+		} finally {
+			if (canSnap) {
+				dp.snapAfter(comment, guid, snapMeta);
+				if (null != snapshot || null != snapCondition) {
+					dp.drop("*snapshot");
+				}
+			} else if (snap != null)
+				dp.put("*snapshot", snap);
 		}
-		if (canSnap) {
-			dp.snap(comment);
-			dp.drop("*snapshot");
-		} else if (snap != null)
-			dp.put("*snapshot", snap);
 	}
 
 	public List<Scope> getCases() {

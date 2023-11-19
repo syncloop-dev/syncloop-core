@@ -36,7 +36,7 @@ public class BasicAuthenticator extends SimpleTestUsernamePasswordAuthenticator 
         if(identityManager==null)
     		try {
     			identityManager = UserProfileManager.create();
-    			UserProfileManager.getUsers();
+    			//UserProfileManager.getUsers();
     			LOGGER.info("Users loaded...........");
     		} catch (SystemException e) {
     			ServiceUtils.printException("UserProfileManager issue", e);
