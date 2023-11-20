@@ -451,12 +451,6 @@ public class SQL {
         String configFolderPath = PropertyManager.getConfigFolderPath();
         String connectionURL = "jdbc:sqlite:" + PropertyManager.getConfigFolderPath() + "profiles.db";
 
-        File dbFile = new File(configFolderPath + "profiles.db");
-        boolean isNewDatabase = !dbFile.exists();
-
-        if (isNewDatabase) {
-            createProfileDB();
-        }
 
         try {
             Class.forName("org.sqlite.JDBC");
@@ -470,59 +464,7 @@ public class SQL {
         }
     }
 
-    public static void createProfileDB() {
-        String configFolderPath = PropertyManager.getConfigFolderPath();
-        String connectionURL = "jdbc:sqlite:" + configFolderPath + "profiles.db";
 
-        try (Connection connection = DriverManager.getConnection(connectionURL)) {
-            if (connection != null) {
-                DatabaseMetaData meta = connection.getMetaData();
-
-                String createGroupsTable = "CREATE TABLE IF NOT EXISTS groups (" +
-                        "group_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                        "name TEXT NOT NULL," +
-                        "tenant_id INTEGER," +
-                        "created_date DATETIME," +
-                        "modified_date DATETIME," +
-                        "deleted BOOLEAN" +
-                        ")";
-                connection.createStatement().executeUpdate(createGroupsTable);
-
-                String createTenantTable = "CREATE TABLE IF NOT EXISTS tenant (" +
-                        "tenant_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                        "name TEXT," +
-                        "created_date DATETIME," +
-                        "modified_date DATETIME," +
-                        "deleted BOOLEAN" +
-                        ")";
-                connection.createStatement().executeUpdate(createTenantTable);
-
-                String createUserGroupMappingTable = "CREATE TABLE IF NOT EXISTS user_group_mapping (" +
-                        "mapping_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                        "user_id TEXT," +
-                        "group_id INTEGER" +
-                        ")";
-                connection.createStatement().executeUpdate(createUserGroupMappingTable);
-
-                String createUsersTable = "CREATE TABLE IF NOT EXISTS users (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                        "password TEXT," +
-                        "email TEXT," +
-                        "tenant_id INTEGER NOT NULL," +
-                        "status TEXT," +
-                        "user_id TEXT NOT NULL," +
-                        "name TEXT," +
-                        "deleted BOOLEAN," +
-                        "created_date DATETIME," +
-                        "modified_date DATETIME," +
-                        "verification_secret TEXT" +
-                        ")";
-                connection.createStatement().executeUpdate(createUsersTable);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
 
     public static Connection getConnection(String jdbcConnection, DataPipeline dp) throws Exception {
         Properties jdbcProperties = new Properties();
