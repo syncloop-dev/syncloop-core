@@ -35,6 +35,7 @@ public class UsersRepository {
                     String name = userResultSet.getString("name");
                     String email = userResultSet.getString("email");
                     String status = userResultSet.getString("status");
+                    int id = userResultSet.getInt("id");
 
                     String tenantSql = "SELECT t.name FROM tenant t WHERE t.tenant_id = ?";
                     String groupSql = "SELECT g.name FROM \"groups\" g " +
@@ -53,7 +54,7 @@ public class UsersRepository {
                             tenantName = tenantResultSet.getString("name");
                         }
 
-                        groupStatement.setString(1, userId);
+                        groupStatement.setInt(1, id);
                         ResultSet groupResultSet = groupStatement.executeQuery();
 
                         List<String> groupNames = new ArrayList<>();

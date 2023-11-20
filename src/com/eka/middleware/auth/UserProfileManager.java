@@ -42,10 +42,12 @@ public class UserProfileManager implements IdentityManager {
     private static UserProfileManager upm = null;
     public static Logger LOGGER = LogManager.getLogger(UserProfileManager.class);
 
+    @Deprecated
     public static final Map<String, Object> getUsers() throws SystemException {
         return UsersRepository.getUsers();
     }
 
+    @Deprecated
     public static List<String> getGroups() throws SystemException {
         return GroupsRepository.getAllGroups();
     }
@@ -576,6 +578,9 @@ public class UserProfileManager implements IdentityManager {
     };
 
     public static void migrationProfiles() throws SystemException {
+
+
+
 		String absoluteFilePath = PropertyManager.getConfigFolderPath() + "profiles.json";
 		File file = new File(absoluteFilePath);
 

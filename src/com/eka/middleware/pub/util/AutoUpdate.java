@@ -188,7 +188,7 @@ public class AutoUpdate {
             }
 
             if (jarUpdated) {
-                ApplicationShutdownHook.restartServer(dataPipeline);
+                //ApplicationShutdownHook.restartServer(dataPipeline);
             }
 
             // Create restore point
@@ -368,7 +368,12 @@ public class AutoUpdate {
             updateStatus(uniqueId, "PENDING", dataPipeline);
             try {
                 updateTenant(version, dataPipeline);
-                updateStatus(uniqueId, "COMPLETED_SUCCESS", dataPipeline);
+                Boolean updatedCoreJar = dataPipeline.getAsBoolean("updatedCoreJar");
+                if (updatedCoreJar) {
+                    updateStatus(uniqueId, "COMPLETED_SUCCESS_RESTART_REQUIRED", dataPipeline);
+                } else {
+                    updateStatus(uniqueId, "COMPLETED_SUCCESS", dataPipeline);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 updateStatus(uniqueId, "COMPLETED_ERROR" , dataPipeline);
