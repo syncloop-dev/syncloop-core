@@ -50,6 +50,7 @@ import com.eka.middleware.auth.db.repository.TenantRepository;
 import com.eka.middleware.auth.db.repository.UsersRepository;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.heap.CacheManager;
+import com.eka.middleware.scheduling.ApplicationSchedulerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
@@ -1075,6 +1076,8 @@ public class ServiceUtils {
 						try (Connection conn = SQL.getProfileConnection(false)) {
 							UsersRepository.addGroupsForUser(conn, user.getId(), groupList);
 						}
+
+						ApplicationSchedulerFactory.initScheduler(null, name);
 
 					} catch (Exception e) {
 						throw new RuntimeException(e);

@@ -149,6 +149,7 @@ public class MiddlewareServer {
 						continue;
 					}
 					if (!"default".equalsIgnoreCase(tenant)) {
+						ApplicationSchedulerFactory.initScheduler(null, tenant);
 						LOGGER.info("Starting " + tenant + " tenant......................");
 						tent.logDebug(null, "Starting " + tenant + " tenant......................");
 						ServiceUtils.startTenantServices(tenant);
