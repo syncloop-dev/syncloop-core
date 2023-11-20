@@ -450,6 +450,7 @@ public class SQL {
     public static Connection getProfileConnection(boolean isTransactional) {
         String connectionURL = "jdbc:sqlite:" + PropertyManager.getConfigFolderPath() + "profiles.db";
 
+
         try {
             Class.forName("org.sqlite.JDBC");
             Connection connection = DBCPDataSource.getConnection(connectionURL, connectionURL, null, null, 5, 0, null, null, "org.sqlite.JDBC");
@@ -461,6 +462,8 @@ public class SQL {
             throw new RuntimeException(e);
         }
     }
+
+
 
     public static Connection getConnection(String jdbcConnection, DataPipeline dp) throws Exception {
         Properties jdbcProperties = new Properties();
