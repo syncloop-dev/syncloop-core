@@ -576,8 +576,6 @@ public class UserProfileManager implements IdentityManager {
     };
 
     public static void migrationProfiles() throws SystemException {
-		String absoluteFilePath = PropertyManager.getConfigFolderPath() + "profiles.json";
-		File file = new File(absoluteFilePath);
 
         String configFolderPath = PropertyManager.getConfigFolderPath();
         File dbFile = new File(configFolderPath + "profiles.db");
@@ -586,6 +584,10 @@ public class UserProfileManager implements IdentityManager {
         if (isNewDatabase) {
             createProfileDB();
         }
+
+
+        String absoluteFilePath = PropertyManager.getConfigFolderPath() + "profiles.json";
+        File file = new File(absoluteFilePath);
 
         if (file.exists()) {
 			byte[] bytes = PropertyManager.readConfigurationFile("profiles.json");

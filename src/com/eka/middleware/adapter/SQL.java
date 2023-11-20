@@ -448,7 +448,6 @@ public class SQL {
     }
 
     public static Connection getProfileConnection(boolean isTransactional) {
-        String configFolderPath = PropertyManager.getConfigFolderPath();
         String connectionURL = "jdbc:sqlite:" + PropertyManager.getConfigFolderPath() + "profiles.db";
 
 
