@@ -19,10 +19,12 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
+import com.eka.middleware.scheduling.ApplicationSchedulerFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.quartz.Scheduler;
 import org.xnio.CompressionType;
 import org.xnio.Options;
 
@@ -51,7 +53,7 @@ public class MiddlewareServer {
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
 
-	public static final String BUILD_NAME = "v1.4.9.1";
+	public static final String BUILD_NAME = "v1.5";
 	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
 
 	public static String allowRestrictedHeaders = System.getProperty("jdk.httpclient.allowRestrictedHeaders");
@@ -79,7 +81,9 @@ public class MiddlewareServer {
 
 		try {
 			PropertyManager.initConfig(args);
+			UserProfileManager.migrationProfiles();
 			local_IP = PropertyManager.getLocal_IP();
+			Scheduler scheduler = ApplicationSchedulerFactory.initScheduler(null, "default");
 			String ports[] = ServiceUtils.getServerProperty("middleware.server.http.ports").split(",");
 			String https = ServiceUtils.getServerProperty("middleware.server.https.ports");
 			String keyStoreFilePath = ServiceUtils.getServerProperty("middleware.server.keyStore.jks");
@@ -123,7 +127,7 @@ public class MiddlewareServer {
 					profile.put("forceCreateUser", true);
 					authAcc.setProfile(profile);
 					//UserProfileManager.addUser(authAcc);
-					ServiceUtils.initNewTenant("default", authAcc);
+					ServiceUtils.initNewTenant("default", authAcc, "admin");
 				} else {
 					LOGGER.info("Starting default tenant......................");
 					defaultTenant.logDebug(null, "Starting default tenant......................");
@@ -145,6 +149,7 @@ public class MiddlewareServer {
 						continue;
 					}
 					if (!"default".equalsIgnoreCase(tenant)) {
+						ApplicationSchedulerFactory.initScheduler(null, tenant);
 						LOGGER.info("Starting " + tenant + " tenant......................");
 						tent.logDebug(null, "Starting " + tenant + " tenant......................");
 						ServiceUtils.startTenantServices(tenant);
