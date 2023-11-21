@@ -1,11 +1,9 @@
 package com.eka.middleware.distributed;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -27,8 +25,10 @@ public class QueueTaskExecuter {
 			while (true) {
 				String nodeID = null;
 				try {
-
-					nodeID = IgNode.getRandomClusterNode(tenant);
+					nodeID= IgNode.getLocalNode(tenant);
+					int ranNumber=new Random().nextInt(10);
+					if(ranNumber==5)
+						nodeID = IgNode.getRandomClusterNode(tenant);
 					Queue queue = QueueManager.getQueue(tenant, nodeID);
 					String json = (String) queue.poll();
 					if (json != null && json.startsWith("INVOKE:")) {
@@ -54,7 +54,6 @@ public class QueueTaskExecuter {
 				try {
 					Queue queue = QueueManager.getQueue(tenant, queueName);
 					String json = (String) queue.poll();
-					json = json.substring(7);
 				} catch (Throwable e) {
 					ServiceUtils.printException(
 							"Exception caused while reading tasks from configured queue: " + queueName,
@@ -130,6 +129,7 @@ public class QueueTaskExecuter {
 							String jsonResult = ServiceUtils.toJson(asyncOutputDoc);
 							Map<String, Object> cache = CacheManager.getCacheAsMap(tenant);
 							cache.put(batchId, jsonResult);
+							//System.out.println(" - Batch result saved: " + batchId + "\n");
 						}
 						rpRef.destroy();
 					} catch (Exception e) {
@@ -141,7 +141,7 @@ public class QueueTaskExecuter {
 				}
 			});
 		} catch (Exception e) {
-			// TODO: handle exception
+			ServiceUtils.printException("Exception in task execution. Task Data:"+json, e);
 		}
 
 	}

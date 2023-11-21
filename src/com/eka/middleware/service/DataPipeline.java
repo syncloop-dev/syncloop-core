@@ -1124,7 +1124,9 @@ public class DataPipeline {
 			try {
 
 				metaData.put("*publish_time", new Date().toString());
-				metaData.put("*publist_time_ms", System.currentTimeMillis());
+				metaData.put("*publish_time_ms", System.currentTimeMillis());
+				metaData.put("*start_time", new Date().toString());
+				metaData.put("*start_time_ms", System.currentTimeMillis());
 				// final DataPipeline dpAsync = rpAsync.dataPipeLine;
 
 				if (asyncInputDoc != null && asyncInputDoc.size() > 0) {
@@ -1148,12 +1150,11 @@ public class DataPipeline {
 
 					json = ServiceUtils.toJson(asyncInputDoc);
 				}
-				String nodeID = IgNode.getRandomClusterNode(rp.getTenant());
+				String nodeID = IgNode.getLowUsageNode(rp.getTenant());
 				Queue queue = QueueManager.getQueue(this.rp.getTenant(), nodeID);
 
-				System.out.println("\n - Batch prepared: " + batchId);
 				queue.add("INVOKE:" + json);
-				System.out.println(" - Batch queued: " + batchId + "\n");
+				//System.out.println(" - Batch queued: " + batchId + "\n");
 				// json = (String) queue.poll();
 
 				return asyncOutputDoc;

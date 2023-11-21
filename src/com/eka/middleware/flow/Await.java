@@ -123,9 +123,13 @@ public class Await implements FlowBasicInfo {
 						String batchID=(String)metaData.get("batchId");
 						dp.updateQueuedTaskStatus(batchID, transformers, asyncOutputDoc, metaData);
 						String status=(String)metaData.get("status");
-						Long timeOut=(Long)metaData.get("*timeout_ms");
+						//metaData.put("*timeout_ms", timeout_ms);
+						Long timeOut=metaData.get("*timeout_ms") == null?null:metaData.get("*timeout_ms") instanceof Long ?(Long)metaData.get("*timeout_ms"):((Integer)metaData.get("*timeout_ms")).longValue();// (Long)metaData.get("*timeout_ms");
 						Long timedOut=0l;
-						Long startTime=(Long)metaData.get("*start_time_ms");
+						Long startTime=metaData.get("*start_time_ms") == null?null: metaData.get("*start_time_ms") instanceof Long?(Long)metaData.get("*start_time_ms"):((Integer)metaData.get("*start_time_ms")).longValue();
+						if(startTime==null)
+							startTime=System.currentTimeMillis();
+						
 						Boolean closed=(Boolean)metaData.get("*Closed");
 						if(timeOut==null)
 							metaData.put("*timeout_ms", timeout_ms);
@@ -208,6 +212,7 @@ public class Await implements FlowBasicInfo {
 								if("Failed".equals(status))
 									dp.log("Batch ID : "+batchID+" "+status);
 							} catch (Exception e) {
+								System.out.println("Valie of time_out is "+metaData.get("*timeout_ms"));
 								try {
 									ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
 								} catch (Exception e2) {

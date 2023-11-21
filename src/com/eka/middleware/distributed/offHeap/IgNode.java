@@ -1,13 +1,16 @@
 package com.eka.middleware.distributed.offHeap;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -34,7 +37,10 @@ public class IgNode {
         // Setting up the TCP Discovery SPI to find other nodes in the network
         TcpDiscoverySpi spi = new TcpDiscoverySpi();
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
-        
+        //spi.failureDetectionTimeoutEnabled(false);//setFailureDetectionTimeout(10000);
+
+        // Optionally set socket timeout, if needed
+        //spi.setSocketTimeout(5000);
         String nodes=ServiceUtils.getServerProperty("middleware.accessible.cluster.nodes");
         String nodeList[]=null;
         List<String> addresses=new ArrayList<>();
@@ -60,7 +66,7 @@ public class IgNode {
 
         ipFinder.setAddresses(addresses);
         spi.setIpFinder(ipFinder);
-        cfg.setConsistentId("IgCluster");
+        cfg.setConsistentId(UUID.randomUUID().toString());
         cfg.setDiscoverySpi(spi);
         
         // Starting the node with the given configuration
@@ -78,17 +84,56 @@ public class IgNode {
 			return tenant.id;
 		
 		int size=IgNode.getIgnite().cluster().nodes().size();
-		if(size==1)
+		if(size==1) {
+			if(nodeId==null)
+				nodeId = ignite.cluster().localNode().id().toString();
 			return nodeId;
+		}
 		
 		int nodeNumber=new Random().nextInt(size);
 		final AtomicInteger ai=new AtomicInteger(0);
-		final Map<String, String> map=new HashMap<>();
+		final Map<String, Object> map=new HashMap<>();
 		IgNode.getIgnite().cluster().nodes().forEach(node->{
 			if(ai.getAndIncrement()==nodeNumber)
 				map.put("id", node.id().toString());
 		});
-		return map.get("id");
+		
+		return (String)map.get("id");
+	}
+	
+	public static String getLowUsageNode(Tenant tenant) {
+		if(nodeId==null)
+			return tenant.id;
+		
+		int size=IgNode.getIgnite().cluster().nodes().size();
+		if(size==1) {
+			if(nodeId==null)
+				nodeId = ignite.cluster().localNode().id().toString();
+			return nodeId;
+		}
+		
+		int nodeNumber=new Random().nextInt(size);
+		final AtomicInteger ai=new AtomicInteger(0);
+		final Map<String, Object> map=new HashMap<>();
+		IgNode.getIgnite().cluster().nodes().forEach(node->{
+			double cpuUsage=node.metrics().getCurrentCpuLoad();
+			double cpu=map.get("cpu")!=null?(double)map.get("cpu"):1d;
+			if(cpu>cpuUsage) {
+				map.put("cpu",cpuUsage);
+				map.put("id", node.id().toString());
+			}
+			if(map.get("id")==null && ai.getAndIncrement()==nodeNumber)
+				map.put("id", node.id().toString());
+		});
+		
+		return (String)map.get("id");
+	}
+	
+	public static String getLocalNode(Tenant tenant) {
+		if(nodeId==null)
+			return tenant.id;
+		else
+			return nodeId;
 	}
 	
 	public static void stop() {
