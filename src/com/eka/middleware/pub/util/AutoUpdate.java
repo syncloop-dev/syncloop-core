@@ -181,7 +181,7 @@ public class AutoUpdate {
             boolean updatedCoreJar = false;
             boolean jarUpdated = false;
 
-            if (jsonValue != null && jsonValue.equals("true")) {
+            if (jsonValue != null && jsonValue.equals("true") && dataPipeline.rp.getTenant().getName().equals("default")) {
                 String coreDirPath = packagePath + "builds/core";
                 updatedCoreJar = moveFolder(coreDirPath, "/lib");
                 jarUpdated = true;
