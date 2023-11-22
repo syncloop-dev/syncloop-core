@@ -358,11 +358,13 @@ public class ServiceUtils {
 
 	private static String getLogLine(Exception e, String msg) {
 		StringBuilder sb = new StringBuilder();
-		StackTraceElement[] stackTrace = e.getStackTrace();
+		StackTraceElement[] stackTrace =null;// e.getStackTrace();
 		sb.append(msg);
 		sb.append("\n");
-		if(e!=null)
+		if(e!=null) {
 			sb.append(e.getMessage());
+			stackTrace = e.getStackTrace();
+		}
 		else
 			sb.append("Custom error");
 		sb.append("\n");

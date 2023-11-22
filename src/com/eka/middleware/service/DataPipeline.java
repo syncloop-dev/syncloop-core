@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.UUID;
@@ -874,7 +875,8 @@ public class DataPipeline {
 		final Map<String, Object> metaData = new HashMap<String, Object>();
 		asyncOutputDoc.put("*metaData", metaData);
 		final String uuidAsync = UUID.randomUUID().toString();
-		metaData.put("batchId", uuidAsync);
+		final String batchId = UUID.randomUUID().toString();
+		metaData.put("batchId", batchId);
 		metaData.put("status", "Active");
 
 		try {
@@ -1150,12 +1152,7 @@ public class DataPipeline {
 
 					json = ServiceUtils.toJson(asyncInputDoc);
 				}
-				String nodeID = IgNode.getLowUsageNode(rp.getTenant());
-				Queue queue = QueueManager.getQueue(this.rp.getTenant(), nodeID);
-
-				queue.add("INVOKE:" + json);
-				//System.out.println(" - Batch queued: " + batchId + "\n");
-				// json = (String) queue.poll();
+				publish(json,batchId);
 
 				return asyncOutputDoc;
 			} catch (Exception e) {
@@ -1173,6 +1170,34 @@ public class DataPipeline {
 			asyncOutputDoc.put("*futureTransformers", transformers);
 			futureList.add(asyncOutputDoc);
 		}
+	}
+	
+	private Map messaging=new HashMap<>();
+	
+	private void publish(String json, String batchId) {
+		
+		String randomNodeID = IgNode.getRandomClusterNode(rp.getTenant());
+		String lowUsageNodeID = IgNode.getLowUsageNode(rp.getTenant());
+		int nodeNumber=new Random().nextInt(10);
+		String cmd="INVOKE:" + json;
+		Queue queue = QueueManager.getQueue(this.rp.getTenant(), "ServiceQueue");
+		try {
+			if(nodeNumber>=5)
+				IgNode.getIgnite().message(IgNode.getIgnite().cluster().forNodeId(UUID.fromString(randomNodeID))).send(rp.getTenant().getName(), cmd);
+			else
+				IgNode.getIgnite().message(IgNode.getIgnite().cluster().forNodeId(UUID.fromString(lowUsageNodeID))).send(rp.getTenant().getName(), cmd);
+		} catch (Exception e) {
+			ServiceUtils.printException("Could not publish the message to queue task to node:"+randomNodeID+". Hence publishing to ServiceQueue", e);
+			queue.add(cmd);
+		}
+		//System.out.println("Batch published:"+batchId);
+//		Queue queue = QueueManager.getQueue(this.rp.getTenant(), "ServiceQueue");
+//		Map BSQC=CacheManager.getOrCreateNewCache(this.rp.getTenant(), "BackupServiceQueueCache");
+//		Queue bq = QueueManager.getQueue(this.rp.getTenant(), "BatchQueue");
+		//bq.add(batchId);
+		//queue.add("INVOKE:" + json);
+		//BSQC.put(batchId, "INVOKE:" + json);
+		
 	}
 
 	public List<Map> listAsyncRunningTasks(String sid) {

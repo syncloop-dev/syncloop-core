@@ -3,11 +3,14 @@ package com.eka.middleware.distributed;
 import java.util.Date;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import org.apache.ignite.lang.IgniteBiPredicate;
+
 import com.eka.middleware.distributed.offHeap.IgNode;
+import com.eka.middleware.distributed.offHeap.IgQueue;
 import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.server.ServiceManager;
@@ -18,19 +21,80 @@ import com.eka.middleware.template.Tenant;
 
 public class QueueTaskExecuter {
 
-	private static final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(200);
+	private static final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(50);
 
 	public static void start(final Tenant tenant) {
-		executor.submit(() -> {
-			while (true) {
-				String nodeID = null;
+
+		IgNode.getIgnite().message().localListen(tenant.getName(), new IgniteBiPredicate<UUID, String>() {
+			@Override
+			public boolean apply(UUID nodeId, String data) {
 				try {
-					nodeID= IgNode.getLocalNode(tenant);
-					int ranNumber=new Random().nextInt(10);
-					if(ranNumber==5)
-						nodeID = IgNode.getRandomClusterNode(tenant);
-					Queue queue = QueueManager.getQueue(tenant, nodeID);
-					String json = (String) queue.poll();
+					String json = data;
+					Queue queue = QueueManager.getQueue(tenant, IgNode.getLocalNode(tenant));
+					if (json != null)
+						queue.add(json);
+					return true; // Return true to keep listening
+				} catch (Exception e) {
+					ServiceUtils.printException("Could not add the message to node queue:"+IgNode.getLocalNode(tenant), e);
+					return false;
+				}
+				
+			}
+		});
+
+		executor.submit(() -> {
+			String nodeID = IgNode.getRandomClusterNode(tenant);
+			Queue queue = QueueManager.getQueue(tenant, "ServiceQueue");
+			while (true) {
+				try {
+					String json = (String) ((IgQueue) queue).take();
+					if (json != null && json.startsWith("INVOKE:")) {
+						try {
+							json = json.substring(7);
+							execute(tenant, json, null);
+							Thread.sleep((int)(IgNode.getIgnite().cluster().localNode().metrics().getAverageCpuLoad()*500d));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				} catch (Throwable e) {
+					ServiceUtils.printException(
+							"Exception caused while reading tasks from ServiceQueue: " + nodeID,
+							new Exception(e));
+				}
+			}
+		});
+		
+		executor.submit(() -> {
+			String nodeID = IgNode.getLocalNode(tenant);
+			Queue queue = QueueManager.getQueue(tenant, nodeID);
+			while (true) {
+				try {
+					String json = (String) ((IgQueue) queue).take();
+					if (json != null && json.startsWith("INVOKE:")) {
+						try {
+							json = json.substring(7);
+							execute(tenant, json, null);
+							Thread.sleep((int)(IgNode.getIgnite().cluster().localNode().metrics().getAverageCpuLoad()*10d));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				} catch (Throwable e) {
+					ServiceUtils.printException(
+							"Exception caused while reading tasks from internal node queue: " + nodeID,
+							new Exception(e));
+				}
+			}
+		});
+		
+		executor.submit(() -> {
+			String nodeID = IgNode.getHighUsageNode(tenant);
+			Queue queue = QueueManager.getQueue(tenant, nodeID);
+			while (true) {
+				try {
+					Thread.sleep((int)(IgNode.getIgnite().cluster().localNode().metrics().getAverageCpuLoad()*50d));
+					String json = (String) ((IgQueue) queue).take();
 					if (json != null && json.startsWith("INVOKE:")) {
 						try {
 							json = json.substring(7);
@@ -75,8 +139,10 @@ public class QueueTaskExecuter {
 			final String correlationID = (String) metaData.get("*correlationID");
 			final String uuidAsync = (String) metaData.get("*uuidAsync");
 			final String batchId = (String) metaData.get("batchId");
+			System.out.println("Batch subscribd BatchID: " + batchId);
 			asyncOutputDoc.put("*metaData", metaData);
-
+			//Queue bq = QueueManager.getQueue(tenant, "BatchQueue");
+			//Map BSQC = CacheManager.getOrCreateNewCache(tenant, "BackupServiceQueueCache");
 			executor.submit(() -> {
 
 				RuntimePipeline rpRef = null;
@@ -93,11 +159,11 @@ public class QueueTaskExecuter {
 						if (v != null && k != null)
 							dpAsync.put(k, v);
 					});
-					
+
 					dpAsync.appLog("TENANT", dpAsync.rp.getTenant().getName());
 					dpAsync.appLog("URL_PATH", dpAsync.getUrlPath());
 					dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResourceName());
-					
+
 					if (fqnOfFunction.startsWith("packages")) {
 						metaData.put("*sessionID", dpAsync.getSessionId());
 						try {
@@ -129,8 +195,10 @@ public class QueueTaskExecuter {
 							String jsonResult = ServiceUtils.toJson(asyncOutputDoc);
 							Map<String, Object> cache = CacheManager.getCacheAsMap(tenant);
 							cache.put(batchId, jsonResult);
-							//System.out.println(" - Batch result saved: " + batchId + "\n");
+							// System.out.println(" - Batch result saved: " + batchId + "\n");
 						}
+						//BSQC.remove(batchId);
+						//bq.remove(batchId);
 						rpRef.destroy();
 					} catch (Exception e) {
 						ServiceUtils.printException(
@@ -141,7 +209,7 @@ public class QueueTaskExecuter {
 				}
 			});
 		} catch (Exception e) {
-			ServiceUtils.printException("Exception in task execution. Task Data:"+json, e);
+			ServiceUtils.printException("Exception in task execution. Task Data:" + json, e);
 		}
 
 	}

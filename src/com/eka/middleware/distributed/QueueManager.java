@@ -13,7 +13,7 @@ import com.eka.middleware.template.Tenant;
 public class QueueManager {
 	private static final Map<String, Queue> queueMap=new ConcurrentHashMap<>(); 
 	public static Queue<Object> getQueue(Tenant tenant,String name){
-		name=tenant.id+"-"+name;
+		name=tenant.getName()+"-"+name;
 		Queue queue=queueMap.get(name);
 		if(queue==null) {
 			if(IgNode.getNodeId()!=null)
@@ -25,8 +25,18 @@ public class QueueManager {
 		return queue;
 	}
 	
+	public static Queue<Object> getLocalQueue(Tenant tenant,String name){
+		name=tenant.getName()+"-"+name;
+		Queue queue=queueMap.get(name);
+		if(queue==null) {
+			queue=new PriorityBlockingQueue<Object> (); 
+			queueMap.put(name, queue);
+		}
+		return queue;
+	}
+	
 	public static void deleteQueue(Tenant tenant,String name) {
-		name=tenant.id+"-"+name;
+		name=tenant.getName()+"-"+name;
 		Queue queue=queueMap.get(name);
 		if(queue!=null) {
 			queue.remove(); 

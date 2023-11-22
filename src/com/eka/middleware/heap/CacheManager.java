@@ -23,20 +23,20 @@ private static final Map<String, Map> cacheMap=new ConcurrentHashMap<>();
 public static List<String> cacheList(Tenant tenant){
 	List<String> list = new ArrayList<>();
 	cacheMap.keySet().forEach(key->{
-		list.add(key.replace(tenant.id+"-", ""));
+		list.add(key.replace(tenant.getName()+"-", ""));
 	});
 	return list;
 }
 
 public static Map<String, Object> getCacheAsMap(Tenant tenant) {
-	Map<String, Object> tenantMap=tenantCache.get(tenant.id);
+	Map<String, Object> tenantMap=tenantCache.get(tenant.getName());
 	if(tenantMap==null) {
 		if(igNode!=null)
-			tenantMap=new IgMap<String,  Object>(igNode,"myTenantCache-"+tenant.id);
+			tenantMap=new IgMap<String,  Object>(igNode,"MyTenantCache-"+tenant.getName());
 		else
 			tenantMap=new ConcurrentHashMap<String, Object>();
+		tenantCache.put(tenant.getName(), tenantMap);
 	}
-	tenantCache.put(tenant.id, tenantMap);
 	return tenantMap;
 }
 
@@ -82,8 +82,8 @@ public static Map<String, Object> getCacheAsMap(Tenant tenant) {
 	}
 	
 	public static Map getOrCreateNewCache(Tenant tenant,String name) {
-		Map<String, Object> tenantMap=tenantCache.get(tenant.id);
-		name=tenant.id+"-"+name;
+		Map<String, Object> tenantMap=tenantCache.get(tenant.getName());
+		name=tenant.getName()+"-"+name;
 		Map newCache=cacheMap.get(name);
 		if(newCache==null) {
 			if(IgNode.getNodeId()!=null)
@@ -95,7 +95,7 @@ public static Map<String, Object> getCacheAsMap(Tenant tenant) {
 	}
 	
 	public static void deleteCache(Tenant tenant,String name) {
-		name=tenant.id+"-"+name;
+		name=tenant.getName()+"-"+name;
 		Map newCache=cacheMap.get(name);
 		if(newCache!=null) {
 			if(IgNode.getNodeId()!=null)

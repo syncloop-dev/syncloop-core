@@ -15,8 +15,10 @@ public class IgQueue<E> implements Queue<E> {
         // Create or get the Ignite queue
     	CollectionConfiguration colCfg = new CollectionConfiguration();
     	colCfg.setCacheMode(PARTITIONED);
+    	colCfg.setCollocated(true);
+    	colCfg.setBackups(1);
         this.igniteQueue = ignite.queue(queueName, 0, colCfg);
-        System.out.println("New queue created with queueName: "+colCfg);
+        //System.out.println("New queue created with queueName: "+colCfg);
     }
 
     @Override
@@ -37,6 +39,10 @@ public class IgQueue<E> implements Queue<E> {
     @Override
     public E poll() {
         return igniteQueue.poll();
+    }
+    
+    public E take() {
+        return igniteQueue.take();
     }
 
     @Override
@@ -108,6 +114,8 @@ public class IgQueue<E> implements Queue<E> {
     public void clear() {
         igniteQueue.clear();
     }
+    
+    
     
     public static void main(String[] args) {
     	IgQueue iigq=new IgQueue<>(IgNode.getIgnite(), "test");

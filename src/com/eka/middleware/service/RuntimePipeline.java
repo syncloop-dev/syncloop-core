@@ -219,8 +219,13 @@ public class RuntimePipeline {
 		rtp.setDestroyed(true);
 		pipelines.get(sessionId).payload.clear();
 		pipelines.remove(sessionId);
-		appLogger.finish();
-		executor.shutdown();
+		try {
+			executor.shutdown();
+			appLogger.finish();
+		} catch (Exception e) {
+			ServiceUtils.printException(getTenant(),"Exception while finishing appLogger.", e);
+		}
+		
 	}
 	
 	@Override
