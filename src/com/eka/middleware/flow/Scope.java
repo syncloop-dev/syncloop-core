@@ -190,7 +190,7 @@ public class Scope implements FlowBasicInfo {
 			dp.putGlobal("*hasError", false);
 		} catch (Exception e) {
 			dp.putGlobal("*error", e.getMessage());
-			dp.putGlobal("*hasError", true);
+			dp.putGlobal("*hasError", false);
 			throw e;
 		} finally {
 			if(canSnap) {
