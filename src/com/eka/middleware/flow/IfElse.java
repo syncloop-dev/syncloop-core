@@ -95,14 +95,14 @@ public class IfElse implements FlowBasicInfo {
 					continue;
 
 				// ifLogic=xVal;
-				snapMeta.put("condition", ifLogic);
+				snapMeta.put("IF_ELSE_CONDITION", ifLogic);
 				if ("#default".equals(ifLogic.trim()) || "#else".equals(ifLogic.trim())) {
 					Scope scope = new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
 					break;
 				} else {
 					result = FlowUtils.evaluateCondition(ifLogic, dp);
-					snapMeta.put("conditionEvaluation", result);
+					snapMeta.put("IF_ELSE_CONDITION_EVAL", result);
 					if (result) {
 						Scope scope = new Scope(jsonValue.asJsonObject());
 						scope.process(dp);

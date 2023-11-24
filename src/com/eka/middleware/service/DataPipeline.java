@@ -508,7 +508,7 @@ public class DataPipeline {
 			map.put("guid", guid);
 			map.put("before_execution", beforeExecution);
 			map.put(currentResource, new Map[]{servicePayload,payloadStack,globalPayload});
-			map.putAll(meta);
+			map.put("meta", meta);
 			String json = ServiceUtils.toPrettyJson(map);
 			rp.writeSnapshot(resource, json);
 		} catch (Exception e) {
