@@ -2,6 +2,10 @@ package com.eka.middleware.distributed.offHeap;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 
 import java.util.Collection;
 import java.util.Map;
@@ -12,7 +16,12 @@ public class IgMap<K, V> implements Map<K, V> {
 	private final IgniteCache<K, V> cache;
 
 	public IgMap(Ignite ignite, String cacheName) {
-		this.cache = ignite.getOrCreateCache(cacheName);
+		CacheConfiguration<K, V> ccf=new CacheConfiguration<K, V>();
+		ccf.setName(cacheName);
+		ccf.setCacheMode(CacheMode.REPLICATED);
+		ccf.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+		this.cache = (IgniteCache<K, V>) ignite.getOrCreateCache(ccf);
+		//cache.co
 	}
 
 	@Override

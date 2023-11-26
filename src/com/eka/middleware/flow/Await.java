@@ -9,6 +9,10 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
@@ -18,6 +22,7 @@ import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class Await implements FlowBasicInfo {
+	private static Logger LOGGER = LogManager.getLogger(Await.class);
 	private boolean disabled = false;
 //	private String inputArrayPath;
 //	private String outPutArrayPath;
@@ -212,7 +217,7 @@ public class Await implements FlowBasicInfo {
 								if("Failed".equals(status))
 									dp.log("Batch ID : "+batchID+" "+status);
 							} catch (Exception e) {
-								System.out.println("Valie of time_out is "+metaData.get("*timeout_ms"));
+								LOGGER.debug("Valie of time_out is "+metaData.get("*timeout_ms"));
 								try {
 									ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
 								} catch (Exception e2) {

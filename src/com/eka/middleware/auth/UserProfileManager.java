@@ -207,7 +207,7 @@ public class UserProfileManager implements IdentityManager {
             passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
         }
         Timestamp createdDate = new Timestamp(System.currentTimeMillis());
-        System.out.println("create user complete........... ");
+        LOGGER.debug("create user complete........... ");
 
         int tenantId = getTenantIdByName(tenant);
 

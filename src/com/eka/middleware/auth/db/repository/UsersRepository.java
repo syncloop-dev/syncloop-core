@@ -4,8 +4,12 @@ package com.eka.middleware.auth.db.repository;
 import com.eka.middleware.adapter.SQL;
 import com.eka.middleware.auth.db.entity.Groups;
 import com.eka.middleware.auth.db.entity.Users;
+import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.template.SystemException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.ldaptive.auth.User;
 
 import java.sql.*;
@@ -17,6 +21,7 @@ import java.util.Map;
 
 public class UsersRepository {
 
+	public static Logger LOGGER = LogManager.getLogger(UsersRepository.class);
     @Deprecated
     public static Map<String, Object> getUsers() throws SystemException {
         Map<String, Object> usersMap = new HashMap<>();
@@ -299,7 +304,7 @@ public class UsersRepository {
                     insertGroupStatement.setInt(2, groupId);
                     insertGroupStatement.executeUpdate();
                 } else {
-                    System.out.println("Group not found: " + group.getGroupName());
+                	LOGGER.debug("Group not found: " + group.getGroupName());
                 }
             }
         }

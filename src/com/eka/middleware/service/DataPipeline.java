@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.UUID;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
@@ -430,7 +431,6 @@ public class DataPipeline {
 		} catch (Exception e) {
 			ServiceUtils.printException(this, "Could not convert datapipeline '" + rp.getSessionID() + "' to Yaml", e);
 		}
-		;
 		return null;
 	}
 
@@ -730,6 +730,7 @@ public class DataPipeline {
 		return futureList;
 	}
 
+	AtomicInteger atIntRemoved = new AtomicInteger(0);
 	public void updateQueuedTaskStatus(String batchId, final JsonArray transformers,
 			final Map<String, Object> asyncOutputDoc, final Map<String, Object> metaData) {
 		if (batchId != null) {
@@ -763,14 +764,26 @@ public class DataPipeline {
 						asyncOutputDoc.put(k, v);
 				});
 				final List<Map> taskList = (List<Map>) cache.get(rp.getSessionID());
-				if (taskList != null) {
-					taskList.remove(metaData);
-					synchronized (taskList) {
-						if (taskList.size() == 0)
-							cache.remove(rp.getSessionID());
+				try {
+					if (taskList != null) {
+						taskList.remove(metaData);
+						synchronized (taskList) {
+							if (taskList.size() == 0)
+								cache.remove(rp.getSessionID());
+						}
+					}
+					cache.remove(batchId);
+				} catch (Exception e) {
+					ServiceUtils.printException("Removing batch from cache failed. batchID: "+batchId, e);
+				}finally {
+					try {
+						Thread.sleep(100);
+						cache.remove(batchId);
+						LOGGER.debug("Completed batch number counter:"+ atIntRemoved.incrementAndGet());
+					} catch (Exception e) {
+						ServiceUtils.printException("Removing batch from cache failed 2nd time. batchID: "+batchId, e);
 					}
 				}
-				cache.remove(batchId);
 			}
 		}
 	}
@@ -1173,31 +1186,27 @@ public class DataPipeline {
 	}
 	
 	private Map messaging=new HashMap<>();
-	
+	AtomicInteger atInt = new AtomicInteger(0);
 	private void publish(String json, String batchId) {
 		
 		String randomNodeID = IgNode.getRandomClusterNode(rp.getTenant());
-		String lowUsageNodeID = IgNode.getLowUsageNode(rp.getTenant());
-		int nodeNumber=new Random().nextInt(10);
-		String cmd="INVOKE:" + json;
+		//String lowUsageNodeID = IgNode.getLowUsageNode(rp.getTenant());
+		//int nodeNumber=new Random().nextInt(10);
 		Queue queue = QueueManager.getQueue(this.rp.getTenant(), "ServiceQueue");
+		Map BSQC=CacheManager.getOrCreateNewCache(this.rp.getTenant(), "BackupServiceQueueCache");
+		//Queue bq = QueueManager.getQueue(this.rp.getTenant(), "BatchQueue");
+		String nodeID=randomNodeID;
 		try {
-			if(nodeNumber>=5)
-				IgNode.getIgnite().message(IgNode.getIgnite().cluster().forNodeId(UUID.fromString(randomNodeID))).send(rp.getTenant().getName(), cmd);
-			else
-				IgNode.getIgnite().message(IgNode.getIgnite().cluster().forNodeId(UUID.fromString(lowUsageNodeID))).send(rp.getTenant().getName(), cmd);
+			BSQC.put(batchId, json);
+			IgNode.getIgnite().message(IgNode.getIgnite().cluster().forNodeId(UUID.fromString(randomNodeID))).send(rp.getTenant().getName(), batchId);
 		} catch (Exception e) {
 			ServiceUtils.printException("Could not publish the message to queue task to node:"+randomNodeID+". Hence publishing to ServiceQueue", e);
-			queue.add(cmd);
-		}
-		//System.out.println("Batch published:"+batchId);
-//		Queue queue = QueueManager.getQueue(this.rp.getTenant(), "ServiceQueue");
-//		Map BSQC=CacheManager.getOrCreateNewCache(this.rp.getTenant(), "BackupServiceQueueCache");
-//		Queue bq = QueueManager.getQueue(this.rp.getTenant(), "BatchQueue");
-		//bq.add(batchId);
-		//queue.add("INVOKE:" + json);
-		//BSQC.put(batchId, "INVOKE:" + json);
+			queue.add(batchId);
+			nodeID="All";
+		}	
 		
+		LOGGER.debug("Batch published to node: "+nodeID+", batchID: "+batchId);
+		LOGGER.debug("Batch number #"+atInt.incrementAndGet());
 	}
 
 	public List<Map> listAsyncRunningTasks(String sid) {
