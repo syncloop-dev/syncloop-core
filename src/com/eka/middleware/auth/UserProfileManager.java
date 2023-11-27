@@ -42,10 +42,12 @@ public class UserProfileManager implements IdentityManager {
     private static UserProfileManager upm = null;
     public static Logger LOGGER = LogManager.getLogger(UserProfileManager.class);
 
+    @Deprecated
     public static final Map<String, Object> getUsers() throws SystemException {
         return UsersRepository.getUsers();
     }
 
+    @Deprecated
     public static List<String> getGroups() throws SystemException {
         return GroupsRepository.getAllGroups();
     }
@@ -207,7 +209,7 @@ public class UserProfileManager implements IdentityManager {
             passHash = "[#]" + ServiceUtils.generateUUID(new String(password) + userId);
         }
         Timestamp createdDate = new Timestamp(System.currentTimeMillis());
-        LOGGER.debug("create user complete........... ");
+        System.out.println("create user complete........... ");
 
         int tenantId = getTenantIdByName(tenant);
 
@@ -576,8 +578,18 @@ public class UserProfileManager implements IdentityManager {
     };
 
     public static void migrationProfiles() throws SystemException {
-		String absoluteFilePath = PropertyManager.getConfigFolderPath() + "profiles.json";
-		File file = new File(absoluteFilePath);
+
+        String configFolderPath = PropertyManager.getConfigFolderPath();
+        File dbFile = new File(configFolderPath + "profiles.db");
+        boolean isNewDatabase = !dbFile.exists();
+
+        if (isNewDatabase) {
+            createProfileDB();
+        }
+
+
+        String absoluteFilePath = PropertyManager.getConfigFolderPath() + "profiles.json";
+        File file = new File(absoluteFilePath);
 
         if (file.exists()) {
 			byte[] bytes = PropertyManager.readConfigurationFile("profiles.json");
@@ -654,5 +666,59 @@ public class UserProfileManager implements IdentityManager {
                 }
             }
 		}
+    }
+
+    public static void createProfileDB() {
+        String configFolderPath = PropertyManager.getConfigFolderPath();
+        String connectionURL = "jdbc:sqlite:" + configFolderPath + "profiles.db";
+
+        try (Connection connection = DriverManager.getConnection(connectionURL)) {
+            if (connection != null) {
+                DatabaseMetaData meta = connection.getMetaData();
+
+                String createGroupsTable = "CREATE TABLE IF NOT EXISTS groups (" +
+                        "group_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "name TEXT NOT NULL," +
+                        "tenant_id INTEGER," +
+                        "created_date DATETIME," +
+                        "modified_date DATETIME," +
+                        "deleted BOOLEAN" +
+                        ")";
+                connection.createStatement().executeUpdate(createGroupsTable);
+
+                String createTenantTable = "CREATE TABLE IF NOT EXISTS tenant (" +
+                        "tenant_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                        "name TEXT," +
+                        "created_date DATETIME," +
+                        "modified_date DATETIME," +
+                        "deleted BOOLEAN" +
+                        ")";
+                connection.createStatement().executeUpdate(createTenantTable);
+
+                String createUserGroupMappingTable = "CREATE TABLE IF NOT EXISTS user_group_mapping (" +
+                        "mapping_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "user_id TEXT," +
+                        "group_id INTEGER" +
+                        ")";
+                connection.createStatement().executeUpdate(createUserGroupMappingTable);
+
+                String createUsersTable = "CREATE TABLE IF NOT EXISTS users (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                        "password TEXT," +
+                        "email TEXT," +
+                        "tenant_id INTEGER NOT NULL," +
+                        "status TEXT," +
+                        "user_id TEXT NOT NULL," +
+                        "name TEXT," +
+                        "deleted BOOLEAN," +
+                        "created_date DATETIME," +
+                        "modified_date DATETIME," +
+                        "verification_secret TEXT" +
+                        ")";
+                connection.createStatement().executeUpdate(createUsersTable);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

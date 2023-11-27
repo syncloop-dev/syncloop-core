@@ -133,16 +133,25 @@ public class DataPipeline {
 			return null;
 		}
 
-		/*
-		 * int length = resourceStack.size(); if (length > 1 && allowGlobal) { boolean
-		 * bit = false; //for (int i = length - 1; i >= 0; i--) { String resource =
-		 * this.callingResource;//resourceStack.get(i); if
-		 * (resource.equals(currentResource) || bit) { bit = true; Map<String, Object>
-		 * map2 = payloadStack.get(resource); if (map2 != null) { Object value =
-		 * map2.get(key); if (value != null) return value; } } //if
-		 * (hasDroppedPrevious.get(resource + "-" + key) != null // &&
-		 * hasDroppedPrevious.get(resource + "-" + key)) // break; } //}
-		 */
+	/*	int length = resourceStack.size();
+		if (length > 1 && allowGlobal) {
+			boolean bit = false;
+			//for (int i = length - 1; i >= 0; i--) {
+				String resource = this.callingResource;//resourceStack.get(i);
+				if (resource.equals(currentResource) || bit) {
+					bit = true;
+					Map<String, Object> map2 = payloadStack.get(resource);
+					if (map2 != null) {
+						Object value = map2.get(key);
+						if (value != null)
+							return value;
+					}
+				}
+				//if (hasDroppedPrevious.get(resource + "-" + key) != null
+				//		&& hasDroppedPrevious.get(resource + "-" + key))
+				//	break;
+			}
+		//}*/
 		return null;
 	}
 
@@ -197,10 +206,12 @@ public class DataPipeline {
 					Map<String, Object> mapPrev = payloadStack.get(prevResource);
 					if (mapPrev != null && mapPrev.size() > 0) {
 
-						/*
-						 * mapPrev.forEach((k, v) -> { if (v != null) mapCur.put(k, v); else
-						 * mapCur.remove(k); });
-						 */
+						/*mapPrev.forEach((k, v) -> {
+							if (v != null)
+								mapCur.put(k, v);
+							else
+								mapCur.remove(k);
+						});*/
 						payloadStack.remove(prevResource);
 					}
 					resourceStack.remove(i + 1);
@@ -1184,11 +1195,11 @@ public class DataPipeline {
 			futureList.add(asyncOutputDoc);
 		}
 	}
-	
+
 	private Map messaging=new HashMap<>();
 	AtomicInteger atInt = new AtomicInteger(0);
 	private void publish(String json, String batchId) {
-		
+
 		String randomNodeID = IgNode.getRandomClusterNode(rp.getTenant());
 		//String lowUsageNodeID = IgNode.getLowUsageNode(rp.getTenant());
 		//int nodeNumber=new Random().nextInt(10);
@@ -1203,8 +1214,8 @@ public class DataPipeline {
 			ServiceUtils.printException("Could not publish the message to queue task to node:"+randomNodeID+". Hence publishing to ServiceQueue", e);
 			queue.add(batchId);
 			nodeID="All";
-		}	
-		
+		}
+
 		LOGGER.debug("Batch published to node: "+nodeID+", batchID: "+batchId);
 		LOGGER.debug("Batch number #"+atInt.incrementAndGet());
 	}

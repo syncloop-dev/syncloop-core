@@ -48,7 +48,7 @@ public class Scope implements FlowBasicInfo {
 	
 	public void process(DataPipeline dp) throws SnippetException{
 		Map<String, Object> snapMeta = Maps.newHashMap();
-		snapMeta.put("evaluateCondition", evaluateCondition);
+		snapMeta.put("GROUP_SEQUENCE_CONDITION_EVAL", evaluateCondition);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 		}
@@ -87,7 +87,7 @@ public class Scope implements FlowBasicInfo {
 								tcfBlock.process(dp);
 							}else {
 								boolean canExecute =FlowUtils.evaluateCondition(tcfBlock.getCondition(),dp);
-								snapMeta.put("canExecute", canExecute);
+								snapMeta.put("GROUP_SEQUENCE_CAN_CONDITION_EXEC", canExecute);
 								if(canExecute)
 									tcfBlock.process(dp);
 							}
