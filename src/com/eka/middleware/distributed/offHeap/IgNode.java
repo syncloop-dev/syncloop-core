@@ -80,7 +80,7 @@ public class IgNode {
 		String port = ServiceUtils.getServerProperty("middleware.accessible.cluster.port");
 		if (port == null)
 			port = "48500";
-		if (nodes != null && nodes.trim().length() > 10) {
+		if (nodes != null && nodes.trim().length() > 7) {
 			nodeList = nodes.split(",");
 			if (nodeList.length > 0)
 				for (String address : nodeList) {
