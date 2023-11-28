@@ -50,7 +50,6 @@ import com.eka.middleware.auth.db.repository.TenantRepository;
 import com.eka.middleware.auth.db.repository.UsersRepository;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.heap.CacheManager;
-import com.eka.middleware.scheduling.ApplicationSchedulerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
@@ -359,11 +358,13 @@ public class ServiceUtils {
 
 	private static String getLogLine(Exception e, String msg) {
 		StringBuilder sb = new StringBuilder();
-		StackTraceElement[] stackTrace = e.getStackTrace();
+		StackTraceElement[] stackTrace =null;// e.getStackTrace();
 		sb.append(msg);
 		sb.append("\n");
-		if(e!=null)
+		if(e!=null) {
 			sb.append(e.getMessage());
+			stackTrace = e.getStackTrace();
+		}
 		else
 			sb.append("Custom error");
 		sb.append("\n");
@@ -1077,8 +1078,6 @@ public class ServiceUtils {
 							UsersRepository.addGroupsForUser(conn, user.getId(), groupList);
 						}
 
-						ApplicationSchedulerFactory.initScheduler(null, name);
-
 					} catch (Exception e) {
 						throw new RuntimeException(e);
 					}
@@ -1589,6 +1588,48 @@ public class ServiceUtils {
 			mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
 		}
 		return mainflowJsonObject;
+	}
+	
+	public static Map<String, Object> decodeJWT(String jwtToken) {
+        // Splitting the JWT Token into parts
+        String[] parts = jwtToken.split("\\.");
+        if (parts.length < 2) {
+            return new HashMap<>(); // Not enough parts for a valid JWT
+        }
+
+        // Decoding the payload
+        String payload = parts[1];
+        byte[] decodedBytes = Base64.getUrlDecoder().decode(payload);
+        String decodedString = new String(decodedBytes);
+
+        // Converting JSON string to Map
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> tokenData = new HashMap<>();
+        try {
+            tokenData = objectMapper.readValue(decodedString, Map.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return tokenData;
+    }
+	
+	public static boolean isValid(String token) {
+		Map<String, Object> jwtData = ServiceUtils.decodeJWT(token);
+		if(jwtData==null)
+			return false;
+        String id=(String) jwtData.get("username");
+		Map<String, Object> usersMap = null;
+		try {
+			usersMap = (Map<String, Object>) UserProfileManager.getUsers();
+		} catch (SystemException e) {
+			ServiceUtils.printException("Could not load users list: " + id, e);
+			return false;
+		}
+		Map<String, Object> user = (Map<String, Object>) usersMap.get(id);
+		if(user!=null && user.getOrDefault("salt","").equals(jwtData.getOrDefault("salt", "")))
+			return true;
+		return false;
 	}
 
 	public static void saveServerProperties(DataPipeline dataPipeline) throws Exception {

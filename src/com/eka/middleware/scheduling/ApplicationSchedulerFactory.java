@@ -6,6 +6,8 @@ import com.eka.middleware.service.DataPipeline;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.quartz.*;
 
 import java.util.HashMap;
@@ -20,7 +22,7 @@ public class ApplicationSchedulerFactory {
      * @return
      * @throws SchedulerException
      */
-
+    public static Logger LOGGER = LogManager.getLogger(ApplicationSchedulerFactory.class);
     public static Scheduler initScheduler(final String configFile, String tenantName) throws SchedulerException {
         SchedulerFactory schedFact;
 
@@ -46,7 +48,7 @@ public class ApplicationSchedulerFactory {
 
         if (tenantScheduler.isInStandbyMode()) {
             tenantScheduler.start();
-            System.out.println("Scheduler started.");
+            LOGGER.debug("Scheduler started.");
         }
     }
 
@@ -65,7 +67,7 @@ public class ApplicationSchedulerFactory {
     public static void stopScheduler(DataPipeline dataPipeline) throws SchedulerException {
         Scheduler tenantScheduler =  getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
         if (tenantScheduler != null && !tenantScheduler.isInStandbyMode()) {
-            System.out.println("scheduler stopped.....");
+        	LOGGER.debug("scheduler stopped.....");
             tenantScheduler.standby();
         }
     }

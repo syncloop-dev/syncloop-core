@@ -31,6 +31,7 @@ import org.xnio.Options;
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.distributed.offHeap.IgNode;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
@@ -66,6 +67,13 @@ public class MiddlewareServer {
 
 	public static void main(final String[] args) throws SystemException {
 
+		try {
+			PropertyManager.initConfig(args);
+			IgNode.getIgnite();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))) {
 			try {
 				BootBuild.bootBuild();
@@ -80,7 +88,7 @@ public class MiddlewareServer {
 		ApplicationShutdownHook.arg = args;
 
 		try {
-			PropertyManager.initConfig(args);
+			//PropertyManager.initConfig(args);
 			UserProfileManager.migrationProfiles();
 			local_IP = PropertyManager.getLocal_IP();
 			Scheduler scheduler = ApplicationSchedulerFactory.initScheduler(null, "default");
@@ -149,7 +157,6 @@ public class MiddlewareServer {
 						continue;
 					}
 					if (!"default".equalsIgnoreCase(tenant)) {
-						ApplicationSchedulerFactory.initScheduler(null, tenant);
 						LOGGER.info("Starting " + tenant + " tenant......................");
 						tent.logDebug(null, "Starting " + tenant + " tenant......................");
 						ServiceUtils.startTenantServices(tenant);

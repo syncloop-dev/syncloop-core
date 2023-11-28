@@ -19,6 +19,7 @@ import org.pac4j.jwt.config.signature.SecretSignatureConfiguration;
 import org.pac4j.jwt.profile.JwtGenerator;
 
 import com.eka.middleware.auth.Security;
+import com.eka.middleware.distributed.QueueTaskExecuter;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
@@ -46,7 +47,9 @@ public class Tenant {
                 if (name == null)
                     name = "default";
                 if (tenantMap.get(name) == null) {
-                    tenantMap.put(name, new Tenant(name));
+                	Tenant tenant=new Tenant(name);
+                    tenantMap.put(name, tenant);
+                    QueueTaskExecuter.start(tenant);
                 }
             } catch (Exception e) {
                 ServiceUtils.printException("Failed while loading tenant.", e);
