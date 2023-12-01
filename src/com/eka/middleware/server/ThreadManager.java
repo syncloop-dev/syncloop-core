@@ -147,7 +147,7 @@ public class ThreadManager {
 					} else {
 						exchange.getResponseHeaders().add(Headers.STATUS, 404);
 						exchange.getResponseSender()
-								.send("Server is up and running but it could not find the resource.");
+								.send("{\"status\": \"404\", \"message\": \"URL not found\"}");
 					}
 					return;
 				}
