@@ -542,12 +542,14 @@ public class ServiceUtils {
 				}
 				Map<String, Object> formDataMap = new HashMap<String, Object>();
 				List<InputStream> files = new ArrayList<InputStream>();
+				List<String> filesList = new ArrayList<>();
 				for (String key : formData) {
 					for (FormData.FormValue formValue : formData.get(key)) {
 						if (formValue.isFileItem()) {
 							if (key != null && key.trim().length() > 0) {
 								formDataMap.put(key + "_fileName", formValue.getFileName());
 								formDataMap.put(key, formValue.getFileItem().getInputStream());
+								filesList.add(key);
 							}
 							InputStream is = formValue.getFileItem().getInputStream();
 							files.add(is);
@@ -557,6 +559,7 @@ public class ServiceUtils {
 					}
 				}
 				formDataMap.put("uploadedFiles", files);
+				formDataMap.put("keys", filesList);
 				MultiPart mp = new MultiPart(formDataMap);
 				rp.payload.put("*multiPartRequest", mp);
 			} catch (Exception e) {
