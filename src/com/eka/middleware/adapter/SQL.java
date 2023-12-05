@@ -185,8 +185,12 @@ public class SQL {
                             paramIndex++;
                         }
                     }
-//                    myStmt.addBatch();
-                    rows += myStmt.executeUpdate();
+                    myStmt.addBatch();
+//                    rows += myStmt.executeUpdate();
+                }
+                int[] batch = myStmt.executeBatch();
+                for (int i  : batch) {
+                    rows += i;
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -338,7 +342,7 @@ public class SQL {
                         }
                     }
 
-                    int rows = myStmt.executeUpdate();
+                    /*int rows = myStmt.executeUpdate();
                     if (rows > 0) {
                         ResultSet keys = myStmt.getGeneratedKeys();
                         if (keys.next()) {
@@ -346,6 +350,17 @@ public class SQL {
                         } else {
                             ids += "null,";
                         }
+                    }*/
+                    myStmt.addBatch();
+                }
+
+                int[] rows = myStmt.executeBatch();
+                if (rows.length > 0) {
+                    ResultSet keys = myStmt.getGeneratedKeys();
+                    if (keys.next()) {
+                        ids += keys.getObject(1) + ",";
+                    } else {
+                        ids += "null,";
                     }
                 }
             } catch (SQLException e) {
