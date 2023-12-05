@@ -23,6 +23,7 @@ import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
+import org.graalvm.polyglot.Value;
 
 public class FlowUtils {
     private static Logger LOGGER = LogManager.getLogger(FlowUtils.class);
@@ -214,7 +215,11 @@ public class FlowUtils {
 
             String tokens[] = typePath.split(Pattern.quote("/"));
             String typeOfVariable = tokens[tokens.length - 1];
-            if (!typeOfVariable.toUpperCase().contains("LIST") && !typeOfVariable.equals("string") && evaluate != null && evaluate.trim().length() > 0) {
+            if ((!typeOfVariable.toUpperCase().contains("LIST") ||
+                    typeOfVariable.toUpperCase().equals("INTEGERLIST") ||
+                    typeOfVariable.toUpperCase().equals("STRINGLIST") ||
+                    typeOfVariable.toUpperCase().equals("NUMBERLIST") ||
+                    typeOfVariable.toUpperCase().equals("BOOLEANLIST")) && !typeOfVariable.equals("string") && evaluate != null && evaluate.trim().length() > 0) {
                 try {
                     String threadSafeName = dp.getUniqueThreadName();
                     Object typeVal = eval(value, threadSafeName, typeOfVariable);
@@ -378,8 +383,51 @@ public class FlowUtils {
                     return ctx.eval("js", js).asBoolean();
                 case "byte":
                     return ctx.eval("js", js).asByte();
+                case "integerList":
+                    Value result = ctx.eval("js", js);
+                    if (result.hasArrayElements()) {
+                        int size = (int)result.getArraySize();
+                        int[] intArray = new int[size];
+                        for (int i = 0; i < intArray.length; i++) {
+                            intArray[i] = result.getArrayElement(i).asInt();
+                        }
+                        return intArray;
+                    }
+                    return null;
+                case "stringList":
+                    result = ctx.eval("js", js);
+                    if (result.hasArrayElements()) {
+                        int size = (int)result.getArraySize();
+                        String[] array = new String[size];
+                        for (int i = 0; i < array.length; i++) {
+                            array[i] = result.getArrayElement(i).asString();
+                        }
+                        return array;
+                    }
+                    return null;
+                case "numberList":
+                    result = ctx.eval("js", js);
+                    if (result.hasArrayElements()) {
+                        int size = (int)result.getArraySize();
+                        Double[] array = new Double[size];
+                        for (int i = 0; i < array.length; i++) {
+                            array[i] = result.getArrayElement(i).asDouble();
+                        }
+                        return array;
+                    }
+                    return null;
+                case "booleanList":
+                    result = ctx.eval("js", js);
+                    if (result.hasArrayElements()) {
+                        int size = (int)result.getArraySize();
+                        Boolean[] array = new Boolean[size];
+                        for (int i = 0; i < array.length; i++) {
+                            array[i] = result.getArrayElement(i).asBoolean();
+                        }
+                        return array;
+                    }
+                    return null;
                 case "object":
-                    return ctx.eval("js", js);
                 default:
                     return ctx.eval("js", js);
             }
