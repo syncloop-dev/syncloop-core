@@ -187,7 +187,7 @@ public class FlowUtils {
 							break;
 						case "EEV": // Evaluate Expression Variable
 							for (String expressionKey : expressions) {
-								String expressionValue = dp.getValueByPointer(expressionKey) + "";
+								String expressionValue = ServiceUtils.toJson(dp.getValueByPointer(expressionKey));
 								if (expressionValue == null || expressionValue.equals("null")) {
 									map.put(expressionKey, KeywordResolver.find(expressionKey, dp));
 								} else {

@@ -168,6 +168,18 @@ public class ServiceUtils {
 		return json;
 	}
 
+	public static final String toJson(Object obj) {
+		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+		String json = null;
+		try {
+			json = om.writeValueAsString(obj);
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException(e);
+		}
+		return json;
+	}
+
 	public static final String toPrettyJson(Map<String, Object> map) throws Exception {
 		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
