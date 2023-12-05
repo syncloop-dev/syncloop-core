@@ -166,6 +166,9 @@ public class FlowUtils {
             String typePath = jsonValue.asJsonObject().getString("typePath", null);
             String value = jsonValue.asJsonObject().getString("value", null);
             String evaluate = jsonValue.asJsonObject().getString("evaluate", null);
+            String tokens[] = typePath.split(Pattern.quote("/"));
+            String typeOfVariable = tokens[tokens.length - 1];
+
             if (evaluate != null && evaluate.trim().length() > 0) {
                 Map<String, String> map = new HashMap<String, String>();
                 String expressions[] = extractExpressions(value);
@@ -187,7 +190,8 @@ public class FlowUtils {
 							break;
 						case "EEV": // Evaluate Expression Variable
 							for (String expressionKey : expressions) {
-								String expressionValue = ServiceUtils.toJson(dp.getValueByPointer(expressionKey));
+                                Object valueByPointer = dp.getValueByPointer(expressionKey);
+								String expressionValue = typeOfVariable.equalsIgnoreCase("stringList") ? ServiceUtils.toJson(valueByPointer) : valueByPointer + "";
 								if (expressionValue == null || expressionValue.equals("null")) {
 									map.put(expressionKey, KeywordResolver.find(expressionKey, dp));
 								} else {
@@ -213,8 +217,7 @@ public class FlowUtils {
 				}
             }
 
-            String tokens[] = typePath.split(Pattern.quote("/"));
-            String typeOfVariable = tokens[tokens.length - 1];
+
             if ((!typeOfVariable.toUpperCase().contains("LIST") ||
                     typeOfVariable.toUpperCase().equals("INTEGERLIST") ||
                     typeOfVariable.toUpperCase().equals("STRINGLIST") ||
