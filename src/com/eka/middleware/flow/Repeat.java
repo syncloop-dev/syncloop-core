@@ -58,7 +58,7 @@ public class Repeat implements FlowBasicInfo {
             rt = data.getString("repeat", "0");
         }
         if (rt.startsWith("#{")) {
-            rt = FlowUtils.extractExpressions(rt)[0];
+            rt = FlowUtils.extractExpressions(rt, null)[0];
         }
         boolean isNumber = NumberUtils.isParsable(rt);
         if (isNumber)

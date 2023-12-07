@@ -2,6 +2,7 @@ package com.eka.middleware.flow;
 
 import java.util.*;
 //import java.util.HashMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -11,6 +12,7 @@ import javax.json.JsonValue;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
+import com.eka.middleware.service.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +35,7 @@ public class FlowUtils {
     public static String placeXPathValue(String xPaths, DataPipeline dp) throws SnippetException {
         try {
             String xPathValues = xPaths;
-            String params[] = extractExpressions(xPaths);// xPaths.split(Pattern.quote("}"));
+            String params[] = extractExpressions(xPaths, dp);// xPaths.split(Pattern.quote("}"));
             if (params != null)
                 for (String param : params) {
                     // if (param.contains("#{")) {
@@ -72,7 +74,7 @@ public class FlowUtils {
     public static String placeXPathInternalVariables(String xPaths, DataPipeline dp) throws SnippetException {
         try {
             String xPathValues = xPaths;
-            String params[] = extractExpressions(xPaths);// xPaths.split(Pattern.quote("}"));
+            String params[] = extractExpressions(xPaths, dp);// xPaths.split(Pattern.quote("}"));
             if (params != null)
                 for (String param : params) {
                     // if (param.contains("#{")) {
@@ -155,9 +157,35 @@ public class FlowUtils {
         }
     }
 
-    public static String[] extractExpressions(String string) {
+    public static String[] extractExpressions(String string, DataPipeline dataPipeline) {
         String expressions[] = StringUtils.substringsBetween(string, "#{", "}");
         return expressions;
+    }
+
+    public static String resolveExpressions(String input, final Object parentMap) {
+        // Regular expression to find the innermost nested keys
+        String regex = "#\\{([^{}]+)\\}";
+        Pattern pattern = Pattern.compile(regex);
+
+        // Continuously find and replace innermost keys
+        boolean found;
+        do {
+            Matcher matcher = pattern.matcher(input);
+            StringBuffer sb = new StringBuffer();
+            found = false;
+
+            while (matcher.find()) {
+                found = true;
+                String key = matcher.group(1); // Extract the key
+                String replacement = MapUtils.getValueByPointer(key, parentMap) + "";
+                        ; // Get its value
+                matcher.appendReplacement(sb, replacement); // Replace the key with its value
+            }
+            matcher.appendTail(sb);
+            input = sb.toString();
+        } while (found);
+
+        return input;
     }
 
     public static void setValue(JsonArray createList, DataPipeline dp) throws SnippetException {
@@ -171,7 +199,7 @@ public class FlowUtils {
 
             if (evaluate != null && evaluate.trim().length() > 0) {
                 Map<String, String> map = new HashMap<String, String>();
-                String expressions[] = extractExpressions(value);
+                String expressions[] = extractExpressions(value, dp);
                 if (expressions != null) {
 					switch (evaluate) {
 						case "ELV": // Evaluate Local Variable
@@ -307,7 +335,7 @@ public class FlowUtils {
                     boolean isFunctionAvailable = false;
 
                     String jsFunction = function;
-                    expressions = extractExpressions(function);
+                    expressions = extractExpressions(function, dp);
                     try {
                         Context ctx = ScriptEngineContextManager.findContext(threadSafeName);
                         if (ctx == null)
@@ -350,6 +378,7 @@ public class FlowUtils {
                     successful = copy(leader.getFrom(), leader.getTo(), leader.getOutTypePath(), dp);
             }
         } catch (Exception e) {
+            e.printStackTrace();
             ServiceUtils.printException(dp,
                     "Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'", e);
             throw new Exception(

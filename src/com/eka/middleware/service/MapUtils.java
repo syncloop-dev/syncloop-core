@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.template.SnippetException;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import com.eka.middleware.heap.HashMap;
@@ -16,6 +18,9 @@ public class MapUtils {
 			return null;
 		pointer = pointer.trim();
 		Object obj = null;
+
+		pointer = FlowUtils.resolveExpressions(pointer, parentMap);
+
 		pointer = "//" + pointer;
 		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
 		Map<String, Object> map = null;

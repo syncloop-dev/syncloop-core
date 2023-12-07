@@ -44,7 +44,7 @@ public class AutoUpdate {
         FileInputStream aliasFIS=new FileInputStream(file);
         prop.load(aliasFIS);
         prop.forEach((k,v)->{
-            if(dp.getString("error")==null){
+            //if(dp.getString("error")==null){
                 String key=(String)k;
                 String value=(String)v;
                 dp.map("fqn",value);
@@ -60,7 +60,7 @@ public class AutoUpdate {
                 }
                 dp.drop("fqn");
                 dp.drop("alias");
-            }
+            //}
         });
         aliasFIS.close();
         if(dp.getString("error")!=null)
