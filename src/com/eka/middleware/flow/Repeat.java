@@ -144,6 +144,12 @@ public class Repeat implements FlowBasicInfo {
                     String msg = e.getMessage();
                     if (msg.contains("packages.middleware.pub.service.exitRepeat"))
                         break;
+                    if (msg.contains("packages.middleware.pub.service.continueRepeat")) {
+                        repeatTimes--;
+                        if (repeatTimes == 0)
+                            repeatOn = null;
+                        continue;
+                    }
                     if ("success".equals(repeatOn)) {
                         repeatOn = null;
                         SnippetException se = null;

@@ -125,6 +125,9 @@ public class ServiceManager {
 					Exception ex = null;
 					if (fqn.contains("packages.middleware.pub.service.exitRepeat"))
 						ex = new Exception("packages.middleware.pub.service.exitRepeat");
+					else if(fqn.contains("packages.middleware.pub.service.continueRepeat"))
+						ex = new Exception("packages.middleware.pub.service.continueRepeat");
+
 					else
 						ex = new Exception(e.getCause());
 					throw ex;
