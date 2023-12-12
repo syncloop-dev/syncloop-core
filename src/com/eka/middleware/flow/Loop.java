@@ -39,6 +39,8 @@ public class Loop implements FlowBasicInfo {
 	@Getter
 	private String guid;
 
+	private int allowedLoop = 1000;
+
 	public Loop(JsonObject jo) {
 		loop = jo;
 		data = loop.get("data").asJsonObject();
@@ -155,7 +157,13 @@ public class Loop implements FlowBasicInfo {
 //		if(map==null && dpM)
 //			throw new SnippetException(dp, "Path pointer '"+inputArrayParent+"'. Please loop over parent array first", null);
 			long index = 0;
+			int loopExecutedCount = 0;
 			for (Object object : list) {
+				loopExecutedCount++;
+				if (loopExecutedCount > allowedLoop) {
+					throw new RuntimeException("Loop exceeded");
+				}
+
 				dp.put(indexVar, index + "");
 				index++;
 				if (map != null)

@@ -47,6 +47,8 @@ public class Repeat implements FlowBasicInfo {
     @Getter
     private String guid;
 
+    private int allowedLoop = 1000;
+
     public Repeat(JsonObject jo) {
         repeat = jo;
         data = repeat.get("data").asJsonObject();
@@ -123,7 +125,12 @@ public class Repeat implements FlowBasicInfo {
             snapMeta.put("repeatTimes", repeatTimes);
             snapMeta.put("repeatOn", repeatOn);
             snapMeta.put("interval", interval);
+            int loopExecutedCount = 0;
             while (repeatOn != null && canExecute) {
+                loopExecutedCount++;
+                if (loopExecutedCount > allowedLoop) {
+                    throw new RuntimeException("Loop exceeded");
+                }
 
                 dp.put(indexVar, index + "");
                 index++;
