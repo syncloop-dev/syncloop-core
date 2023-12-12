@@ -82,9 +82,9 @@ public class DataPipeline {
 		rp = runtimePipeline;
 		this.resource = resource + "@" + recursiveDepth;
 		this.urlPath = urlPath;
-		payloadStack.put(resource, rp.payload);
-		currentResource = resource;
-		resourceStack.add(resource);
+		payloadStack.put(this.resource, rp.payload);
+		currentResource = this.resource;
+		resourceStack.add(this.resource);
 	}
 
 	public void addErrorStack(FlowBasicInfo flowBasicInfo) {
@@ -612,10 +612,10 @@ public class DataPipeline {
 	}
 
 	public String getUniqueThreadName() {
-		return "cb_" + (getCurrentResourceName().hashCode() & 0xfffffff);
+		return "cb_" + (getCurrentResource().hashCode() & 0xfffffff);
 	}
 
-	private String getCurrentResource() {
+	public String getCurrentResource() {
 		// StackTraceElement[] ste = Thread.currentThread().getStackTrace();
 		// Since its a private method it will be called
 		// inside it's own class function so we get the
@@ -690,7 +690,7 @@ public class DataPipeline {
 
 				appLog("TENANT", rp.getTenant().getName());
 				appLog("URL_PATH", getUrlPath());
-				appLogMul("RESOURCE_NAME", getCurrentResourceName());
+				appLogMul("RESOURCE_NAME", getCurrentResource());
 
 				ServiceUtils.execute(fqnOfMethod, this);
 			} catch (SnippetException e) {
@@ -986,7 +986,7 @@ public class DataPipeline {
 
 				dpAsync.appLog("TENANT", dpAsync.rp.getTenant().getName());
 				dpAsync.appLog("URL_PATH", dpAsync.getUrlPath());
-				dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResourceName());
+				dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResource());
 				if (fqnOfFunction.startsWith("packages")) {
 					metaData.put("*sessionID", dpAsync.getSessionId());
 					ServiceManager.invokeJavaMethod(fqnOfFunction, dpAsync);
@@ -1343,7 +1343,7 @@ public class DataPipeline {
 	}
 
 	public void logException(Throwable exception) {
-		new SnippetException(this, "Eexception reported by " + getCurrentResourceName(), new Exception(exception));
+		new SnippetException(this, "Eexception reported by " + getCurrentResource(), new Exception(exception));
 	}
 
 	public void logDataPipeline() {

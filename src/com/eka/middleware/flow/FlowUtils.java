@@ -415,7 +415,11 @@ public class FlowUtils {
                 case "string":
                     return ctx.eval("js", js).asString();
                 case "integer":
-                    return (int) ctx.eval("js", js).asLong();//(int)Bodmas.eval(js);//
+                	Value value=ctx.eval("js", js);
+                	if(value.fitsInDouble())
+                		return (int) value.asDouble();
+                	else
+                		return (int) value.asLong();//(int)Bodmas.eval(js);//
                 case "number":
                     return ctx.eval("js", js).asDouble();
                 case "boolean":
