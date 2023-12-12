@@ -32,6 +32,10 @@ public class FlowUtils {
     private static final ScriptEngineManager factory = new ScriptEngineManager();
     private static final ScriptEngine engine = factory.getEngineByName("graal.js");
 
+    // Regular expression to find the innermost nested keys
+    private static final String regex = "#\\{([^{}]+)\\}";
+    private static final Pattern pattern = Pattern.compile(regex);
+
     public static String placeXPathValue(String xPaths, DataPipeline dp) throws SnippetException {
         try {
             String xPathValues = xPaths;
@@ -163,10 +167,6 @@ public class FlowUtils {
     }
 
     public static String resolveExpressions(String input, final Object parentMap) {
-        // Regular expression to find the innermost nested keys
-        String regex = "#\\{([^{}]+)\\}";
-        Pattern pattern = Pattern.compile(regex);
-
         // Continuously find and replace innermost keys
         boolean found;
         do {
@@ -177,9 +177,17 @@ public class FlowUtils {
             while (matcher.find()) {
                 found = true;
                 String key = matcher.group(1); // Extract the key
-                String replacement = MapUtils.getValueByPointer(key, parentMap) + "";
-                        ; // Get its value
-                matcher.appendReplacement(sb, replacement); // Replace the key with its value
+                String value = MapUtils.getValueByPointer(key, parentMap) + "";
+                ; // Get its value
+                if(value.equals("null") && parentMap instanceof DataPipeline) {
+                    DataPipeline dp=(DataPipeline)parentMap;
+                    value=KeywordResolver.find(key, (DataPipeline)parentMap);
+                    if(value==null)
+                        throw new RuntimeException("Property not set for the key: "+key);
+                    Object valueByPointer = dp.getValueByPointer(key);
+                    //String expressionValue = typeOfVariable.equalsIgnoreCase("stringList") ? ServiceUtils.toJson(valueByPointer) : valueByPointer + "";
+                }
+                matcher.appendReplacement(sb, value); // Replace the key with its value
             }
             matcher.appendTail(sb);
             input = sb.toString();
@@ -217,7 +225,8 @@ public class FlowUtils {
 							}
 							break;
 						case "EEV": // Evaluate Expression Variable
-							for (String expressionKey : expressions) {
+                            value = resolveExpressions(value, dp);
+							/*for (String expressionKey : expressions) {
                                 Object valueByPointer = dp.getValueByPointer(expressionKey);
 								String expressionValue = typeOfVariable.equalsIgnoreCase("stringList") ? ServiceUtils.toJson(valueByPointer) : valueByPointer + "";
 								if (expressionValue == null || expressionValue.equals("null")) {
@@ -225,7 +234,7 @@ public class FlowUtils {
 								} else {
 									map.put(expressionKey, expressionValue);
 								}
-							}
+							}*/
 							break;
 						case "EPV": // Evaluate Package Variable
 							for (String expressionKey : expressions) {
@@ -235,13 +244,15 @@ public class FlowUtils {
 							}
 							break;
 					}
-					for (String expressionKey : expressions) {
-						if (map.get(expressionKey) != null)
-							value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
-						else
-							throw new SnippetException(dp, "Property not set properly",
-									new Exception("Could not resolve expression '#{" + expressionKey + "}' for " + path + "."));
-					}
+                    if(!evaluate.equals("EEV")) {
+                        for (String expressionKey : expressions) {
+                            if (map.get(expressionKey) != null)
+                                value = value.replace("#{" + expressionKey + "}", map.get(expressionKey));
+                            else
+                                throw new SnippetException(dp, "Property not set properly",
+                                        new Exception("Could not resolve expression '#{" + expressionKey + "}' for " + path + "."));
+                        }
+                    }
 				}
             }
 
@@ -341,11 +352,7 @@ public class FlowUtils {
                         if (ctx == null)
                             ctx = ScriptEngineContextManager.getContext(threadSafeName);
                         synchronized (ctx) {
-                            try {
-                                isFunctionAvailable = (boolean) eval("(" + functionName + "!=null);", ctx, "boolean");
-                            } catch (Exception e) {
-                                isFunctionAvailable = false;
-                            }
+                            isFunctionAvailable = (leader.getApplyFunction()!=null && leader.getApplyFunction().trim().length()>1 && !leader.getApplyFunction().trim().toLowerCase().equals("none"));
                             if (!isFunctionAvailable || expressions != null) {
                                 if (expressions != null)
                                     for (String expressionKey : expressions)
@@ -423,7 +430,7 @@ public class FlowUtils {
                         for (int i = 0; i < intArray.length; i++) {
                             intArray[i] = result.getArrayElement(i).asInt();
                         }
-                        return intArray;
+                        return Arrays.asList(intArray);
                     }
                     return null;
                 case "stringList":
@@ -434,7 +441,7 @@ public class FlowUtils {
                         for (int i = 0; i < array.length; i++) {
                             array[i] = result.getArrayElement(i).asString();
                         }
-                        return array;
+                        return Arrays.asList(array);
                     }
                     return null;
                 case "numberList":
@@ -445,7 +452,7 @@ public class FlowUtils {
                         for (int i = 0; i < array.length; i++) {
                             array[i] = result.getArrayElement(i).asDouble();
                         }
-                        return array;
+                        return Arrays.asList(array);
                     }
                     return null;
                 case "booleanList":
@@ -456,7 +463,7 @@ public class FlowUtils {
                         for (int i = 0; i < array.length; i++) {
                             array[i] = result.getArrayElement(i).asBoolean();
                         }
-                        return array;
+                        return Arrays.asList(array);
                     }
                     return null;
                 case "object":

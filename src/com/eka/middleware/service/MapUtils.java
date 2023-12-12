@@ -19,7 +19,9 @@ public class MapUtils {
 		pointer = pointer.trim();
 		Object obj = null;
 
-		pointer = FlowUtils.resolveExpressions(pointer, parentMap);
+		if (pointer.contains("#{")) {
+			pointer = FlowUtils.resolveExpressions(pointer, parentMap);
+		}
 
 		pointer = "//" + pointer;
 		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
