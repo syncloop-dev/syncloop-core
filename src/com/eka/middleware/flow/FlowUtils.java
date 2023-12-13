@@ -430,15 +430,11 @@ public class FlowUtils {
                     Value result = ctx.eval("js", js);
                     if (result.hasArrayElements()) {
                         int size = (int)result.getArraySize();
-                        int[] intArray = new int[size];
+                        Integer[] intArray = new Integer[size];
                         for (int i = 0; i < intArray.length; i++) {
                             intArray[i] = result.getArrayElement(i).asInt();
                         }
-                        ArrayList<Integer> arrayList = new ArrayList<>();
-                        for (int ar : intArray) {
-                            arrayList.add(ar);
-                        }
-                        return arrayList;
+                        return Arrays.asList(intArray);
                     }
                     return null;
                 case "stringList":
@@ -449,11 +445,7 @@ public class FlowUtils {
                         for (int i = 0; i < array.length; i++) {
                             array[i] = result.getArrayElement(i).asString();
                         }
-                        ArrayList<String> arrayList = new ArrayList<>();
-                        for (String ar : array) {
-                            arrayList.add(ar);
-                        }
-                        return arrayList;
+                        return Arrays.asList(array);
                     }
                     return null;
                 case "numberList":
@@ -464,11 +456,7 @@ public class FlowUtils {
                         for (int i = 0; i < array.length; i++) {
                             array[i] = result.getArrayElement(i).asDouble();
                         }
-                        ArrayList<Double> arrayList = new ArrayList<>();
-                        for (Double ar : array) {
-                            arrayList.add(ar);
-                        }
-                        return arrayList;
+                        return Arrays.asList(array);
                     }
                     return null;
                 case "booleanList":
@@ -479,11 +467,7 @@ public class FlowUtils {
                         for (int i = 0; i < array.length; i++) {
                             array[i] = result.getArrayElement(i).asBoolean();
                         }
-                        ArrayList<Boolean> arrayList = new ArrayList<>();
-                        for (Boolean ar : array) {
-                            arrayList.add(ar);
-                        }
-                        return arrayList;
+                        return Arrays.asList(array);
                     }
                     return null;
                 case "object":

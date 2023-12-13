@@ -72,6 +72,11 @@ public class MapUtils {
 		String path = "";
 		Object preObj = parentMap;
 		pointer = "//" + pointer;
+
+		if (pointer.contains("#{")) {
+			pointer = FlowUtils.resolveExpressions(pointer, parentMap);
+		}
+
 		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
 		boolean isNumeric = false;
 		String[] pointerTokens = pointer.split("/");
@@ -160,32 +165,25 @@ public class MapUtils {
 		key = pointerTokens[tokenCount - 1];
 		isNumeric = NumberUtils.isCreatable(key);
 		if (isNumeric) {
-			Object[] newObject = null;
+			List<Object> newObject = null;
 
 			int index = Integer.parseInt(key);
 			key = pointerTokens[tokenCount - 2];
-			if (preObj != null && ((Object[]) preObj).length > index) {
-				newObject = ((Object[]) preObj);
+			if (preObj != null && ((List<Object>) preObj).size() > index) {
+				newObject = ((List<Object>) preObj);
 			} else {
 				switch (valueType) {
 				case "integerlist":
-					newObject = new Integer[index + 1];
-					break;
 				case "numberlist":
-					newObject = new Double[index + 1];
-					break;
 				case "booleanlist":
-					newObject = new Boolean[index + 1];
-					break;
 				case "stringlist":
-					newObject = new String[index + 1];
-					break;
 				case "objectlist":
-					newObject = new Object[index + 1];
+					newObject = new ArrayList<>();
 					break;
 				}
 			}
-			newObject[index] = value;
+			newObject.remove(index);
+			newObject.add(index, value);
 			preObj = newObject;
 		} else
 			((Map) preObj).put(key, value);
