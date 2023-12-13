@@ -47,6 +47,7 @@ public class ApplicationSchedulerFactory {
 
         if (null == tenantScheduler) {
             LOGGER.info("Scheduler obj null for {}", dataPipeline.rp.getTenant().getName());
+            return ;
         }
 
         if (tenantScheduler.isInStandbyMode()) {
@@ -64,6 +65,7 @@ public class ApplicationSchedulerFactory {
         Scheduler scheduler = getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
         if (null == scheduler) {
             LOGGER.info("Scheduler obj null for {}", dataPipeline.rp.getTenant().getName());
+            return false;
         }
         return !scheduler.isInStandbyMode();
     }
@@ -74,6 +76,7 @@ public class ApplicationSchedulerFactory {
         Scheduler tenantScheduler =  getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
         if (null == tenantScheduler) {
             LOGGER.info("Scheduler obj null for {}", dataPipeline.rp.getTenant().getName());
+            return ;
         }
         if (tenantScheduler != null && !tenantScheduler.isInStandbyMode()) {
         	LOGGER.debug("scheduler stopped.....");
@@ -97,6 +100,7 @@ public class ApplicationSchedulerFactory {
     public static SchedulerMetaData getSchedulerMetaData(Scheduler scheduler) throws SchedulerException {
         if (null == scheduler) {
             LOGGER.info("Scheduler obj null");
+            return null;
         }
         return scheduler.getMetaData();
     }
@@ -152,6 +156,7 @@ public class ApplicationSchedulerFactory {
     public static void removeJob(JobKey jobKey, Scheduler scheduler) throws SchedulerException {
         if (null == scheduler) {
             LOGGER.info("Scheduler obj null for");
+            return ;
         }
         scheduler.unscheduleJob(TriggerKey.triggerKey(jobKey.getName(), jobKey.getGroup()));
         scheduler.deleteJob(jobKey);
@@ -160,6 +165,7 @@ public class ApplicationSchedulerFactory {
     public static void startJob(JobKey jobKey, Scheduler scheduler) throws SchedulerException {
         if (null == scheduler) {
             LOGGER.info("Scheduler obj null for");
+            return ;
         }
         scheduler.triggerJob(jobKey);
     }
