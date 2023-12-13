@@ -207,7 +207,7 @@ public class QueueTaskExecuter {
 
 					dpAsync.appLog("TENANT", dpAsync.rp.getTenant().getName());
 					dpAsync.appLog("URL_PATH", dpAsync.getUrlPath());
-					dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResourceName());
+					dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResource());
 					metaData.put("*sessionID", dpAsync.getSessionId());
 					if (fqnOfFunction.startsWith("packages")) {
 						try {
