@@ -321,7 +321,7 @@ public class ServiceUtils {
 			dataPipeline.clear();
 			dataPipeline.put("error", e.getMessage());
 			dataPipeline.put("status", "Service error");
-			throw new SnippetException(dataPipeline, "Failed to execute " + dataPipeline.getCurrentResourceName(),
+			throw new SnippetException(dataPipeline, "Failed to execute " + dataPipeline.getCurrentResource(),
 					new Exception(e));
 		}
 	}

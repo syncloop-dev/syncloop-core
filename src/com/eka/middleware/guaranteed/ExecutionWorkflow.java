@@ -47,7 +47,7 @@ public class ExecutionWorkflow implements WorkflowTask{
 					
 					dpAsync.appLog("TENANT", dpAsync.rp.getTenant().getName());
 					dpAsync.appLog("URL_PATH", dpAsync.getUrlPath());
-					dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResourceName());
+					dpAsync.appLog("RESOURCE_NAME", dpAsync.getCurrentResource());
 					
 					if (fqnOfFunction.startsWith("packages")) {
 						metaData.put("*sessionID", dpAsync.getSessionId());
