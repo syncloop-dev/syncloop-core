@@ -700,6 +700,7 @@ public class DataPipeline {
 				// ServiceUtils.printException("Error caused by "+fqnOfMethod, new
 				// Exception(e));
 			} finally {
+
 				servicePayload = payloadStack.get(currentResource);
 				currentResource = callingResource;
 				this.callingResource = null;

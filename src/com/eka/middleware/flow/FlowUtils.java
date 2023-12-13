@@ -353,7 +353,7 @@ public class FlowUtils {
                             ctx = ScriptEngineContextManager.getContext(threadSafeName);
                         synchronized (ctx) {
                             isFunctionAvailable = (leader.getApplyFunction()!=null && leader.getApplyFunction().trim().length()>1 && !leader.getApplyFunction().trim().toLowerCase().equals("none"));
-                            if (!isFunctionAvailable || expressions != null) {
+                            if (isFunctionAvailable || expressions != null) {
                                 if (expressions != null)
                                     for (String expressionKey : expressions)
                                         jsFunction = function.replace("#{" + expressionKey + "}",
