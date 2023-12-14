@@ -305,7 +305,7 @@ public class Security {
 		String jwtPath="/tenant/" + dp.rp.getTenant().getName()+ "/jwt" + resourcePath;
 		resourcePath = "/tenant/" + dp.rp.getTenant().getName() + resourcePath;
 		String basePath = (String) props.get("basePath");
-		String reDirectURI = basePath + "/callback" + resourcePath + "?client_name=	OidcClient";
+		String reDirectURI = basePath + "/callback" + resourcePath + "?client_name=OidcClient";
 		
 		paths.add(jwtPath);
 		path.addExactPath(jwtPath, SecurityHandler.build(AuthHandlers.mainHandler, conf));

@@ -1110,7 +1110,6 @@ public class ServiceUtils {
 	}
 
 	public static void startTenantServices(String tenant) throws SnippetException {
-		Security.setupTenantSecurity(tenant);
 		String uuid = UUID.randomUUID().toString();
 		final RuntimePipeline rp = RuntimePipeline.create(Tenant.getTenant(tenant), uuid, uuid, null,
 				"packages.middleware.pub.server.core.service.main",
@@ -1629,19 +1628,19 @@ public class ServiceUtils {
         return tokenData;
     }
 	
-	public static boolean isValid(String token) {
+	public static boolean isValid(String token) throws SystemException {
 		Map<String, Object> jwtData = ServiceUtils.decodeJWT(token);
 		if(jwtData==null)
 			return false;
         String id=(String) jwtData.get("username");
-		Map<String, Object> usersMap = null;
+		/*Map<String, Object> usersMap = null;
 		try {
 			usersMap = (Map<String, Object>) UserProfileManager.getUsers();
 		} catch (SystemException e) {
 			ServiceUtils.printException("Could not load users list: " + id, e);
 			return false;
-		}
-		Map<String, Object> user = (Map<String, Object>) usersMap.get(id);
+		}*/
+		Map<String, Object> user = UsersRepository.getUserById(id);
 		if(user!=null && user.getOrDefault("salt","").equals(jwtData.getOrDefault("salt", "")))
 			return true;
 		return false;

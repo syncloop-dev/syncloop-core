@@ -182,8 +182,13 @@ public class MapUtils {
 					break;
 				}
 			}
-			newObject.remove(index);
-			newObject.add(index, value);
+
+			if ( index < newObject.size()) {
+				newObject.remove(index);
+				newObject.add(index, value);
+			} else {
+				newObject.add(value);
+			}
 			preObj = newObject;
 		} else
 			((Map) preObj).put(key, value);

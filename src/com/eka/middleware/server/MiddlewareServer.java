@@ -139,6 +139,7 @@ public class MiddlewareServer {
 				} else {
 					LOGGER.info("Starting default tenant......................");
 					defaultTenant.logDebug(null, "Starting default tenant......................");
+					Security.setupTenantSecurity("default");
 					ServiceUtils.startTenantServices("default");
 				}
 
@@ -159,7 +160,8 @@ public class MiddlewareServer {
 					if (!"default".equalsIgnoreCase(tenant)) {
 						LOGGER.info("Starting " + tenant + " tenant......................");
 						tent.logDebug(null, "Starting " + tenant + " tenant......................");
-						ServiceUtils.startTenantServices(tenant);
+						Security.setupTenantSecurity(tenant);
+						//ServiceUtils.startTenantServices(tenant);
 						Thread.sleep(2000);
 					}
 				}
