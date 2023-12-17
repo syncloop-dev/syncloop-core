@@ -130,7 +130,7 @@ public class MapUtils {
 						list.add(map);
 					obj = map;
 					preObj = obj;
-				} else if (typeTokens[typeIndex].contains("documentList")) {
+				} else if (typeTokens[typeIndex].toUpperCase().endsWith("LIST")) {
 					List<Object> list = new ArrayList<Object>();
 					if (preObj.getClass().toString().contains("DataPipeline")) {
 						DataPipeline dp = (DataPipeline) preObj;
@@ -150,7 +150,7 @@ public class MapUtils {
 						((Map) preObj).put(key, obj);
 					preObj = obj;
 				} else {
-					preObj = new Object[1];
+					preObj = new ArrayList<>();
 					if(parentMap instanceof DataPipeline)
 						((DataPipeline)parentMap).put(key, preObj);
 					else
@@ -169,9 +169,9 @@ public class MapUtils {
 
 			int index = Integer.parseInt(key);
 			key = pointerTokens[tokenCount - 2];
-			if (preObj != null && ((List<Object>) preObj).size() > index) {
+			if (preObj != null){// && ((List<Object>) preObj).size() > index) {
 				newObject = ((List<Object>) preObj);
-			} else {
+			} else {//It may never enter the else block and even if it does then not sure what's the point. preObj will become a local unused object.
 				switch (valueType) {
 				case "integerlist":
 				case "numberlist":
