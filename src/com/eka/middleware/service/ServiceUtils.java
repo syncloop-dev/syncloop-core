@@ -34,15 +34,34 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
-import java.util.zip.*;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.json.Json;
 import javax.json.JsonObject;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.graalvm.polyglot.Value;
+import org.pac4j.core.profile.UserProfile;
+import org.pac4j.undertow.account.Pac4jAccount;
+import org.springframework.util.AntPathMatcher;
+
 import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.adapter.SQL;
+import com.eka.middleware.auth.AuthAccount;
+import com.eka.middleware.auth.Security;
+import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.auth.db.entity.Groups;
 import com.eka.middleware.auth.db.entity.Users;
 import com.eka.middleware.auth.db.repository.GroupsRepository;
@@ -50,20 +69,6 @@ import com.eka.middleware.auth.db.repository.TenantRepository;
 import com.eka.middleware.auth.db.repository.UsersRepository;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.heap.CacheManager;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.google.common.collect.Maps;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.pac4j.core.profile.UserProfile;
-import org.pac4j.undertow.account.Pac4jAccount;
-
-import com.eka.middleware.auth.AuthAccount;
-import com.eka.middleware.auth.Security;
-import com.eka.middleware.auth.UserProfileManager;
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.ServiceManager;
@@ -72,6 +77,7 @@ import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
 import com.eka.middleware.template.Tenant;
 import com.eka.middleware.template.UriTemplate;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -79,6 +85,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.google.common.collect.Maps;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 
@@ -97,7 +104,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Sessions;
 import io.undertow.util.StatusCodes;
-import org.springframework.util.AntPathMatcher;
 
 public class ServiceUtils {
 	// private static final Properties serverProperties = new Properties();
@@ -162,11 +168,53 @@ public class ServiceUtils {
 	}
 
 	public static final String toJson(Map<String, Object> map) throws Exception {
-		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-		String json = om.writeValueAsString(map);
-		return json;
+		try {
+			om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+			om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+			String json = om.writeValueAsString(map);
+			return json;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e);
+		}
 	}
+	
+    public static Object convertPolyglotValue(Value value) {
+        if (value.isNumber()) {
+            if (value.fitsInInt()) {
+                return value.asInt();
+            } else if (value.fitsInLong()) {
+                return value.asLong();
+            } else {
+                return value.asDouble();
+            }
+        } else if (value.isBoolean()) {
+            return value.asBoolean();
+        } else if (value.isString()) {
+            return value.asString();
+        } else if (value.hasArrayElements()) {
+            return convertArray(value);
+        } else if (value.hasMembers()) {
+            return convertObject(value);
+        }
+        return null;
+    }
+
+    private static Map<String, Object> convertObject(Value value) {
+        Map<String, Object> map = new HashMap<>();
+        for (String key : value.getMemberKeys()) {
+            map.put(key, convertPolyglotValue(value.getMember(key)));
+        }
+        return map;
+    }
+
+    private static List<Object> convertArray(Value value) {
+        List<Object> list = new ArrayList<>();
+        for (int i = 0; i < value.getArraySize(); i++) {
+            list.add(convertPolyglotValue(value.getArrayElement(i)));
+        }
+        return list;
+    }
 
 	public static final String toJson(Object obj) {
 		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
@@ -181,10 +229,15 @@ public class ServiceUtils {
 	}
 
 	public static final String toPrettyJson(Map<String, Object> map) throws Exception {
-		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-		String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
-		return json;
+		try {
+			om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+			om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+			String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
+			return json;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e);
+		}
 	}
 
 	public static final String objectToJson(Object object) throws Exception {
@@ -307,12 +360,13 @@ public class ServiceUtils {
 		if (fqn.startsWith("packages")) {
 			ServiceManager.invokeJavaMethod(fqn, dataPipeLine);
 		} else {
-			executeEmbeddedService(dataPipeLine, CacheManager.getEmbeddedService(fqn.replaceAll("embedded.", "")
-					.replaceAll(".main", ""), dataPipeLine.rp.getTenant()));
+			executeEmbeddedService(dataPipeLine, CacheManager.getEmbeddedService(
+					fqn.replaceAll("embedded.", "").replaceAll(".main", ""), dataPipeLine.rp.getTenant()));
 		}
 	}
 
-	public static final void executeEmbeddedService(DataPipeline dataPipeline, String apiServiceJson) throws SnippetException {
+	public static final void executeEmbeddedService(DataPipeline dataPipeline, String apiServiceJson)
+			throws SnippetException {
 		try {
 			InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
 			JsonObject mainflowJsonObject = Json.createReader(is).readObject();
@@ -325,16 +379,16 @@ public class ServiceUtils {
 					new Exception(e));
 		}
 	}
-	
+
 	public static final boolean isPublicFolder(String path) {
-		//String str="/files/gui/middleware/pub/";
-		String array[]=path.split("/pub/");
-		if(array.length>=2) {
-			String preFixPath=array[0];
-			String pArray[]=preFixPath.split("/files/gui/");
-			if(pArray.length>=2) {
-				String packageName=pArray[1];
-				if(!packageName.contains("/"))
+		// String str="/files/gui/middleware/pub/";
+		String array[] = path.split("/pub/");
+		if (array.length >= 2) {
+			String preFixPath = array[0];
+			String pArray[] = preFixPath.split("/files/gui/");
+			if (pArray.length >= 2) {
+				String packageName = pArray[1];
+				if (!packageName.contains("/"))
 					return true;
 			}
 		}
@@ -351,18 +405,18 @@ public class ServiceUtils {
 	}
 
 	public static final void printException(String msg, Exception e) {
-		String logLine=getLogLine(e, msg);
+		String logLine = getLogLine(e, msg);
 		LOGGER.error(logLine);
 	}
-	
-	public static final void printException(Tenant tenant,String msg, Exception e) {
-		String logLine=getLogLine(e, msg);
+
+	public static final void printException(Tenant tenant, String msg, Exception e) {
+		String logLine = getLogLine(e, msg);
 		tenant.logError(null, logLine);
 		LOGGER.error(logLine);
 	}
-	
+
 	public static final void printException(DataPipeline dp, String msg, Exception e) {
-		String logLine=getLogLine(e, msg);
+		String logLine = getLogLine(e, msg);
 		dp.log(logLine, Level.ERROR);
 		LOGGER.error(logLine);
 
@@ -370,14 +424,13 @@ public class ServiceUtils {
 
 	private static String getLogLine(Exception e, String msg) {
 		StringBuilder sb = new StringBuilder();
-		StackTraceElement[] stackTrace =null;// e.getStackTrace();
+		StackTraceElement[] stackTrace = null;// e.getStackTrace();
 		sb.append(msg);
 		sb.append("\n");
-		if(e!=null) {
+		if (e != null) {
 			sb.append(e.getMessage());
 			stackTrace = e.getStackTrace();
-		}
-		else
+		} else
 			sb.append("Custom error");
 		sb.append("\n");
 		if (stackTrace == null)
@@ -388,7 +441,7 @@ public class ServiceUtils {
 		}
 		return sb.toString();
 	}
-	
+
 	public static final String getServerProperty(String key) {
 		String val = null;
 		try {
@@ -439,7 +492,7 @@ public class ServiceUtils {
 			String URLAliasFilePath = PropertyManager.getPackagePath(tenant) + "URLAliasMapping.properties";
 			if (requestPath.contains("//")) {
 				LOGGER.log(Level.INFO, requestPath);
-				tenant.logInfo(null,requestPath);
+				tenant.logInfo(null, requestPath);
 				return null;
 			}
 			if (requestPath.endsWith("/")) {
@@ -495,7 +548,7 @@ public class ServiceUtils {
 			return serviceName;
 
 		} catch (Exception e) {
-			ServiceUtils.printException(tenant,"Failed during evaluating resource path", e);
+			ServiceUtils.printException(tenant, "Failed during evaluating resource path", e);
 		}
 		return null;
 	}
@@ -575,7 +628,7 @@ public class ServiceUtils {
 				MultiPart mp = new MultiPart(formDataMap);
 				rp.payload.put("*multiPartRequest", mp);
 			} catch (Exception e) {
-				ServiceUtils.printException(rp.getTenant(),rp.getSessionID() + " Could not stream file thread.", e);
+				ServiceUtils.printException(rp.getTenant(), rp.getSessionID() + " Could not stream file thread.", e);
 			}
 //				});
 //
@@ -620,7 +673,8 @@ public class ServiceUtils {
 		}
 
 		AntPathMatcher antPathMatcher = new AntPathMatcher();
-		if(antPathMatcher.match(alias.replace("GET","").replace("POST","").replace("PUT"," ").replace("PATCH"," "),"/restrictUrl")){
+		if (antPathMatcher.match(alias.replace("GET", "").replace("POST", "").replace("PUT", " ").replace("PATCH", " "),
+				"/restrictUrl")) {
 			return "Invalid alias. Alias cannot start /{}";
 		}
 
@@ -628,7 +682,7 @@ public class ServiceUtils {
 
 		for (Object key : urlMappings.keySet()) {
 			String mappedAlias = key.toString();
-			if (antPathMatcher.match(mappedAlias, alias)){
+			if (antPathMatcher.match(mappedAlias, alias)) {
 				return "Failed to save. It already exists.";
 			}
 		}
@@ -641,7 +695,8 @@ public class ServiceUtils {
 					urlMappings.remove(setKey);
 			}
 			urlMappings.setProperty(alias, fqn);
-			FileOutputStream fos = new FileOutputStream(new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
+			FileOutputStream fos = new FileOutputStream(
+					new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
 			urlMappings.store(fos, "");
 			fos.flush();
 			fos.close();
@@ -673,14 +728,14 @@ public class ServiceUtils {
 			return "Alias not found. Nothing to delete.";
 		}
 
-		FileOutputStream fos = new FileOutputStream(new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
+		FileOutputStream fos = new FileOutputStream(
+				new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
 		urlMappings.store(fos, "");
 		fos.flush();
 		fos.close();
 
 		return "Alias deleted successfully.";
 	}
-
 
 	private static boolean isAliasValid(String alias) {
 		if (alias.contains("?")) {
@@ -698,11 +753,12 @@ public class ServiceUtils {
 		if (alias.matches(".*\\{[a-zA-Z0-9]+\\}[a-zA-Z0-9]+.*")) {
 			return false; // The pattern matches "{X}Y" with alphanumeric X and Y.
 		}
-		if (alias.contains("./") || alias.contains("/.") || alias.contains("/./") || alias.contains("/{}") || alias.contains("{}")) {
+		if (alias.contains("./") || alias.contains("/.") || alias.contains("/./") || alias.contains("/{}")
+				|| alias.contains("{}")) {
 			return false; // Restrict If The alias contains one of the specified patterns.
 		}
 
-		if(!areBracesBalanced(alias)){
+		if (!areBracesBalanced(alias)) {
 			return false;
 		}
 
@@ -726,8 +782,6 @@ public class ServiceUtils {
 
 		return braceCounter == 0;
 	}
-
-
 
 	private static final void streamResponseFile(final RuntimePipeline rp, final MultiPart mp) throws SnippetException {
 
@@ -805,7 +859,7 @@ public class ServiceUtils {
 			handleBodyResponse(rp.getExchange(), mp);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			ServiceUtils.printException(rp.getTenant(),rp.getSessionID() + " Could not stream body thread.", e);
+			ServiceUtils.printException(rp.getTenant(), rp.getSessionID() + " Could not stream body thread.", e);
 		}
 //		try {
 //			ExecutorService threadpool = Executors.newCachedThreadPool();
@@ -879,7 +933,7 @@ public class ServiceUtils {
 				});
 			} catch (Exception e) {
 				e.printStackTrace();
-				ServiceUtils.printException(rp.getTenant(),rp.getSessionID() + " Could not stream body thread.", e);
+				ServiceUtils.printException(rp.getTenant(), rp.getSessionID() + " Could not stream body thread.", e);
 			}
 
 			if (payload.get("@body") != null) {
@@ -920,43 +974,43 @@ public class ServiceUtils {
 		FileUtils.copyDirectory(new File(sourceDirectoryLocation), new File(destinationDirectoryLocation));
 		LOGGER.info("Tenant instance created: " + destinationDirectoryLocation.toString());
 	}
-	
+
 	public static String setupRequestPath(HttpServerExchange exchange) {
-		
+
 		Cookie cookie = exchange.getRequestCookie("tenant");
 		String tenantName = null;
 		try {
-			AuthAccount acc=UserProfileManager.getUserProfileManager()
+			AuthAccount acc = UserProfileManager.getUserProfileManager()
 					.getAccount(ServiceUtils.getCurrentLoggedInUserProfile(exchange));
-			tenantName=(String)acc.getAuthProfile().get("tenant");
+			tenantName = (String) acc.getAuthProfile().get("tenant");
 		} catch (Exception ignore) {
-			
+
 		}
-		String token=null;
-		if(cookie!=null && tenantName==null) {
-			tenantName=ServiceUtils.getTenantName(cookie);
-			token=ServiceUtils.getToken(cookie);
+		String token = null;
+		if (cookie != null && tenantName == null) {
+			tenantName = ServiceUtils.getTenantName(cookie);
+			token = ServiceUtils.getToken(cookie);
 		}
-		
+
 		String rqp = exchange.getRequestPath();
-		String rsrcTokens[]=null;
-		if(rqp!=null)
+		String rsrcTokens[] = null;
+		if (rqp != null)
 			rsrcTokens = ("b" + rqp).split("/");
-		
+
 		if (rsrcTokens != null) {
-			if (rsrcTokens.length>2 && rsrcTokens[1].equalsIgnoreCase("tenant")) {
+			if (rsrcTokens.length > 2 && rsrcTokens[1].equalsIgnoreCase("tenant")) {
 				String tName = rsrcTokens[2];
-				if(tenantName==null)
-					tenantName=tName;
-				if(!tName.equals(tenantName))
-					exchange.setRequestPath(rqp.replace("/tenant/"+tName,"/tenant/"+tenantName));
+				if (tenantName == null)
+					tenantName = tName;
+				if (!tName.equals(tenantName))
+					exchange.setRequestPath(rqp.replace("/tenant/" + tName, "/tenant/" + tenantName));
 				ServiceUtils.setupCookie(exchange, tenantName, token);
 			}
 			if (tenantName == null) {
 				Cookie cukie = ServiceUtils.setupCookie(exchange, tenantName, token);
-				tenantName=getTenantName(cukie);
-				exchange.setRequestPath("/tenant/"+tenantName+rqp);
-				if(!ServiceUtils.isApiCall(exchange))
+				tenantName = getTenantName(cukie);
+				exchange.setRequestPath("/tenant/" + tenantName + rqp);
+				if (!ServiceUtils.isApiCall(exchange))
 					exchange.setResponseCookie(cukie);
 			}
 		}
@@ -966,36 +1020,36 @@ public class ServiceUtils {
 	public static void manipulateHeaders(HttpServerExchange exchange) {
 
 	}
-	
-	public static Cookie setupCookie(HttpServerExchange exchange,String tenantName, String token) {
+
+	public static Cookie setupCookie(HttpServerExchange exchange, String tenantName, String token) {
 		Cookie cookie = exchange.getRequestCookie("tenant");
-		if(cookie==null || cookie.isDiscard()) {
-			if(tenantName==null)
-				tenantName="default";
-			cookie=new CookieImpl("tenant", tenantName);
+		if (cookie == null || cookie.isDiscard()) {
+			if (tenantName == null)
+				tenantName = "default";
+			cookie = new CookieImpl("tenant", tenantName);
 			cookie.setPath("/");
-			if(!ServiceUtils.isApiCall(exchange))
+			if (!ServiceUtils.isApiCall(exchange))
 				exchange.setResponseCookie(cookie);
 		}
-		if(tenantName==null)
-			tenantName=getTenantName(cookie);
-		else if(getToken(cookie)==null)
+		if (tenantName == null)
+			tenantName = getTenantName(cookie);
+		else if (getToken(cookie) == null)
 			cookie.setValue(tenantName);
-		//cookie.setSecure(true);
-		if(token!=null){
-			cookie.setValue(tenantName+" "+token);
+		// cookie.setSecure(true);
+		if (token != null) {
+			cookie.setValue(tenantName + " " + token);
 		}
 		cookie.setPath("/");
-		//if(!ServiceUtils.isApiCall(exchange))
-			exchange.setResponseCookie(cookie);
-		//exchange.
+		// if(!ServiceUtils.isApiCall(exchange))
+		exchange.setResponseCookie(cookie);
+		// exchange.
 //		((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);
 //		exchange.responseCookies().forEach(null);
 //		exchange.remove
-		
+
 		return cookie;
 	}
-	
+
 	public static void clearSession(HttpServerExchange exchange) {
 		Session session = Sessions.getSession(exchange);
 		if (session == null)
@@ -1008,19 +1062,20 @@ public class ServiceUtils {
 	}
 
 	public static String getToken(Cookie cookie) {
-		String value=cookie.getValue();
-		String tokenize[]=value.split(" ");
-		String token=null;
-		
-		if(tokenize.length>=2)
-			token=tokenize[1];
-		
+		String value = cookie.getValue();
+		String tokenize[] = value.split(" ");
+		String token = null;
+
+		if (tokenize.length >= 2)
+			token = tokenize[1];
+
 		return token;
 	}
+
 	public static String getTenantName(Cookie cookie) {
-		String value=cookie.getValue();
-		String tokenize[]=value.split(" ");
-		String tenantName=tokenize[0];
+		String value = cookie.getValue();
+		String tokenize[] = value.split(" ");
+		String tenantName = tokenize[0];
 		return tenantName;
 	}
 
@@ -1042,7 +1097,8 @@ public class ServiceUtils {
 			}
 			account.getAuthProfile().put("tenant", name);
 			String src = PropertyManager.getPackagePath(null) + "released" + File.separator + "core";
-			String srcZip = PropertyManager.getPackagePath(null) + "released" + File.separator + "core/syncloop-distribution-latest.zip";
+			String srcZip = PropertyManager.getPackagePath(null) + "released" + File.separator
+					+ "core/syncloop-distribution-latest.zip";
 			String dest = PropertyManager.getPackagePathByTenantName(name);
 
 			groups.add(AuthAccount.STATIC_ADMIN_GROUP);
@@ -1062,13 +1118,16 @@ public class ServiceUtils {
 						ServiceUtils.unzipBuildFile(srcZip, dest);
 						Security.generateKeyPair(name);
 						Security.setupTenantSecurity(name);
-						Tenant.getTenant(name).logInfo(null, "New user(" + account.getUserId() + ") added for the tenant " + name + " successfully.");
+						Tenant.getTenant(name).logInfo(null, "New user(" + account.getUserId()
+								+ ") added for the tenant " + name + " successfully.");
 						LOGGER.info("Starting newly created tenant(" + name + ")......................");
-						Tenant.getTenant(name).logInfo(null, "Starting newly created tenant(" + name + ")......................");
+						Tenant.getTenant(name).logInfo(null,
+								"Starting newly created tenant(" + name + ")......................");
 						startTenantServices(name);
-						int tenantId = user.getTenant();//UserProfileManager.newTenant(name);
+						int tenantId = user.getTenant();// UserProfileManager.newTenant(name);
 						LOGGER.info("New tenant with name " + name + " created successfully.");
-						Tenant.getTenant(name).logInfo(null, "New tenant with name " + name + " created and started successfully.");
+						Tenant.getTenant(name).logInfo(null,
+								"New tenant with name " + name + " created and started successfully.");
 
 						List<Groups> groupList = Lists.newArrayList();
 						Groups group = new Groups();
@@ -1099,7 +1158,7 @@ public class ServiceUtils {
 				}
 			};
 
-			//new Thread(runnable).start();
+			// new Thread(runnable).start();
 			runnable.run();
 
 		} catch (Exception e) {
@@ -1152,7 +1211,7 @@ public class ServiceUtils {
 	}
 
 	public static SecretKeySpec getKey(final String myKey) {
-		SecretKeySpec secretKey=null;
+		SecretKeySpec secretKey = null;
 		byte[] key;
 		MessageDigest sha = null;
 		try {
@@ -1169,33 +1228,33 @@ public class ServiceUtils {
 
 	public static String encrypt(final String strToEncrypt, final String tenantName) {
 		try {
-			//setKey(secret);
+			// setKey(secret);
 			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
 			cipher.init(Cipher.ENCRYPT_MODE, Tenant.getTenant(tenantName).KEY);
 			return Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes("UTF-8")));
 		} catch (Exception e) {
-			printException(Tenant.getTenant(tenantName), "Error while encrypting: " , e);
+			printException(Tenant.getTenant(tenantName), "Error while encrypting: ", e);
 		}
 		return null;
 	}
 
 	public static String decrypt(final String strToDecrypt, final String tenantName) throws Exception {
 		try {
-			//setKey(secret);
+			// setKey(secret);
 			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
 			cipher.init(Cipher.DECRYPT_MODE, Tenant.getTenant(tenantName).KEY);
 			return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
 		} catch (Exception e) {
-			printException(Tenant.getTenant(tenantName), "Error while decrypting: " , e);
+			printException(Tenant.getTenant(tenantName), "Error while decrypting: ", e);
 			throw e;
 		}
 	}
-	
+
 	public static Date addHoursToDate(Date date, int hours) {
-	    Calendar calendar = Calendar.getInstance();
-	    calendar.setTime(date);
-	    calendar.add(Calendar.HOUR_OF_DAY, hours);
-	    return calendar.getTime();
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(date);
+		calendar.add(Calendar.HOUR_OF_DAY, hours);
+		return calendar.getTime();
 	}
 
 	public static final String[] getJarPaths(String path, String packagePath) throws Exception {
@@ -1284,7 +1343,7 @@ public class ServiceUtils {
 	 * @throws SnippetException
 	 */
 	public static void redirectRequest(HttpServerExchange exchange, String path) {
-		if(exchange==null)
+		if (exchange == null)
 			return;
 		exchange.getResponseHeaders().clear();
 		exchange.setStatusCode(StatusCodes.FOUND);
@@ -1297,16 +1356,16 @@ public class ServiceUtils {
 	 */
 	public static boolean isApiCall(HttpServerExchange exchange) {
 
-		if (exchange.getRequestURL().endsWith(".html") || exchange.getRequestURL().endsWith(".js") ||
-				exchange.getRequestURL().endsWith(".css")) {
+		if (exchange.getRequestURL().endsWith(".html") || exchange.getRequestURL().endsWith(".js")
+				|| exchange.getRequestURL().endsWith(".css")) {
 			return false;
 		}
 
 		return true;
 	}
-	
-	public static void logInfo(String tenantName,String serviceName, String message) {
-		Tenant.getTenant(tenantName).logError(serviceName , message);
+
+	public static void logInfo(String tenantName, String serviceName, String message) {
+		Tenant.getTenant(tenantName).logError(serviceName, message);
 	}
 
 	/**
@@ -1327,7 +1386,7 @@ public class ServiceUtils {
 
 	public static String normalizeApiPath(String s) {
 		s = StringUtils.stripEnd(s, "/");
-		String path = s;//s.replaceAll("\\{", "").replaceAll("\\}", "");
+		String path = s;// s.replaceAll("\\{", "").replaceAll("\\}", "");
 
 		String[] paths = StringUtils.split(s, "/");
 		StringBuilder pathBuilder = new StringBuilder();
@@ -1348,7 +1407,7 @@ public class ServiceUtils {
 		String[] paths = StringUtils.split(path, "/");
 
 		path = paths[paths.length - 1];
-		return method + (path.substring(0,1).toUpperCase() + path.substring(1).toLowerCase());
+		return method + (path.substring(0, 1).toUpperCase() + path.substring(1).toLowerCase());
 	}
 
 	public static String toServiceSlug(String str) {
@@ -1435,8 +1494,8 @@ public class ServiceUtils {
 		dp.put("*currentResourceFQN", fqn);
 		dp.appLogMul("RESOURCE_NAME", fqn);
 		String gqlEnabled = (String) dp.getMyProperties().get("GraphQL");
-		String GraphQLDBC=(String) dp.getMyProperties().get("GraphQL.DBC");
-		String GraphQLSchema=(String) dp.getMyProperties().get("GraphQL.Schema");
+		String GraphQLDBC = (String) dp.getMyProperties().get("GraphQL.DBC");
+		String GraphQLSchema = (String) dp.getMyProperties().get("GraphQL.Schema");
 		JsonObject mainflowJsonObject = (JsonObject) passThroughData.get("mainflowJsonObject");
 
 		Long timeout = (Long) passThroughData.get("timeout");
@@ -1448,8 +1507,7 @@ public class ServiceUtils {
 		if (resetServiceInMS != null) {
 
 			String flowRef = (String) passThroughData.get("flowRef");
-			mainflowJsonObject = configureServiceStartup(dp, timeout, mainflowJsonObject, resetServiceInMS,
-					flowRef);
+			mainflowJsonObject = configureServiceStartup(dp, timeout, mainflowJsonObject, resetServiceInMS, flowRef);
 			passThroughData.put("mainflowJsonObject", mainflowJsonObject);
 
 			if (Boolean.valueOf(gqlEnabled)) {
@@ -1461,9 +1519,9 @@ public class ServiceUtils {
 					gql = gql.replaceAll("\\\\s+", " ").replaceAll("\\\\r|\\\\n", "").trim();
 					gqlData.put("gQuery", gql);
 					gqlData.put("fqn", fqn);
-					if(StringUtils.isNotBlank(GraphQLSchema))
+					if (StringUtils.isNotBlank(GraphQLSchema))
 						gqlData.put("schema", GraphQLSchema);
-					if(StringUtils.isNotBlank(GraphQLDBC))
+					if (StringUtils.isNotBlank(GraphQLDBC))
 						gqlData.put("connection", GraphQLDBC);
 					String[] gqlTokens = gql.split(" ");
 					String rootName = gqlTokens[1];
@@ -1471,7 +1529,7 @@ public class ServiceUtils {
 					gqlData.put("rootName", rootName);
 
 					if (rootName.toLowerCase().equals("introspectionquery")) {
-						//dp.put("*gqlData", gqlData);
+						// dp.put("*gqlData", gqlData);
 						dp.map("*gqlData", gqlData);
 						dp.apply("packages.middleware.pub.graphQL.rest.flow.applyGraphQL");
 						dp.clearServicePayload();
@@ -1512,7 +1570,7 @@ public class ServiceUtils {
 			FlowResolver.execute(dp, mainflowJsonObject);
 
 		if (StringUtils.isNotBlank(gql) && StringUtils.isBlank(GraphQLDBC)) {
-			//dp.put("*gqlData", gqlData);
+			// dp.put("*gqlData", gqlData);
 			dp.map("*gqlData", gqlData);
 			Map<String, Object> data = new HashMap<>();
 			String rootName = (String) gqlData.get("rootName");
@@ -1590,7 +1648,7 @@ public class ServiceUtils {
 	}
 
 	private static JsonObject configureServiceStartup(DataPipeline dataPipeline, Long timeout,
-													  JsonObject mainflowJsonObject, Integer resetServiceInMS, String flowRef) throws Exception {
+			JsonObject mainflowJsonObject, Integer resetServiceInMS, String flowRef) throws Exception {
 		Map<String, Object> chache = CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());// -----reset fix
 		Boolean resetEnabled = (Boolean) chache.get("ekamw.promote.runtime.service.reload");// -----reset fix
 		if (timeout < System.currentTimeMillis() && (resetEnabled == null || resetEnabled == true))// -----reset fix
@@ -1603,45 +1661,44 @@ public class ServiceUtils {
 		}
 		return mainflowJsonObject;
 	}
-	
+
 	public static Map<String, Object> decodeJWT(String jwtToken) {
-        // Splitting the JWT Token into parts
-        String[] parts = jwtToken.split("\\.");
-        if (parts.length < 2) {
-            return new HashMap<>(); // Not enough parts for a valid JWT
-        }
+		// Splitting the JWT Token into parts
+		String[] parts = jwtToken.split("\\.");
+		if (parts.length < 2) {
+			return new HashMap<>(); // Not enough parts for a valid JWT
+		}
 
-        // Decoding the payload
-        String payload = parts[1];
-        byte[] decodedBytes = Base64.getUrlDecoder().decode(payload);
-        String decodedString = new String(decodedBytes);
+		// Decoding the payload
+		String payload = parts[1];
+		byte[] decodedBytes = Base64.getUrlDecoder().decode(payload);
+		String decodedString = new String(decodedBytes);
 
-        // Converting JSON string to Map
-        ObjectMapper objectMapper = new ObjectMapper();
-        Map<String, Object> tokenData = new HashMap<>();
-        try {
-            tokenData = objectMapper.readValue(decodedString, Map.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		// Converting JSON string to Map
+		ObjectMapper objectMapper = new ObjectMapper();
+		Map<String, Object> tokenData = new HashMap<>();
+		try {
+			tokenData = objectMapper.readValue(decodedString, Map.class);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-        return tokenData;
-    }
-	
+		return tokenData;
+	}
+
 	public static boolean isValid(String token) throws SystemException {
 		Map<String, Object> jwtData = ServiceUtils.decodeJWT(token);
-		if(jwtData==null)
+		if (jwtData == null)
 			return false;
-        String id=(String) jwtData.get("username");
-		/*Map<String, Object> usersMap = null;
-		try {
-			usersMap = (Map<String, Object>) UserProfileManager.getUsers();
-		} catch (SystemException e) {
-			ServiceUtils.printException("Could not load users list: " + id, e);
-			return false;
-		}*/
+		String id = (String) jwtData.get("username");
+		/*
+		 * Map<String, Object> usersMap = null; try { usersMap = (Map<String, Object>)
+		 * UserProfileManager.getUsers(); } catch (SystemException e) {
+		 * ServiceUtils.printException("Could not load users list: " + id, e); return
+		 * false; }
+		 */
 		Map<String, Object> user = UsersRepository.getUserById(id);
-		if(user!=null && user.getOrDefault("salt","").equals(jwtData.getOrDefault("salt", "")))
+		if (user != null && user.getOrDefault("salt", "").equals(jwtData.getOrDefault("salt", "")))
 			return true;
 		return false;
 	}

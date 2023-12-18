@@ -1,6 +1,10 @@
 package com.eka.middleware.flow;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 //import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -12,20 +16,20 @@ import javax.json.JsonValue;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
-import com.eka.middleware.service.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
 
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.pub.util.document.Function;
 import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.MapUtils;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
-import org.graalvm.polyglot.Value;
 
 public class FlowUtils {
     private static Logger LOGGER = LogManager.getLogger(FlowUtils.class);
@@ -39,6 +43,29 @@ public class FlowUtils {
     public static String placeXPathValue(String xPaths, DataPipeline dp) throws SnippetException {
         try {
             String xPathValues = xPaths;
+            Object obj=resolveExpressions(xPathValues, dp);
+            Integer size = null;
+            String val = "";
+            if (null != obj && obj instanceof Map) {
+                size = ((Map) obj).size();
+            } else if (null != obj && (obj instanceof List)) {
+                size = ((List) obj).size();
+            } else  {
+                val = obj + "";
+            }
+
+            if (null != size) {
+                if (size == 0) {
+                    val = "null";
+                } else {
+                    val = "true";
+                }
+            }
+            
+            xPathValues=val;
+            return xPathValues;
+            /*
+            
             String params[] = extractExpressions(xPaths, dp);// xPaths.split(Pattern.quote("}"));
             if (params != null)
                 for (String param : params) {
@@ -68,7 +95,7 @@ public class FlowUtils {
                     xPathValues = xPathValues.replace("#{" + param + "}", value);// cond=evaluatedParam+"="+value;
                     // }
                 }
-            return xPathValues;
+            return xPathValues;*/
         } catch (Exception e) {
             ServiceUtils.printException(dp, "Something went wrong while parsing xpath(" + xPaths + ")", e);
             throw new SnippetException(dp, "Something went wrong while parsing xpath(" + xPaths + ")", e);
@@ -177,7 +204,12 @@ public class FlowUtils {
             while (matcher.find()) {
                 found = true;
                 String key = matcher.group(1); // Extract the key
-                String value = MapUtils.getValueByPointer(key, parentMap) + "";
+                Object value = MapUtils.getValueByPointer(key, parentMap);
+                if(value==null)
+                	value="null";
+                if(value instanceof Map || value instanceof List) {
+                	value=ServiceUtils.toJson(value);
+                }
                 ; // Get its value
                 if(value.equals("null") && parentMap instanceof DataPipeline) {
                     DataPipeline dp=(DataPipeline)parentMap;
@@ -187,7 +219,7 @@ public class FlowUtils {
                     Object valueByPointer = dp.getValueByPointer(key);
                     //String expressionValue = typeOfVariable.equalsIgnoreCase("stringList") ? ServiceUtils.toJson(valueByPointer) : valueByPointer + "";
                 }
-                matcher.appendReplacement(sb, value); // Replace the key with its value
+                matcher.appendReplacement(sb, (String)value); // Replace the key with its value
             }
             matcher.appendTail(sb);
             input = sb.toString();
@@ -371,9 +403,10 @@ public class FlowUtils {
                                 val = eval(functionName + "();", ctx, typeOfVariable);
                             else if (typeOfVariable.equals("string"))
                                 val = eval(functionName + "('" + val + "');", ctx, typeOfVariable);
-                            else
-                                val = eval(functionName + "(" + val + ");", ctx, typeOfVariable);
-
+                            else {
+                                String jdata=ServiceUtils.toJson(val);
+                            	val = eval(functionName + "(" + jdata + ");", ctx, typeOfVariable);//ServiceUtils.toJson(val)
+                            }
                             if (val != null)
                                 dp.setValueByPointer(leader.getTo(), val, leader.getOutTypePath());
                         }
@@ -472,13 +505,14 @@ public class FlowUtils {
                     return null;
                 case "object":
                 default:
-                    return ctx.eval("js", js);
+                	result=ctx.eval("js", js);
+                    return ServiceUtils.convertPolyglotValue(result);
             }
         } catch (Exception e) {
             // System.out.println(e.getMessage());
             if (!e.getMessage().contains("applyLogic is not defined"))
                 e.printStackTrace();
-            return null;
+            throw new RuntimeException(e);
         }
     }
 

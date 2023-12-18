@@ -344,7 +344,9 @@ public class DataPipeline {
 
 			if (list instanceof Object[]) {
 				return Arrays.asList((Object[]) list);
-			} else
+			} else if(list instanceof List) {
+				return (List)list;
+			}else
 				return null;
 		}
 		List<Object> arrayList = (List<Object>) list;
@@ -612,7 +614,7 @@ public class DataPipeline {
 	}
 
 	public String getUniqueThreadName() {
-		return "cb_" + (getCurrentResource().hashCode() & 0xfffffff);
+		return "cb_" + ((getCurrentResource()+rp.getSessionID()).hashCode() & 0xfffffff);
 	}
 
 	public String getCurrentResource() {
