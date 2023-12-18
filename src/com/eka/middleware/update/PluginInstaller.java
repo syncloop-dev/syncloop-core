@@ -30,16 +30,17 @@ public class PluginInstaller {
 
         marketPlace
                 .getPlugins().stream().forEach(plugin -> {
-                   try {
-                       Plugins installedPlugin = getInstalledPlugin(plugin.getUnique_id(), dataPipeline);
-                       plugin.setInstalled(null != installedPlugin);
-                       if (plugin.isInstalled()
-                               && plugin.getLatest_version_number() > installedPlugin.getLatest_version_number()) {
-                           plugin.setInstalled(true);
-                       }
-                   } catch (Exception e) {
+                    try {
+                        Plugins installedPlugin = getInstalledPlugin(plugin.getUnique_id(), dataPipeline);
+                        plugin.setInstalled(null != installedPlugin);
+                        if (plugin.isInstalled()
+                                && plugin.getLatest_version_number() > installedPlugin.getLatest_version_number()) {
+                            plugin.setInstalled(true);
+                            plugin.setRequiredUpdate(true);
+                        }
+                    } catch (Exception e) {
                         e.printStackTrace();
-                   }
+                    }
                 });
 
         return marketPlace;
@@ -67,7 +68,7 @@ public class PluginInstaller {
             return;
         }
 
-        String fileName = String.format("%sv%s.zip", plugin.getName_slug(), version);
+        String fileName = String.format("%s-%s.zip", plugin.getName_slug(), version);
         String filePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/import/" + fileName;
 
         URL url = new URL(Build.DISTRIBUTION_REPO + "plugins/" + fileName);
@@ -88,7 +89,6 @@ public class PluginInstaller {
             String location = buildsDirPath + fileName;
             AutoUpdate.unzip(location, packagePath, dataPipeline);
 
-            // Import URL aliases
             String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
             boolean importSuccessful = AutoUpdate.importURLAliases(urlAliasFilePath, dataPipeline);
             AutoUpdate.createRestorePoint(fileName, dataPipeline);
@@ -122,17 +122,23 @@ public class PluginInstaller {
         PluginPackage pluginPackage = getInstalledPlugins(dataPipeline);
         File file = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/plugin-package.json");
 
-        Optional<Plugins> pluginObj = pluginPackage.getPlugins().parallelStream().filter(f -> f.getUnique_id().equals(plugins.getUnique_id())).findAny();
+        Optional<Plugins> pluginObj = pluginPackage.getPlugins()
+                .stream()
+                .filter(f -> f.getUnique_id().equals(plugins.getUnique_id()))
+                .findAny();
 
         if (pluginObj.isPresent()) {
             Plugins oldPlugin = pluginObj.get();
-            pluginPackage.getPlugins().remove(oldPlugin);
-            pluginPackage.getPlugins().add(plugins);
+            oldPlugin.setLatest_version(plugins.getLatest_version());
+            oldPlugin.setName(plugins.getName());
+            oldPlugin.setInstalled(true);
         } else {
-            pluginPackage.setPlugins(Lists.newArrayList(plugins));
+            plugins.setInstalled(true);
+            pluginPackage.getPlugins().add(plugins);
         }
         IOUtils.write(new Gson().toJson(pluginPackage), new FileOutputStream(file), StandardCharsets.UTF_8);
     }
+
 
     private static PluginPackage getInstalledPlugins(DataPipeline dataPipeline) throws IOException {
         PluginPackage pluginPackage = new PluginPackage();
