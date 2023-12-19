@@ -122,6 +122,9 @@ public class MapUtils {
 			if (obj == null) {
 				if (preObj.getClass().toString().contains("ArrayList") && isNumeric) {
 					int index = Integer.parseInt(key);
+					if (index < 0) {
+						index = Integer.MAX_VALUE;
+					}
 					List<Object> list = (List) preObj;
 					Map<String, Object> map = new HashMap<String, Object>();
 					if (list.size() > index)
@@ -168,6 +171,9 @@ public class MapUtils {
 			List<Object> newObject = null;
 
 			int index = Integer.parseInt(key);
+			if (index < 0) {
+				index = Integer.MAX_VALUE;
+			}
 			key = pointerTokens[tokenCount - 2];
 			if (preObj != null){// && ((List<Object>) preObj).size() > index) {
 				newObject = ((List<Object>) preObj);

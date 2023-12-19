@@ -85,10 +85,13 @@ public class ThreadManager {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or path not public. Make sure you are using right tenant name('"+tenantName+"'). Name is case sensitive. Clear your cookies retry with correct tenant name.");
 					exchange.getResponseHeaders().clear();
 					exchange.setStatusCode(401);
+					exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/html"); // Change "text/plain" to your desired content type
 					exchange.getResponseSender()
-							.send("Tenant Access Denied. Path access not allowed." /*+ pureRequestPath
+							.send("Tenant Access Denied. Path access not allowed. <br /><a href='/tenant/default/files/gui/middleware/pub/server/ui/welcome/onboarding/relogin.html'>Click Here</a> to login again." /*+ pureRequestPath
 									+ "\nPublic prefix paths:\n" + Security.getPublicPrefixPaths(tenantName)
 									+ "\nPublic exact paths:\n" + Security.getPublicExactPaths(tenantName)*/);
+
+
 					exchange.endExchange();
 					return;
 				}

@@ -219,7 +219,7 @@ public class FlowUtils {
                     Object valueByPointer = dp.getValueByPointer(key);
                     //String expressionValue = typeOfVariable.equalsIgnoreCase("stringList") ? ServiceUtils.toJson(valueByPointer) : valueByPointer + "";
                 }
-                matcher.appendReplacement(sb, (String)value); // Replace the key with its value
+                matcher.appendReplacement(sb, value.toString()); // Replace the key with its value
             }
             matcher.appendTail(sb);
             input = sb.toString();
@@ -464,10 +464,19 @@ public class FlowUtils {
                     if (result.hasArrayElements()) {
                         int size = (int)result.getArraySize();
                         Integer[] intArray = new Integer[size];
+                        ArrayList<Integer> integers = new ArrayList<>();
                         for (int i = 0; i < intArray.length; i++) {
-                            intArray[i] = result.getArrayElement(i).asInt();
+                            Value v = result.getArrayElement(i);
+                            if(v.fitsInInt()) {
+                                integers.add(v.asInt());
+                            } else {
+                                String val = v.asString();
+                                Double dVal = Double.parseDouble(val);
+                                integers.add(dVal.intValue());
+                            }
+
                         }
-                        return Arrays.asList(intArray);
+                        return integers;
                     }
                     return null;
                 case "stringList":
@@ -475,10 +484,11 @@ public class FlowUtils {
                     if (result.hasArrayElements()) {
                         int size = (int)result.getArraySize();
                         String[] array = new String[size];
+                        ArrayList<String> strings = new ArrayList<>();
                         for (int i = 0; i < array.length; i++) {
-                            array[i] = result.getArrayElement(i).asString();
+                            strings.add(result.getArrayElement(i).asString());
                         }
-                        return Arrays.asList(array);
+                        return strings;
                     }
                     return null;
                 case "numberList":
@@ -486,10 +496,18 @@ public class FlowUtils {
                     if (result.hasArrayElements()) {
                         int size = (int)result.getArraySize();
                         Double[] array = new Double[size];
+                        ArrayList<Double> doubles = new ArrayList<>();
                         for (int i = 0; i < array.length; i++) {
-                            array[i] = result.getArrayElement(i).asDouble();
+                            Value v = result.getArrayElement(i);
+                            if(v.fitsInDouble()) {
+                                doubles.add(v.asDouble());
+                            } else {
+                                String val = v.asString();
+                                Double dVal = Double.parseDouble(val);
+                                doubles.add(dVal);
+                            }
                         }
-                        return Arrays.asList(array);
+                        return doubles;
                     }
                     return null;
                 case "booleanList":
@@ -497,10 +515,11 @@ public class FlowUtils {
                     if (result.hasArrayElements()) {
                         int size = (int)result.getArraySize();
                         Boolean[] array = new Boolean[size];
+                        ArrayList<Boolean> booleans = new ArrayList<>();
                         for (int i = 0; i < array.length; i++) {
-                            array[i] = result.getArrayElement(i).asBoolean();
+                            booleans.add(result.getArrayElement(i).asBoolean());
                         }
-                        return Arrays.asList(array);
+                        return booleans;
                     }
                     return null;
                 case "object":
