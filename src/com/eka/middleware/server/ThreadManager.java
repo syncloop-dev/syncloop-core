@@ -87,7 +87,19 @@ public class ThreadManager {
 					exchange.setStatusCode(401);
 					exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/html"); // Change "text/plain" to your desired content type
 					exchange.getResponseSender()
-							.send("Tenant Access Denied. Path access not allowed. <br /><a href='/tenant/default/files/gui/middleware/pub/server/ui/welcome/onboarding/relogin.html'>Click Here</a> to login again." /*+ pureRequestPath
+							.send("Tenant Access Denied. Path access not allowed. <br /><a href='/'>Click Here</a> to login again. <script>\n" +
+									"\tfunction deleteAllCookies() {\n" +
+									"\t\tconst cookies = document.cookie.split(\";\");\n" +
+									"\n" +
+									"\t\tfor (let i = 0; i < cookies.length; i++) {\n" +
+									"\t\t\tconst cookie = cookies[i];\n" +
+									"\t\t\tconst eqPos = cookie.indexOf(\"=\");\n" +
+									"\t\t\tconst name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;\n" +
+									"\t\t\tdocument.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;\n" +
+									"\t\t}\n" +
+									"\t}\n" +
+									"\tdeleteAllCookies();\n" +
+									"</script>\n" /*+ pureRequestPath
 									+ "\nPublic prefix paths:\n" + Security.getPublicPrefixPaths(tenantName)
 									+ "\nPublic exact paths:\n" + Security.getPublicExactPaths(tenantName)*/);
 
