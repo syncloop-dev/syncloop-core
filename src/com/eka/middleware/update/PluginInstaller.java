@@ -46,6 +46,28 @@ public class PluginInstaller {
         return marketPlace;
     }
 
+    public static void deletePlugin(String pluginId, DataPipeline dataPipeline) throws IOException {
+
+        PluginPackage pluginPackage = getInstalledPlugins(dataPipeline);
+
+        Optional<Plugins> pluginToRemove = pluginPackage.getPlugins()
+                .stream()
+                .filter(plugin -> plugin.getUnique_id().equals(pluginId))
+                .findAny();
+
+        if (pluginToRemove.isPresent()) {
+            pluginPackage.getPlugins().remove(pluginToRemove.get());
+            updatePackagePluginAfterDelete(pluginPackage, dataPipeline);
+        } else {
+            dataPipeline.put("message", "Plugin not found for deletion.");
+            dataPipeline.put("status", false);
+            throw new IOException("Plugin not found for deletion.");
+        }
+    }
+    private static void updatePackagePluginAfterDelete(PluginPackage pluginPackage, DataPipeline dataPipeline) throws IOException {
+        File file = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/plugin-package.json");
+        IOUtils.write(new Gson().toJson(pluginPackage), new FileOutputStream(file), StandardCharsets.UTF_8);
+    }
     public static void installPlugin(String pluginId, String version, DataPipeline dataPipeline) throws Exception {
 
         MarketPlace marketPlace = getMarketPlace();
