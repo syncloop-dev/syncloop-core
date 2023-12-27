@@ -29,4 +29,5 @@ public class Plugins {
 
     private boolean installed;
     private boolean requiredUpdate;
+    private String installing_path;
 }
