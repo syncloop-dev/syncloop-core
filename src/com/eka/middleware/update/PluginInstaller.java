@@ -166,8 +166,8 @@ public class PluginInstaller {
         PluginPackage pluginPackage = new PluginPackage();
         File file = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/plugin-package.json");
 
-        if (!file.exists()) {
-            pluginPackage = new PluginPackage();
+        if (!file.exists() || file.length() == 0) {
+            //pluginPackage = new PluginPackage();
             pluginPackage.setPlugins(Lists.newArrayList());
         } else {
             pluginPackage = new Gson().fromJson(new FileReader(file), PluginPackage.class);
