@@ -369,6 +369,10 @@ public class FlowUtils {
                         throw e;
                     }
 
+                    String inPath = leader.getInTypePath();
+                    String inTokens[] = inPath.split(Pattern.quote("/"));
+                    String typeOfInVariable = inTokens[inTokens.length - 1];
+
                     String typePath = leader.getOutTypePath();
                     String tokens[] = typePath.split(Pattern.quote("/"));
                     String typeOfVariable = tokens[tokens.length - 1];
@@ -404,7 +408,24 @@ public class FlowUtils {
                             else if (typeOfVariable.equals("string"))
                                 val = eval(functionName + "('" + val + "');", ctx, typeOfVariable);
                             else {
-                                String jdata=ServiceUtils.toJson(val);
+                                Object jdata = val.toString();
+                                if (typeOfInVariable.equalsIgnoreCase("number") ||
+                                        typeOfInVariable.equalsIgnoreCase("boolean") ||
+                                        typeOfInVariable.equalsIgnoreCase("integer")) {
+                                    switch (typeOfInVariable.toLowerCase()) {
+                                        case "number":
+                                            jdata = Double.parseDouble(val.toString());
+                                            break;
+                                        case "boolean":
+                                            jdata = Boolean.parseBoolean(val.toString());
+                                            break;
+                                        case "integer":
+                                            jdata = Integer.parseInt(val.toString());
+                                            break;
+                                    }
+                                } else {
+                                    jdata=ServiceUtils.toJson(val);
+                                }
                             	val = eval(functionName + "(" + jdata + ");", ctx, typeOfVariable);//ServiceUtils.toJson(val)
                             }
                             if (val != null)
@@ -454,7 +475,13 @@ public class FlowUtils {
                 	else
                 		return (int) value.asLong();//(int)Bodmas.eval(js);//
                 case "number":
-                    return ctx.eval("js", js).asDouble();
+                    Value doubleVal=ctx.eval("js", js);
+                    if(doubleVal.fitsInDouble())
+                        return doubleVal.asDouble();
+                    else {
+                        return Double.parseDouble(doubleVal.asString());
+                    }
+
                 case "boolean":
                     return ctx.eval("js", js).asBoolean();
                 case "byte":
