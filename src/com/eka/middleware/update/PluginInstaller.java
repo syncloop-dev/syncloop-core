@@ -109,7 +109,7 @@ public class PluginInstaller {
             String packagePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             String buildsDirPath = packagePath + "builds/import/";
             String location = buildsDirPath + fileName;
-            AutoUpdate.unzip(location, packagePath, dataPipeline);
+            AutoUpdate.unzipForMarketplace(location, packagePath, dataPipeline);
 
             String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
             boolean importSuccessful = AutoUpdate.importURLAliases(urlAliasFilePath, dataPipeline);
