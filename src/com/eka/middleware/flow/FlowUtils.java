@@ -472,8 +472,13 @@ public class FlowUtils {
                 	Value value=ctx.eval("js", js);
                 	if(value.fitsInDouble())
                 		return (int) value.asDouble();
-                	else
-                		return (int) value.asLong();//(int)Bodmas.eval(js);//
+                    if(value.fitsInLong())
+                        return (int) value.asLong();//(int)Bodmas.eval(js);//
+                	else {
+                        String v = value.asString();
+//                        return (int) value.asInt();//(int)Bodmas.eval(js);//
+                        return Integer.parseInt(v);
+                    }
                 case "number":
                     Value doubleVal=ctx.eval("js", js);
                     if(doubleVal.fitsInDouble())
