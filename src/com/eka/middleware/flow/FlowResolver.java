@@ -64,7 +64,22 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 			case "map":
 			case "transformer":
 				Transformer transformer=new Transformer(jsonValue.asJsonObject());
-				transformer.process(dp);
+				JsonArray flowOutputArray=JsonOutputValue.asJsonArray();
+				if(flowOutputArray.isEmpty())
+					flowOutputArray=null;
+				Map<String, Object> outPutData=null;
+
+				if(flowOutputArray!=null) {
+					outPutData=new HashMap<>();
+					for (JsonValue jsonValue1 : flowOutputArray) {
+						String key=jsonValue1.asJsonObject().getString("text");
+						Object val=dp.get(key);
+						if(val!=null)
+							outPutData.put(key, dp.get(key));
+						else
+							transformer.process(dp);
+					}
+				}
 			break;
 			case "await":
 				Await await=new Await(jsonValue.asJsonObject());
