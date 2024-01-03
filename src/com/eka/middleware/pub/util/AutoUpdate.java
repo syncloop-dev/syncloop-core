@@ -115,13 +115,11 @@ public class AutoUpdate {
     public static void unzipForMarketplace(String zipFilePath, String destDir, DataPipeline dp) throws Exception {
         File dir = new File(destDir);
         String unZippedFolderPath = null;
-        boolean skipOverride = false; // Flag to skip override if shouldOverride returns false
+        boolean skipOverride = false;
 
-        // create output directory if it doesn't exist
         if (!dir.exists()) dir.mkdirs();
         FileInputStream fis;
 
-        // buffer for read and write data to file
         fis = new FileInputStream(zipFilePath);
         ZipInputStream zis = new ZipInputStream(fis);
         ZipEntry ze = zis.getNextEntry();
@@ -141,15 +139,14 @@ public class AutoUpdate {
 
                     if (!shouldOverride(packagePropertiesPath)) {
                         skipOverride = true;
-                        continue; // Skip override for subsequent files with "dependency" suffix
+                        continue;
                     } else {
-                        // If shouldOverride returns true, reset the flag
                         skipOverride = false;
                     }
                 }
 
                 if (!skipOverride) {
-                    if (!fileName.contains("dependency/")) { // Skip the entire "dependency" folder
+                    if (!fileName.contains("dependency/")) {
                         new File(newFile.getParent()).mkdirs();
                         byte[] buffer = new byte[1024];
                         int len = zis.read(buffer);
@@ -169,27 +166,22 @@ public class AutoUpdate {
                 }
             }
 
-            // close this ZipEntry
             zis.closeEntry();
             ze = zis.getNextEntry();
         }
 
-        // close last ZipEntry
         zis.closeEntry();
         zis.close();
         fis.close();
     }
 
     private static boolean shouldOverride(String packagePropertiesPath) throws IOException {
-        // Check if the package.properties file exists
         File packagePropertiesFile = new File(packagePropertiesPath);
 
         if (!packagePropertiesFile.exists() || packagePropertiesFile.isDirectory()) {
-            // If the file doesn't exist or is a directory, allow the override
             return true;
         }
 
-        // Load properties only if the file exists
         Properties properties = new Properties();
 
         try (FileInputStream input = new FileInputStream(packagePropertiesPath)) {
@@ -198,7 +190,6 @@ public class AutoUpdate {
             for (String key : properties.stringPropertyNames()) {
                 String value = properties.getProperty(key);
 
-                // If any key has a non-empty value, don't override
                 if (value != null && !value.trim().isEmpty()) {
                     return false;
                 }
