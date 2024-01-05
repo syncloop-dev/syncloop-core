@@ -16,6 +16,7 @@ import java.util.concurrent.Future;
 import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.licensing.License;
 import com.eka.middleware.licensing.LicenseFile;
+import com.eka.middleware.logging.AppLogger;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowMeta;
 import com.google.common.collect.Maps;
@@ -81,7 +82,17 @@ public class ThreadManager {
 			}
 
 			if (account.getUserId().equalsIgnoreCase("anonymous")) {
-				if (!Security.isPublic(pureRequestPath, tenantName)) {
+
+				boolean isPathAllow = Security.isPublic(pureRequestPath, tenantName);
+
+				AppLogger appLogger = new AppLogger(tenantName);
+				appLogger.add("OPERATION", "UI_CROSS_COMM");
+				appLogger.add("USER_ID", "ANONYMOUS");
+				appLogger.add("PURE_REQUEST_PATH", pureRequestPath);
+				appLogger.add("IS_PATH_ALLOW", isPathAllow);
+				appLogger.finish();
+
+				if (!isPathAllow) {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or path not public. Make sure you are using right tenant name('"+tenantName+"'). Name is case sensitive. Clear your cookies retry with correct tenant name.");
 					exchange.getResponseHeaders().clear();
 					exchange.setStatusCode(401);
