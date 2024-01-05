@@ -14,6 +14,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Date;
 import java.util.Optional;
 
 import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
@@ -33,6 +34,7 @@ public class PluginInstaller {
                     try {
                         Plugins installedPlugin = getInstalledPlugin(plugin.getUnique_id(), dataPipeline);
                         plugin.setInstalled(null != installedPlugin);
+                        plugin.setInstalled_on(installedPlugin.getInstalled_on());
                         if (plugin.isInstalled()
                                 && plugin.getLatest_version_number() > installedPlugin.getLatest_version_number()) {
                             plugin.setInstalled(true);
@@ -156,6 +158,7 @@ public class PluginInstaller {
             oldPlugin.setInstalled(true);
         } else {
             plugins.setInstalled(true);
+            plugins.setInstalled_on(new Date().getTime());
             pluginPackage.getPlugins().add(plugins);
         }
         IOUtils.write(new Gson().toJson(pluginPackage), new FileOutputStream(file), StandardCharsets.UTF_8);
