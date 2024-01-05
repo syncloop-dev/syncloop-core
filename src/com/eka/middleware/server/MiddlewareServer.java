@@ -67,13 +67,6 @@ public class MiddlewareServer {
 
 	public static void main(final String[] args) throws SystemException {
 
-		try {
-			PropertyManager.initConfig(args);
-			IgNode.getIgnite();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
 		if (Boolean.parseBoolean(System.getProperty("CONTAINER_DEPLOYMENT"))) {
 			try {
 				BootBuild.bootBuild();
@@ -83,6 +76,13 @@ public class MiddlewareServer {
 			//Build.download("latest");
 		} else {
 			LOGGER.info("No Container Deployment");
+		}
+
+		try {
+			PropertyManager.initConfig(args);
+			IgNode.getIgnite();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 
 		ApplicationShutdownHook.arg = args;
