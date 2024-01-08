@@ -30,6 +30,7 @@ public class Plugins {
     private boolean installed;
     private long installed_on;
     private String vendor;
+    private String service;
     private boolean requiredUpdate;
     private String installing_path;
 }
