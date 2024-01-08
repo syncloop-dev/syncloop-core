@@ -16,6 +16,9 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Date;
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
 
@@ -71,7 +74,6 @@ public class PluginInstaller {
         IOUtils.write(new Gson().toJson(pluginPackage), new FileOutputStream(file), StandardCharsets.UTF_8);
     }
     public static void installPlugin(String pluginId, String version, DataPipeline dataPipeline) throws Exception {
-
         MarketPlace marketPlace = getMarketPlace();
         Optional<Plugins> pluginObj = marketPlace.getPlugins().parallelStream().filter(f -> f.getUnique_id().equals(pluginId)).findAny();
 
@@ -107,11 +109,15 @@ public class PluginInstaller {
         Boolean checkDigest = compareDigest(filePath, plugin.getDigest());
 
         if (checkDigest) {
-
             String packagePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             String buildsDirPath = packagePath + "builds/import/";
             String location = buildsDirPath + fileName;
-            AutoUpdate.unzipForMarketplace(location, packagePath, dataPipeline);
+
+            String packagePropertyPath = packagePath+ plugin.getInstalling_path() + File.separator +"dependency" + File.separator + "config" + File.separator + "package.properties";
+            HashMap<String, String> existingKeyValues = extractExistingPackageProperties(packagePropertyPath);
+
+            AutoUpdate.unzip(location, packagePath, dataPipeline);
+            replaceKeyValuesInPackageProperties(packagePropertyPath, existingKeyValues);
 
             String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
             boolean importSuccessful = AutoUpdate.importURLAliases(urlAliasFilePath, dataPipeline);
@@ -124,6 +130,49 @@ public class PluginInstaller {
             dataPipeline.put("status", false);
         }
     }
+
+    private static HashMap<String, String> extractExistingPackageProperties(String existingPluginPath) throws IOException {
+        HashMap<String, String> keyValues = new HashMap<>();
+
+        File packagePropertiesFile = new File(existingPluginPath);
+        if (packagePropertiesFile.exists()) {
+            Properties properties = new Properties();
+            try (FileInputStream input = new FileInputStream(packagePropertiesFile)) {
+                properties.load(input);
+
+                for (String key : properties.stringPropertyNames()) {
+                    String value = properties.getProperty(key);
+
+                    if (value != null && !value.trim().isEmpty()) {
+                        keyValues.put(key, value.trim());
+                    }
+                }
+            }
+        }
+
+        return keyValues;
+    }
+
+
+    private static void replaceKeyValuesInPackageProperties(String packagePropertiesPath, Map<String, String> keyValues) throws IOException {
+        Properties properties = new Properties();
+
+        try (FileInputStream input = new FileInputStream(packagePropertiesPath)) {
+            properties.load(input);
+        }
+
+        for (Map.Entry<String, String> entry : keyValues.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            properties.setProperty(key, value);
+        }
+
+        try (FileOutputStream output = new FileOutputStream(packagePropertiesPath)) {
+            properties.store(output, null);
+        }
+    }
+
     private static MarketPlace getMarketPlace() throws IOException {
         String jsonUrl = "syncloop-marketplace.json";
 
