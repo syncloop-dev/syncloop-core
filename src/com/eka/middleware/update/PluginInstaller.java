@@ -114,10 +114,13 @@ public class PluginInstaller {
             String location = buildsDirPath + fileName;
 
             String packagePropertyPath = packagePath+ plugin.getInstalling_path() + File.separator +"dependency" + File.separator + "config" + File.separator + "package.properties";
-            HashMap<String, String> existingKeyValues = extractExistingPackageProperties(packagePropertyPath);
-
-            AutoUpdate.unzip(location, packagePath, dataPipeline);
-            replaceKeyValuesInPackageProperties(packagePropertyPath, existingKeyValues);
+            File checkIfPackageFileExists = new File(packagePropertyPath);
+            if(checkIfPackageFileExists.exists()) {
+                HashMap<String, String> existingKeyValues = extractExistingPackageProperties(checkIfPackageFileExists);
+                AutoUpdate.unzip(location, packagePath, dataPipeline);
+                replaceKeyValuesInPackageProperties(packagePropertyPath, existingKeyValues);
+            }else
+                AutoUpdate.unzip(location, packagePath, dataPipeline);
 
             String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
             boolean importSuccessful = AutoUpdate.importURLAliases(urlAliasFilePath, dataPipeline);
@@ -131,28 +134,24 @@ public class PluginInstaller {
         }
     }
 
-    private static HashMap<String, String> extractExistingPackageProperties(String existingPluginPath) throws IOException {
+    private static HashMap<String, String> extractExistingPackageProperties(File packagePropertiesFile) throws IOException {
         HashMap<String, String> keyValues = new HashMap<>();
 
-        File packagePropertiesFile = new File(existingPluginPath);
-        if (packagePropertiesFile.exists()) {
-            Properties properties = new Properties();
-            try (FileInputStream input = new FileInputStream(packagePropertiesFile)) {
-                properties.load(input);
+        Properties properties = new Properties();
+        try (FileInputStream input = new FileInputStream(packagePropertiesFile)) {
+            properties.load(input);
 
-                for (String key : properties.stringPropertyNames()) {
-                    String value = properties.getProperty(key);
+            for (String key : properties.stringPropertyNames()) {
+                String value = properties.getProperty(key);
 
-                    if (value != null && !value.trim().isEmpty()) {
-                        keyValues.put(key, value.trim());
-                    }
+                if (value != null && !value.trim().isEmpty()) {
+                    keyValues.put(key, value.trim());
                 }
             }
         }
 
         return keyValues;
     }
-
 
     private static void replaceKeyValuesInPackageProperties(String packagePropertiesPath, Map<String, String> keyValues) throws IOException {
         Properties properties = new Properties();
