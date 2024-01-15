@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.template.SnippetException;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import com.eka.middleware.heap.HashMap;
@@ -16,6 +18,11 @@ public class MapUtils {
 			return null;
 		pointer = pointer.trim();
 		Object obj = null;
+
+		if (pointer.contains("#{")) {
+			pointer = FlowUtils.resolveExpressions(pointer, parentMap);
+		}
+
 		pointer = "//" + pointer;
 		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
 		Map<String, Object> map = null;
@@ -65,6 +72,11 @@ public class MapUtils {
 		String path = "";
 		Object preObj = parentMap;
 		pointer = "//" + pointer;
+
+		if (pointer.contains("#{")) {
+			pointer = FlowUtils.resolveExpressions(pointer, parentMap);
+		}
+
 		pointer = pointer.replace("///", "").replace("//", "").replace("#", "");
 		boolean isNumeric = false;
 		String[] pointerTokens = pointer.split("/");
@@ -110,6 +122,9 @@ public class MapUtils {
 			if (obj == null) {
 				if (preObj.getClass().toString().contains("ArrayList") && isNumeric) {
 					int index = Integer.parseInt(key);
+					if (index < 0) {
+						index = Integer.MAX_VALUE;
+					}
 					List<Object> list = (List) preObj;
 					Map<String, Object> map = new HashMap<String, Object>();
 					if (list.size() > index)
@@ -118,7 +133,7 @@ public class MapUtils {
 						list.add(map);
 					obj = map;
 					preObj = obj;
-				} else if (typeTokens[typeIndex].contains("documentList")) {
+				} else if (typeTokens[typeIndex].toUpperCase().endsWith("LIST")) {
 					List<Object> list = new ArrayList<Object>();
 					if (preObj.getClass().toString().contains("DataPipeline")) {
 						DataPipeline dp = (DataPipeline) preObj;
@@ -138,7 +153,7 @@ public class MapUtils {
 						((Map) preObj).put(key, obj);
 					preObj = obj;
 				} else {
-					preObj = new Object[1];
+					preObj = new ArrayList<>();
 					if(parentMap instanceof DataPipeline)
 						((DataPipeline)parentMap).put(key, preObj);
 					else
@@ -153,32 +168,33 @@ public class MapUtils {
 		key = pointerTokens[tokenCount - 1];
 		isNumeric = NumberUtils.isCreatable(key);
 		if (isNumeric) {
-			Object[] newObject = null;
+			List<Object> newObject = null;
 
 			int index = Integer.parseInt(key);
+			if (index < 0) {
+				index = Integer.MAX_VALUE;
+			}
 			key = pointerTokens[tokenCount - 2];
-			if (preObj != null && ((Object[]) preObj).length > index) {
-				newObject = ((Object[]) preObj);
-			} else {
+			if (preObj != null){// && ((List<Object>) preObj).size() > index) {
+				newObject = ((List<Object>) preObj);
+			} else {//It may never enter the else block and even if it does then not sure what's the point. preObj will become a local unused object.
 				switch (valueType) {
 				case "integerlist":
-					newObject = new Integer[index + 1];
-					break;
 				case "numberlist":
-					newObject = new Double[index + 1];
-					break;
 				case "booleanlist":
-					newObject = new Boolean[index + 1];
-					break;
 				case "stringlist":
-					newObject = new String[index + 1];
-					break;
 				case "objectlist":
-					newObject = new Object[index + 1];
+					newObject = new ArrayList<>();
 					break;
 				}
 			}
-			newObject[index] = value;
+
+			if ( index < newObject.size()) {
+				newObject.remove(index);
+				newObject.add(index, value);
+			} else {
+				newObject.add(value);
+			}
 			preObj = newObject;
 		} else
 			((Map) preObj).put(key, value);

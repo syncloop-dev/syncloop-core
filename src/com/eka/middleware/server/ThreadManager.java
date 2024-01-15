@@ -16,6 +16,7 @@ import java.util.concurrent.Future;
 import com.beust.jcommander.internal.Lists;
 import com.eka.middleware.licensing.License;
 import com.eka.middleware.licensing.LicenseFile;
+import com.eka.middleware.logging.AppLogger;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowMeta;
 import com.google.common.collect.Maps;
@@ -81,14 +82,39 @@ public class ThreadManager {
 			}
 
 			if (account.getUserId().equalsIgnoreCase("anonymous")) {
-				if (!Security.isPublic(pureRequestPath, tenantName)) {
+
+				boolean isPathAllow = Security.isPublic(pureRequestPath, tenantName);
+
+				AppLogger appLogger = new AppLogger(tenantName);
+				appLogger.add("OPERATION", "UI_CROSS_COMM");
+				appLogger.add("USER_ID", "ANONYMOUS");
+				appLogger.add("PURE_REQUEST_PATH", pureRequestPath);
+				appLogger.add("IS_PATH_ALLOW", isPathAllow);
+				appLogger.finish();
+
+				if (!isPathAllow) {
 					LOGGER.info("User(" + account.getUserId() + ") active tenant mismatch or path not public. Make sure you are using right tenant name('"+tenantName+"'). Name is case sensitive. Clear your cookies retry with correct tenant name.");
 					exchange.getResponseHeaders().clear();
 					exchange.setStatusCode(401);
+					exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "text/html"); // Change "text/plain" to your desired content type
 					exchange.getResponseSender()
-							.send("Tenant Access Denied. Path access not allowed." /*+ pureRequestPath
+							.send("Tenant Access Denied. Path access not allowed. <br /><a href='/'>Click Here</a> to login again. <script>\n" +
+									"\tfunction deleteAllCookies() {\n" +
+									"\t\tconst cookies = document.cookie.split(\";\");\n" +
+									"\n" +
+									"\t\tfor (let i = 0; i < cookies.length; i++) {\n" +
+									"\t\t\tconst cookie = cookies[i];\n" +
+									"\t\t\tconst eqPos = cookie.indexOf(\"=\");\n" +
+									"\t\t\tconst name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;\n" +
+									"\t\t\tdocument.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;\n" +
+									"\t\t}\n" +
+									"\t}\n" +
+									"\tdeleteAllCookies();\n" +
+									"</script>\n" /*+ pureRequestPath
 									+ "\nPublic prefix paths:\n" + Security.getPublicPrefixPaths(tenantName)
 									+ "\nPublic exact paths:\n" + Security.getPublicExactPaths(tenantName)*/);
+
+
 					exchange.endExchange();
 					return;
 				}
@@ -147,7 +173,7 @@ public class ThreadManager {
 					} else {
 						exchange.getResponseHeaders().add(Headers.STATUS, 404);
 						exchange.getResponseSender()
-								.send("Server is up and running but it could not find the resource.");
+								.send("{\"status\": \"404\", \"message\": \"URL not found\"}");
 					}
 					return;
 				}

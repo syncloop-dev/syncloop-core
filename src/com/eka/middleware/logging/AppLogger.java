@@ -30,6 +30,16 @@ public class AppLogger {
 		CONTEXT.set(logMetaHolder);
 	}
 
+	public AppLogger(String tenantName) {
+		Map<String, Object> requestLogMap = new HashMap <>();
+		requestLogMap.put("TENANT_NAME", tenantName);
+		LogMetaHolder logMetaHolder = new LogMetaHolder();
+		logMetaHolder.startTracking();
+		logMetaHolder.getMAP().putAll(requestLogMap);
+
+		CONTEXT.set(logMetaHolder);
+	}
+
 	public static String getTimestamp() {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm:ss");
 		return LocalDateTime.now().format(formatter);
@@ -129,7 +139,7 @@ public class AppLogger {
 	public static void main(String[] args) {
 		Configurator.initialize(null, "/Users/divyansh/Desktop/Syncloop/Local_CodeBase/ekamw-distributions-main/resources/config/log4j2.xml");
 
-		AppLogger appLoggerInstance = new AppLogger(null);
+		AppLogger appLoggerInstance = new AppLogger((DataPipeline) null);
 
 		appLoggerInstance.add("key1", "value1");
 		appLoggerInstance.add("key2", "value2");

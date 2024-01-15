@@ -1,11 +1,10 @@
 package com.eka.middleware.scheduling;
 
 import com.beust.jcommander.internal.Lists;
-import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.quartz.*;
 
 import java.util.HashMap;
@@ -15,12 +14,14 @@ import java.util.Map;
 public class ApplicationSchedulerFactory {
 
     private static Map<String, Scheduler> tenantSchedulers = new HashMap<>();
+
+    public static Logger LOGGER = LogManager.getLogger(ApplicationSchedulerFactory.class);
+
     /**
      * @param configFile
      * @return
      * @throws SchedulerException
      */
-
     public static Scheduler initScheduler(final String configFile, String tenantName) throws SchedulerException {
         SchedulerFactory schedFact;
 
@@ -44,9 +45,14 @@ public class ApplicationSchedulerFactory {
     public static void startScheduler(DataPipeline dataPipeline) throws SchedulerException {
         Scheduler tenantScheduler = getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
 
+        if (null == tenantScheduler) {
+            LOGGER.info("Scheduler obj null for {}", dataPipeline.rp.getTenant().getName());
+            return ;
+        }
+
         if (tenantScheduler.isInStandbyMode()) {
             tenantScheduler.start();
-            System.out.println("Scheduler started.");
+            LOGGER.debug("Scheduler started.");
         }
     }
 
@@ -57,6 +63,10 @@ public class ApplicationSchedulerFactory {
      */
     public static boolean isSchedulerAlive(DataPipeline dataPipeline) throws SchedulerException {
         Scheduler scheduler = getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
+        if (null == scheduler) {
+            LOGGER.info("Scheduler obj null for {}", dataPipeline.rp.getTenant().getName());
+            return false;
+        }
         return !scheduler.isInStandbyMode();
     }
     /**
@@ -64,8 +74,12 @@ public class ApplicationSchedulerFactory {
      */
     public static void stopScheduler(DataPipeline dataPipeline) throws SchedulerException {
         Scheduler tenantScheduler =  getSchedulerForTenant(dataPipeline.rp.getTenant().getName());
+        if (null == tenantScheduler) {
+            LOGGER.info("Scheduler obj null for {}", dataPipeline.rp.getTenant().getName());
+            return ;
+        }
         if (tenantScheduler != null && !tenantScheduler.isInStandbyMode()) {
-            System.out.println("scheduler stopped.....");
+        	LOGGER.debug("scheduler stopped.....");
             tenantScheduler.standby();
         }
     }
@@ -84,6 +98,10 @@ public class ApplicationSchedulerFactory {
      * @throws SchedulerException
      */
     public static SchedulerMetaData getSchedulerMetaData(Scheduler scheduler) throws SchedulerException {
+        if (null == scheduler) {
+            LOGGER.info("Scheduler obj null");
+            return null;
+        }
         return scheduler.getMetaData();
     }
 
@@ -136,11 +154,19 @@ public class ApplicationSchedulerFactory {
      * @throws SchedulerException
      */
     public static void removeJob(JobKey jobKey, Scheduler scheduler) throws SchedulerException {
+        if (null == scheduler) {
+            LOGGER.info("Scheduler obj null for");
+            return ;
+        }
         scheduler.unscheduleJob(TriggerKey.triggerKey(jobKey.getName(), jobKey.getGroup()));
         scheduler.deleteJob(jobKey);
     }
 
     public static void startJob(JobKey jobKey, Scheduler scheduler) throws SchedulerException {
+        if (null == scheduler) {
+            LOGGER.info("Scheduler obj null for");
+            return ;
+        }
         scheduler.triggerJob(jobKey);
     }
 

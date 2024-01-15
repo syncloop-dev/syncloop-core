@@ -39,6 +39,8 @@ public class Loop implements FlowBasicInfo {
 	@Getter
 	private String guid;
 
+	private int allowedLoop = 1000;
+
 	public Loop(JsonObject jo) {
 		loop = jo;
 		data = loop.get("data").asJsonObject();
@@ -155,74 +157,90 @@ public class Loop implements FlowBasicInfo {
 //		if(map==null && dpM)
 //			throw new SnippetException(dp, "Path pointer '"+inputArrayParent+"'. Please loop over parent array first", null);
 			long index = 0;
-			for (Object object : list) {
-				dp.put(indexVar, index + "");
-				index++;
-				if (map != null)
-					map.put(key, object);
-				else
-					dp.put(key, object);
-				JsonArray flows = loop.getJsonArray("children");
-				for (JsonValue jsonValue : flows) {
-					final String type = jsonValue.asJsonObject().getString("type");
-					JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-					String status=jov.getString("status",null);
-					if(!"disabled".equals(status))
-						switch (type) {
-							case "try-catch":
-								TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
-								tcfBlock.process(dp);
-								break;
-							case "sequence":
-							case "group":
-								Scope scope = new Scope(jsonValue.asJsonObject());
-								scope.process(dp);
-								break;
-							case "switch":
-								Switch swich = new Switch(jsonValue.asJsonObject());
-								swich.process(dp);
-								break;
-							case "ifelse":
-								IfElse ifElse = new IfElse(jsonValue.asJsonObject());
-								ifElse.process(dp);
-								break;
-							case "loop":
-							case "foreach":
-								Loop loop = new Loop(jsonValue.asJsonObject());
-								loop.process(dp);
-								break;
-							case "repeat":
-							case "redo":
-								Repeat repeat = new Repeat(jsonValue.asJsonObject());
-								repeat.process(dp);
-								break;
-							case "invoke":
-							case "service":
-								Api api = new Api(jsonValue.asJsonObject());
-								api.process(dp);
-								break;
-							case "map":
-							case "transformer":
-								Transformer transformer = new Transformer(jsonValue.asJsonObject());
-								transformer.process(dp);
-								break;
-							case "await":
-								Await await=new Await(jsonValue.asJsonObject());
-								await.process(dp);
-								break;
-						}
-				}
+			int loopExecutedCount = 0;
 
-				if(outKey!=null) {
-					Object append=dp.get(outKey);
-					if(append!=null && outputList!=null) {
-						outputList.add(append);
-						dp.put(outKey,null);
+			for (Object object : list) {
+				try {
+					loopExecutedCount++;
+					if (loopExecutedCount > allowedLoop) {
+						throw new RuntimeException("Loop exceeded");
+					}
+
+					dp.put(indexVar, index + "");
+					index++;
+					if (map != null)
+						map.put(key, object);
+					else
+						dp.put(key, object);
+					JsonArray flows = loop.getJsonArray("children");
+					for (JsonValue jsonValue : flows) {
+						final String type = jsonValue.asJsonObject().getString("type");
+						JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
+						String status=jov.getString("status",null);
+						if(!"disabled".equals(status))
+							switch (type) {
+								case "try-catch":
+									TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
+									tcfBlock.process(dp);
+									break;
+								case "sequence":
+								case "group":
+									Scope scope = new Scope(jsonValue.asJsonObject());
+									scope.process(dp);
+									break;
+								case "switch":
+									Switch swich = new Switch(jsonValue.asJsonObject());
+									swich.process(dp);
+									break;
+								case "ifelse":
+									IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+									ifElse.process(dp);
+									break;
+								case "loop":
+								case "foreach":
+									Loop loop = new Loop(jsonValue.asJsonObject());
+									loop.process(dp);
+									break;
+								case "repeat":
+								case "redo":
+									Repeat repeat = new Repeat(jsonValue.asJsonObject());
+									repeat.process(dp);
+									break;
+								case "invoke":
+								case "service":
+									Api api = new Api(jsonValue.asJsonObject());
+									api.process(dp);
+									break;
+								case "map":
+								case "transformer":
+									Transformer transformer = new Transformer(jsonValue.asJsonObject());
+									transformer.process(dp);
+									break;
+								case "await":
+									Await await=new Await(jsonValue.asJsonObject());
+									await.process(dp);
+									break;
+							}
+					}
+
+					if (outKey != null) {
+						Object append = dp.get(outKey);
+						if (append != null && outputList != null) {
+							outputList.add(append);
+							dp.put(outKey, null);
+						}
+					}
+					if (dp.isDestroyed())
+						throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+				} catch (Exception e) {
+					Exception throwable = e;
+					String msg = e.getMessage();
+					if (msg.contains("packages.middleware.pub.service.continueRepeat")) {
+						continue;
 					}
 				}
-				if(dp.isDestroyed())
-					throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
 			}
+
 //		map.put(key, list);
 
 			if (map != null)

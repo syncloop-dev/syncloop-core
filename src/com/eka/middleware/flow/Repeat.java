@@ -47,6 +47,8 @@ public class Repeat implements FlowBasicInfo {
     @Getter
     private String guid;
 
+    private int allowedLoop = 1000;
+
     public Repeat(JsonObject jo) {
         repeat = jo;
         data = repeat.get("data").asJsonObject();
@@ -58,7 +60,7 @@ public class Repeat implements FlowBasicInfo {
             rt = data.getString("repeat", "0");
         }
         if (rt.startsWith("#{")) {
-            rt = FlowUtils.extractExpressions(rt)[0];
+            rt = FlowUtils.extractExpressions(rt, null)[0];
         }
         boolean isNumber = NumberUtils.isParsable(rt);
         if (isNumber)
@@ -123,7 +125,12 @@ public class Repeat implements FlowBasicInfo {
             snapMeta.put("repeatTimes", repeatTimes);
             snapMeta.put("repeatOn", repeatOn);
             snapMeta.put("interval", interval);
+            int loopExecutedCount = 0;
             while (repeatOn != null && canExecute) {
+                loopExecutedCount++;
+                if (loopExecutedCount > allowedLoop) {
+                    throw new RuntimeException("Loop exceeded");
+                }
 
                 dp.put(indexVar, index + "");
                 index++;
@@ -137,6 +144,12 @@ public class Repeat implements FlowBasicInfo {
                     String msg = e.getMessage();
                     if (msg.contains("packages.middleware.pub.service.exitRepeat"))
                         break;
+                    if (msg.contains("packages.middleware.pub.service.continueRepeat")) {
+                        repeatTimes--;
+                        if (repeatTimes == 0)
+                            repeatOn = null;
+                        continue;
+                    }
                     if ("success".equals(repeatOn)) {
                         repeatOn = null;
                         SnippetException se = null;

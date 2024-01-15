@@ -9,6 +9,10 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.eka.middleware.server.MiddlewareServer;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
@@ -18,6 +22,7 @@ import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class Await implements FlowBasicInfo {
+	private static Logger LOGGER = LogManager.getLogger(Await.class);
 	private boolean disabled = false;
 //	private String inputArrayPath;
 //	private String outPutArrayPath;
@@ -120,11 +125,16 @@ public class Await implements FlowBasicInfo {
 						Map<String, Object> asyncOutputDoc=map;
 						final Map<String, Object> metaData=(Map<String, Object>) asyncOutputDoc.get("*metaData");
 						final JsonArray transformers=(JsonArray) asyncOutputDoc.get("*futureTransformers");
-						String status=(String)metaData.get("status");
 						String batchID=(String)metaData.get("batchId");
-						Long timeOut=(Long)metaData.get("*timeout_ms");
+						dp.updateQueuedTaskStatus(batchID, transformers, asyncOutputDoc, metaData);
+						String status=(String)metaData.get("status");
+						//metaData.put("*timeout_ms", timeout_ms);
+						Long timeOut=metaData.get("*timeout_ms") == null?null:metaData.get("*timeout_ms") instanceof Long ?(Long)metaData.get("*timeout_ms"):((Integer)metaData.get("*timeout_ms")).longValue();// (Long)metaData.get("*timeout_ms");
 						Long timedOut=0l;
-						Long startTime=(Long)metaData.get("*start_time_ms");
+						Long startTime=metaData.get("*start_time_ms") == null?null: metaData.get("*start_time_ms") instanceof Long?(Long)metaData.get("*start_time_ms"):((Integer)metaData.get("*start_time_ms")).longValue();
+						if(startTime==null)
+							startTime=System.currentTimeMillis();
+						
 						Boolean closed=(Boolean)metaData.get("*Closed");
 						if(timeOut==null)
 							metaData.put("*timeout_ms", timeout_ms);
@@ -207,6 +217,7 @@ public class Await implements FlowBasicInfo {
 								if("Failed".equals(status))
 									dp.log("Batch ID : "+batchID+" "+status);
 							} catch (Exception e) {
+								LOGGER.debug("Valie of time_out is "+metaData.get("*timeout_ms"));
 								try {
 									ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
 								} catch (Exception e2) {

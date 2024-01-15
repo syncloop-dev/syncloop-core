@@ -193,7 +193,8 @@ public class Client {
 		HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.noBody();
 
 		if (null != formData && !formData.isEmpty()) {
-			boolean containedBinary = formData.entrySet().stream().anyMatch(f -> f.getValue() instanceof byte[] || f.getValue() instanceof File);
+			boolean containedBinary = formData.entrySet().stream().anyMatch(f -> f.getValue() instanceof byte[]
+					|| f.getValue() instanceof InputStream || f.getValue() instanceof File);
 
 			if (!containedBinary) {
 				String form = formData.entrySet()
@@ -351,6 +352,15 @@ public class Client {
 					baos.write(("Content-Type: " + mimeType).getBytes(StandardCharsets.UTF_8));
 					baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 					baos.write((byte[]) entry.getValue());
+				} else if (entry.getValue() instanceof InputStream) {
+					String fileName = entry.getKey();
+					String mimeType = "application/octet-stream";
+
+					baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"; filename=\"" + fileName + "\"").getBytes(StandardCharsets.UTF_8));
+					baos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+					baos.write(("Content-Type: " + mimeType).getBytes(StandardCharsets.UTF_8));
+					baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+					baos.write(IOUtils.toByteArray((InputStream) entry.getValue()));
 				} else {
 					baos.write(("Content-Disposition: form-data; name=\"" + entry.getKey() +"\"").getBytes(StandardCharsets.UTF_8));
 					baos.write("\r\n\r\n".getBytes(StandardCharsets.UTF_8));

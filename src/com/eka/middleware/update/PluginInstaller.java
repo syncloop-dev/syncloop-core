@@ -14,7 +14,11 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Date;
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
 
@@ -30,23 +34,46 @@ public class PluginInstaller {
 
         marketPlace
                 .getPlugins().stream().forEach(plugin -> {
-                   try {
-                       Plugins installedPlugin = getInstalledPlugin(plugin.getUnique_id(), dataPipeline);
-                       plugin.setInstalled(null != installedPlugin);
-                       if (plugin.isInstalled()
-                               && plugin.getLatest_version_number() > installedPlugin.getLatest_version_number()) {
-                           plugin.setInstalled(true);
-                       }
-                   } catch (Exception e) {
+                    try {
+                        Plugins installedPlugin = getInstalledPlugin(plugin.getUnique_id(), dataPipeline);
+                        plugin.setInstalled(null != installedPlugin);
+                        plugin.setInstalled_on(installedPlugin.getInstalled_on());
+                        if (plugin.isInstalled()
+                                && plugin.getLatest_version_number() > installedPlugin.getLatest_version_number()) {
+                            plugin.setInstalled(true);
+                            plugin.setRequiredUpdate(true);
+                        }
+                    } catch (Exception e) {
                         e.printStackTrace();
-                   }
+                    }
                 });
 
         return marketPlace;
     }
 
-    public static void installPlugin(String pluginId, String version, DataPipeline dataPipeline) throws Exception {
+    public static void deletePlugin(String pluginId, DataPipeline dataPipeline) throws IOException {
 
+        PluginPackage pluginPackage = getInstalledPlugins(dataPipeline);
+
+        Optional<Plugins> pluginToRemove = pluginPackage.getPlugins()
+                .stream()
+                .filter(plugin -> plugin.getUnique_id().equals(pluginId))
+                .findAny();
+
+        if (pluginToRemove.isPresent()) {
+            pluginPackage.getPlugins().remove(pluginToRemove.get());
+            updatePackagePluginAfterDelete(pluginPackage, dataPipeline);
+        } else {
+            dataPipeline.put("message", "Plugin not found for deletion.");
+            dataPipeline.put("status", false);
+            throw new IOException("Plugin not found for deletion.");
+        }
+    }
+    private static void updatePackagePluginAfterDelete(PluginPackage pluginPackage, DataPipeline dataPipeline) throws IOException {
+        File file = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/plugin-package.json");
+        IOUtils.write(new Gson().toJson(pluginPackage), new FileOutputStream(file), StandardCharsets.UTF_8);
+    }
+    public static void installPlugin(String pluginId, String version, DataPipeline dataPipeline) throws Exception {
         MarketPlace marketPlace = getMarketPlace();
         Optional<Plugins> pluginObj = marketPlace.getPlugins().parallelStream().filter(f -> f.getUnique_id().equals(pluginId)).findAny();
 
@@ -67,7 +94,7 @@ public class PluginInstaller {
             return;
         }
 
-        String fileName = String.format("%sv%s.zip", plugin.getName_slug(), version);
+        String fileName = String.format("%s-%s.zip", plugin.getName_slug(), version);
         String filePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/import/" + fileName;
 
         URL url = new URL(Build.DISTRIBUTION_REPO + "plugins/" + fileName);
@@ -82,13 +109,19 @@ public class PluginInstaller {
         Boolean checkDigest = compareDigest(filePath, plugin.getDigest());
 
         if (checkDigest) {
-
             String packagePath = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
             String buildsDirPath = packagePath + "builds/import/";
             String location = buildsDirPath + fileName;
-            AutoUpdate.unzip(location, packagePath, dataPipeline);
 
-            // Import URL aliases
+            String packagePropertyPath = packagePath+ plugin.getInstalling_path() + File.separator +"dependency" + File.separator + "config" + File.separator + "package.properties";
+            File checkIfPackageFileExists = new File(packagePropertyPath);
+            if(checkIfPackageFileExists.exists()) {
+                HashMap<String, String> existingKeyValues = extractExistingPackageProperties(checkIfPackageFileExists);
+                AutoUpdate.unzip(location, packagePath, dataPipeline);
+                replaceKeyValuesInPackageProperties(packagePropertyPath, existingKeyValues);
+            }else
+                AutoUpdate.unzip(location, packagePath, dataPipeline);
+
             String urlAliasFilePath = packagePath + (("URLAlias_" + fileName + "#").replace(".zip#", ".properties"));
             boolean importSuccessful = AutoUpdate.importURLAliases(urlAliasFilePath, dataPipeline);
             AutoUpdate.createRestorePoint(fileName, dataPipeline);
@@ -100,6 +133,45 @@ public class PluginInstaller {
             dataPipeline.put("status", false);
         }
     }
+
+    private static HashMap<String, String> extractExistingPackageProperties(File packagePropertiesFile) throws IOException {
+        HashMap<String, String> keyValues = new HashMap<>();
+
+        Properties properties = new Properties();
+        try (FileInputStream input = new FileInputStream(packagePropertiesFile)) {
+            properties.load(input);
+
+            for (String key : properties.stringPropertyNames()) {
+                String value = properties.getProperty(key);
+
+                if (value != null && !value.trim().isEmpty()) {
+                    keyValues.put(key, value.trim());
+                }
+            }
+        }
+
+        return keyValues;
+    }
+
+    private static void replaceKeyValuesInPackageProperties(String packagePropertiesPath, Map<String, String> keyValues) throws IOException {
+        Properties properties = new Properties();
+
+        try (FileInputStream input = new FileInputStream(packagePropertiesPath)) {
+            properties.load(input);
+        }
+
+        for (Map.Entry<String, String> entry : keyValues.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            properties.setProperty(key, value);
+        }
+
+        try (FileOutputStream output = new FileOutputStream(packagePropertiesPath)) {
+            properties.store(output, null);
+        }
+    }
+
     private static MarketPlace getMarketPlace() throws IOException {
         String jsonUrl = "syncloop-marketplace.json";
 
@@ -122,24 +194,31 @@ public class PluginInstaller {
         PluginPackage pluginPackage = getInstalledPlugins(dataPipeline);
         File file = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/plugin-package.json");
 
-        Optional<Plugins> pluginObj = pluginPackage.getPlugins().parallelStream().filter(f -> f.getUnique_id().equals(plugins.getUnique_id())).findAny();
+        Optional<Plugins> pluginObj = pluginPackage.getPlugins()
+                .stream()
+                .filter(f -> f.getUnique_id().equals(plugins.getUnique_id()))
+                .findAny();
 
         if (pluginObj.isPresent()) {
             Plugins oldPlugin = pluginObj.get();
-            pluginPackage.getPlugins().remove(oldPlugin);
-            pluginPackage.getPlugins().add(plugins);
+            oldPlugin.setLatest_version(plugins.getLatest_version());
+            oldPlugin.setName(plugins.getName());
+            oldPlugin.setInstalled(true);
         } else {
-            pluginPackage.setPlugins(Lists.newArrayList(plugins));
+            plugins.setInstalled(true);
+            plugins.setInstalled_on(new Date().getTime());
+            pluginPackage.getPlugins().add(plugins);
         }
         IOUtils.write(new Gson().toJson(pluginPackage), new FileOutputStream(file), StandardCharsets.UTF_8);
     }
+
 
     private static PluginPackage getInstalledPlugins(DataPipeline dataPipeline) throws IOException {
         PluginPackage pluginPackage = new PluginPackage();
         File file = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/plugin-package.json");
 
-        if (!file.exists()) {
-            pluginPackage = new PluginPackage();
+        if (!file.exists() || file.length() == 0) {
+            //pluginPackage = new PluginPackage();
             pluginPackage.setPlugins(Lists.newArrayList());
         } else {
             pluginPackage = new Gson().fromJson(new FileReader(file), PluginPackage.class);

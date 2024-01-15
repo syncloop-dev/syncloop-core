@@ -42,7 +42,7 @@ public class TenantRepository {
     public static List<String> getAllTenants() {
         List<String> tenants = new ArrayList<>();
         try (Connection conn = SQL.getProfileConnection(false)) {
-            String sql = "SELECT name FROM tenant";
+            String sql = "SELECT name FROM tenant where deleted = 0";
             try (PreparedStatement statement = conn.prepareStatement(sql);
                  ResultSet resultSet = statement.executeQuery()) {
 

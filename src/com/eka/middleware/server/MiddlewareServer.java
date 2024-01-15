@@ -31,6 +31,7 @@ import org.xnio.Options;
 import com.eka.middleware.auth.AuthAccount;
 import com.eka.middleware.auth.Security;
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.distributed.offHeap.IgNode;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SystemException;
@@ -53,7 +54,7 @@ public class MiddlewareServer {
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
 
-	public static final String BUILD_NAME = "v1.5";
+	public static final String BUILD_NAME = "v1.6.1";
 	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
 
 	public static String allowRestrictedHeaders = System.getProperty("jdk.httpclient.allowRestrictedHeaders");
@@ -77,10 +78,17 @@ public class MiddlewareServer {
 			LOGGER.info("No Container Deployment");
 		}
 
+		try {
+			PropertyManager.initConfig(args);
+			IgNode.getIgnite();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 		ApplicationShutdownHook.arg = args;
 
 		try {
-			PropertyManager.initConfig(args);
+			//PropertyManager.initConfig(args);
 			UserProfileManager.migrationProfiles();
 			local_IP = PropertyManager.getLocal_IP();
 			Scheduler scheduler = ApplicationSchedulerFactory.initScheduler(null, "default");
@@ -131,6 +139,7 @@ public class MiddlewareServer {
 				} else {
 					LOGGER.info("Starting default tenant......................");
 					defaultTenant.logDebug(null, "Starting default tenant......................");
+					Security.setupTenantSecurity("default");
 					ServiceUtils.startTenantServices("default");
 				}
 
@@ -149,10 +158,10 @@ public class MiddlewareServer {
 						continue;
 					}
 					if (!"default".equalsIgnoreCase(tenant)) {
-						ApplicationSchedulerFactory.initScheduler(null, tenant);
 						LOGGER.info("Starting " + tenant + " tenant......................");
 						tent.logDebug(null, "Starting " + tenant + " tenant......................");
-						ServiceUtils.startTenantServices(tenant);
+						Security.setupTenantSecurity(tenant);
+						//ServiceUtils.startTenantServices(tenant);
 						Thread.sleep(2000);
 					}
 				}

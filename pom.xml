@@ -107,6 +107,21 @@
 					<target>17</target>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+						--add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+						--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED
+						--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+						--add-opens=jdk.compiler/com.sun.tools.javac=ALL-UNNAMED
+						--add-opens=java.base/java.lang=ALL-UNNAMED
+						--add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+						--add-opens=java.base/java.io=ALL-UNNAMED
+						--add-opens=java.base/java.util=ALL-UNNAMED</argLine>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 	<dependencies>
@@ -176,13 +191,6 @@
 			<artifactId>js-scriptengine</artifactId>
 			<version>21.1.0</version>
 		</dependency>
-
-		<dependency>
-			<groupId>org.quartz-scheduler</groupId>
-			<artifactId>quartz</artifactId>
-			<version>2.3.2</version> <!-- You can specify the version you need -->
-		</dependency>
-
 		<!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->
 		<dependency>
 			<groupId>org.xerial</groupId>
@@ -206,6 +214,7 @@
 			<artifactId>jsqlparser</artifactId>
 			<version>4.5</version>
 		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/com.cronutils/cron-utils -->
 		<dependency>
 			<groupId>com.cronutils</groupId>
@@ -305,20 +314,11 @@
 			<version>0.9.1</version>
 		</dependency>
 
-
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-layout-template-json</artifactId>
 			<version>2.18.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-undertow-adapter 
-			<dependency> <groupId>org.keycloak</groupId> <artifactId>keycloak-undertow-adapter</artifactId> 
-			<version>19.0.3</version> </dependency> https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api 
-			<dependency> <groupId>javax.servlet</groupId> <artifactId>javax.servlet-api</artifactId> 
-			<version>4.0.1</version> <scope>provided</scope> </dependency> https://mvnrepository.com/artifact/org.pytorch/pytorch_java_only 
-			<dependency> <groupId>org.pytorch</groupId> <artifactId>pytorch_java_only</artifactId> 
-			<version>1.12.2</version> <scope>provided</scope> </dependency> -->
-		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-dbcp2 -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-dbcp2</artifactId>
@@ -362,6 +362,16 @@
 			<version>20.2</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+			<version>2.3.2</version> <!-- You can specify the version you need -->
+		</dependency>
 
+		<dependency>
+			<groupId>org.apache.ignite</groupId>
+			<artifactId>ignite-core</artifactId>
+			<version>2.15.0</version>
+		</dependency>
 	</dependencies>
 </project>

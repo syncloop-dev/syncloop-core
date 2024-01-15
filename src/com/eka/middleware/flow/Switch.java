@@ -107,7 +107,7 @@ public class Switch implements FlowBasicInfo {
 				String xVal=null;
 				if(caseLabel.startsWith("#{")) {
 					dp.log("The CASE with the xPath("+caseLabel+") is risky. Please ensure that the xPath always exists and it must have a not null value. Otherwise an exception will be thrown.", Level.WARN);
-					String exps[]=FlowUtils.extractExpressions(caseLabel);
+					String exps[]=FlowUtils.extractExpressions(caseLabel, dp);
 					if(exps.length>0) {
 						String pointer=exps[0];
 						Object objLablVal=dp.getValueByPointer(pointer);// FlowUtils.placeXPathValue(switchXpath, dp);

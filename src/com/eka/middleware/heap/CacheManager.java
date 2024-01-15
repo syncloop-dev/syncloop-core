@@ -1,22 +1,44 @@
 package com.eka.middleware.heap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.ignite.Ignite;
+
+import com.eka.middleware.distributed.offHeap.IgMap;
+import com.eka.middleware.distributed.offHeap.IgNode;
 import com.eka.middleware.template.Tenant;
 
 public class CacheManager {
-private static final Map<String, Map<String, Object>> tenantCache= new ConcurrentHashMap<String,  Map<String, Object>>();
 	
-	public static Map<String, Object> getCacheAsMap(Tenant tenant) {
-		Map<String, Object> tenantMap=tenantCache.get(tenant.id);
-		if(tenantMap==null)
-			tenantMap=new ConcurrentHashMap<String,  Object>();
-		tenantCache.put(tenant.id, tenantMap);
-		return tenantMap;
+private static final Map<String, Map<String, Object>> tenantCache= new ConcurrentHashMap<String,  Map<String, Object>>();
+
+private static final Ignite igNode= IgNode.getIgnite();
+
+private static final Map<String, Map> cacheMap=new ConcurrentHashMap<>(); 
+
+public static List<String> cacheList(Tenant tenant){
+	List<String> list = new ArrayList<>();
+	cacheMap.keySet().forEach(key->{
+		list.add(key.replace(tenant.getName()+"-", ""));
+	});
+	return list;
+}
+
+public static Map<String, Object> getCacheAsMap(Tenant tenant) {
+	Map<String, Object> tenantMap=tenantCache.get(tenant.getName());
+	if(tenantMap==null) {
+		if(igNode!=null)
+			tenantMap=new IgMap<String,  Object>(igNode,"MyTenantCache-"+tenant.getName());
+		else
+			tenantMap=new ConcurrentHashMap<String, Object>();
+		tenantCache.put(tenant.getName(), tenantMap);
 	}
+	return tenantMap;
+}
 
 	public static void addEmbeddedService(String key, String json, Tenant tenant) {
 
@@ -57,5 +79,28 @@ private static final Map<String, Map<String, Object>> tenantCache= new Concurren
 		}
 
 		return services.get(key);
+	}
+	
+	public static Map getOrCreateNewCache(Tenant tenant,String name) {
+		Map<String, Object> tenantMap=tenantCache.get(tenant.getName());
+		name=tenant.getName()+"-"+name;
+		Map newCache=cacheMap.get(name);
+		if(newCache==null) {
+			if(IgNode.getNodeId()!=null)
+				newCache=new IgMap<>(igNode, name);
+			else
+				newCache=new ConcurrentHashMap<String, Object>();
+		}
+		return newCache;
+	}
+	
+	public static void deleteCache(Tenant tenant,String name) {
+		name=tenant.getName()+"-"+name;
+		Map newCache=cacheMap.get(name);
+		if(newCache!=null) {
+			if(IgNode.getNodeId()!=null)
+				((IgMap)newCache).close();
+			cacheMap.remove(name);
+		}
 	}
 }

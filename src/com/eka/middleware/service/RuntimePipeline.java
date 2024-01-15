@@ -21,6 +21,7 @@ import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
 import com.eka.middleware.auth.UserProfileManager;
+import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
@@ -209,6 +210,8 @@ public class RuntimePipeline {
 		}catch (Exception e) {
 			ServiceUtils.printException(getTenant(),"Exception while closing snapshot file.", e);
 		}
+		Map cache=CacheManager.getCacheAsMap(tenant);
+		cache.remove(sessionId);
 		RuntimePipeline rtp = pipelines.get(sessionId);
 		ScriptEngineContextManager.removeContext(dataPipeLine.getUniqueThreadName());
 		ScriptEngineContextManager.removeContext(rtp.dataPipeLine.getUniqueThreadName());
@@ -216,8 +219,18 @@ public class RuntimePipeline {
 		rtp.setDestroyed(true);
 		pipelines.get(sessionId).payload.clear();
 		pipelines.remove(sessionId);
-		appLogger.finish();
-		executor.shutdown();
+		try {
+			executor.shutdown();
+			appLogger.finish();
+		} catch (Exception e) {
+			ServiceUtils.printException(getTenant(),"Exception while finishing appLogger.", e);
+		}
+		
+	}
+	
+	@Override
+	protected void finalize() throws Throwable {
+		destroy();
 	}
 
 	public static void destroy(String sessionId) {
