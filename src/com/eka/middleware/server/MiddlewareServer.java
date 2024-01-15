@@ -160,6 +160,7 @@ public class MiddlewareServer {
 					if (!"default".equalsIgnoreCase(tenant)) {
 						LOGGER.info("Starting " + tenant + " tenant......................");
 						tent.logDebug(null, "Starting " + tenant + " tenant......................");
+						ApplicationSchedulerFactory.initScheduler(null, tenant);
 						Security.setupTenantSecurity(tenant);
 						//ServiceUtils.startTenantServices(tenant);
 						Thread.sleep(2000);
