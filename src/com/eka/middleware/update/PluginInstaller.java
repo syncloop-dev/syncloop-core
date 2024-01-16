@@ -6,6 +6,7 @@ import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.google.common.collect.Lists;
 import com.nimbusds.jose.shaded.gson.Gson;
+import com.nimbusds.jose.shaded.gson.JsonSyntaxException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -204,25 +205,31 @@ public class PluginInstaller {
             oldPlugin.setLatest_version(plugins.getLatest_version());
             oldPlugin.setName(plugins.getName());
             oldPlugin.setInstalled(true);
+            oldPlugin.setDescription(null);
         } else {
             plugins.setInstalled(true);
             plugins.setInstalled_on(new Date().getTime());
+            plugins.setDescription(null);
             pluginPackage.getPlugins().add(plugins);
         }
         IOUtils.write(new Gson().toJson(pluginPackage), new FileOutputStream(file), StandardCharsets.UTF_8);
     }
 
-
     private static PluginPackage getInstalledPlugins(DataPipeline dataPipeline) throws IOException {
         PluginPackage pluginPackage = new PluginPackage();
         File file = new File(PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/plugin-package.json");
 
-        if (!file.exists() || file.length() == 0) {
-            //pluginPackage = new PluginPackage();
+        try {
+            if (!file.exists() || file.length() == 0) {
+                pluginPackage.setPlugins(Lists.newArrayList());
+            } else {
+                pluginPackage = new Gson().fromJson(new FileReader(file), PluginPackage.class);
+            }
+        } catch (JsonSyntaxException e) {
+            file.delete();
             pluginPackage.setPlugins(Lists.newArrayList());
-        } else {
-            pluginPackage = new Gson().fromJson(new FileReader(file), PluginPackage.class);
         }
+
         return pluginPackage;
     }
 
