@@ -629,7 +629,7 @@ public class FlowUtils {
         return true;
     }
 
-    public static void validateDocuments(DataPipeline dp, JsonValue jv) throws SnippetException {
+    public static void validateDocuments(DataPipeline dp, JsonValue jv, Boolean validationRequired) throws SnippetException {
         JsonArray jva = jv.asJsonArray();
         if (jva.isEmpty())
             return;
@@ -650,7 +650,7 @@ public class FlowUtils {
             // outPutData=
             for (JsonValue jsonValue : jva) {
                 //getKeyTypePair(jsonValue, null, null, mapPointers, mapPointerData);
-                validationParser(jsonValue, null, null, dp);
+                validationParser(jsonValue, null, null, dp, validationRequired);
             }
         }/*
 		dp.log("Document pointers:-");// , Level.TRACE);
@@ -680,10 +680,15 @@ public class FlowUtils {
         }
     }
 
-    private static void validationParser(JsonValue jsonValue, String key, String typePath, DataPipeline dp)
+    private static void validationParser(JsonValue jsonValue, String key, String typePath, DataPipeline dp, Boolean validationRequired)
             throws SnippetException {
 
         String type = jsonValue.asJsonObject().getString("type");
+
+        JsonArray assignList = jsonValue.asJsonObject().get("data").asJsonObject().getJsonArray("assignList");
+        if (null != assignList) {
+            setValue(assignList, dp);
+        }
 
         if (key == null)
             key = jsonValue.asJsonObject().getString("text");
@@ -708,17 +713,21 @@ public class FlowUtils {
         if (list != null && list.size() > 0) {
             for (int i = 0; i < list.size(); i++) {
                 String k = key + "/" + i;
-                dataValidator(data, jv, k, typePath, dp);
+                if (validationRequired) {
+                    dataValidator(data, jv, k, typePath, dp, true);
+                }
             }
-        } else
-            dataValidator(data, jv, key, typePath, dp);
+        } else {
+            if (validationRequired)
+                dataValidator(data, jv, key, typePath, dp, true);
+        }
     }
 
-    private static void dataValidator(JsonObject data, JsonValue jv, String key, String typePath, DataPipeline dp) throws SnippetException {
+    private static void dataValidator(JsonObject data, JsonValue jv, String key, String typePath, DataPipeline dp, Boolean validationRequired) throws SnippetException {
         if (jv != null && !jv.asJsonArray().isEmpty()) {
             JsonArray jva = jv.asJsonArray();
             for (JsonValue jsonVal : jva) {
-                validationParser(jsonVal, key, typePath, dp);
+                validationParser(jsonVal, key, typePath, dp, validationRequired);
             }
         } else {
             functionalValidation(dp, data, key, typePath);

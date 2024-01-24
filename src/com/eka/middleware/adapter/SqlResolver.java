@@ -26,7 +26,7 @@ public class SqlResolver {
         String sqlCode = mainSqlJsonObject.getString("sql");
         Boolean validationRequired = mainSqlJsonObject.getBoolean("enableServiceDocumentValidation", false);
         if (validationRequired)
-            FlowUtils.validateDocuments(dp, sqlInputs);
+            FlowUtils.validateDocuments(dp, sqlInputs, validationRequired);
 
         byte[] decodedBytes = Base64.getDecoder().decode(sqlCode);
         sqlCode = new String(decodedBytes);
@@ -126,7 +126,7 @@ public class SqlResolver {
         if (outPutData != null)
             dp.putAll(outPutData);
         if (validationRequired)
-            FlowUtils.validateDocuments(dp, sqlOutput);
+            FlowUtils.validateDocuments(dp, sqlOutput, validationRequired);
     }
 
 }
