@@ -733,7 +733,13 @@ public class FlowUtils {
         }
     }
 
-    private static void processChildren(JsonArray childrenArray,Object val ,DataPipeline dp) {
+    /**
+     * @param childrenArray
+     * @param val
+     * @param dp
+     * @throws SnippetException
+     */
+    private static void processChildren(JsonArray childrenArray,Object val ,DataPipeline dp) throws SnippetException {
         for (JsonValue child : childrenArray) {
             if (child instanceof JsonObject) {
                 JsonObject childObject = (JsonObject) child;
@@ -741,20 +747,14 @@ public class FlowUtils {
                 JsonObject dataObject = childObject.getJsonObject("data");
                 if (dataObject != null) {
                     JsonArray assignList = dataObject.getJsonArray("assignList");
-                    if (assignList != null) {
-                        try {
-                            if (null ==val) {
-                                setValue(assignList, dp);
-                            }
-                        } catch (SnippetException e) {
-                            e.printStackTrace();
-                        }
+                    if (null != assignList && null==val) {
+                        setValue(assignList, dp);
                     }
                 }
 
                 JsonArray nestedChildren = childObject.getJsonArray("children");
-                if (nestedChildren != null && !nestedChildren.isEmpty()) {
-                    processChildren(nestedChildren,val ,dp);
+                if (nestedChildren != null) {
+                    processChildren(nestedChildren, val, dp);
                 }
             }
         }
