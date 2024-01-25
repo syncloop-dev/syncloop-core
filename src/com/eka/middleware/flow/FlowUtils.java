@@ -16,6 +16,8 @@ import javax.json.JsonValue;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.nimbusds.jose.shaded.gson.JsonElement;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -683,10 +685,18 @@ public class FlowUtils {
     private static void validationParser(JsonValue jsonValue, String key, String typePath, DataPipeline dp, Boolean validationRequired)
             throws SnippetException {
 
+        JsonArray assignList = jsonValue.asJsonObject().get("data").asJsonObject().getJsonArray("assignList");
         String type = jsonValue.asJsonObject().getString("type");
 
-        JsonArray assignList = jsonValue.asJsonObject().get("data").asJsonObject().getJsonArray("assignList");
-        if (null != assignList) {
+        String dpKey=jsonValue.asJsonObject().getString("text");
+        Object val=dp.get(dpKey);
+
+        if (type.equals("document")) {
+            JsonArray childrenArray = jsonValue.asJsonObject().getJsonArray("children");
+            processChildren(childrenArray,val,dp);
+        }
+
+        if (null != assignList && null==val) {
             setValue(assignList, dp);
         }
 
@@ -720,6 +730,33 @@ public class FlowUtils {
         } else {
             if (validationRequired)
                 dataValidator(data, jv, key, typePath, dp, true);
+        }
+    }
+
+    private static void processChildren(JsonArray childrenArray,Object val ,DataPipeline dp) {
+        for (JsonValue child : childrenArray) {
+            if (child instanceof JsonObject) {
+                JsonObject childObject = (JsonObject) child;
+
+                JsonObject dataObject = childObject.getJsonObject("data");
+                if (dataObject != null) {
+                    JsonArray assignList = dataObject.getJsonArray("assignList");
+                    if (assignList != null) {
+                        try {
+                            if (null ==val) {
+                                setValue(assignList, dp);
+                            }
+                        } catch (SnippetException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+                JsonArray nestedChildren = childObject.getJsonArray("children");
+                if (nestedChildren != null && !nestedChildren.isEmpty()) {
+                    processChildren(nestedChildren,val ,dp);
+                }
+            }
         }
     }
 
