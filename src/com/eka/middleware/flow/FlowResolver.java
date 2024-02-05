@@ -23,8 +23,8 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 	JsonValue JsonInputValue=mainflowJsonObject.get("latest").asJsonObject().get("input");
 	JsonValue JsonOutputValue=mainflowJsonObject.get("latest").asJsonObject().get("output");
 	Boolean validationRequired=mainflowJsonObject.getBoolean("enableServiceDocumentValidation");
-	if(validationRequired)
-		FlowUtils.validateDocuments(dp, JsonInputValue);
+	//if(validationRequired)
+		FlowUtils.validateDocuments(dp, JsonInputValue, validationRequired);
 	JsonArray flows= flowJsonValue.asJsonArray();
 	for (JsonValue jsonValue : flows) {
 		final String type=jsonValue.asJsonObject().getString("type");
@@ -64,22 +64,7 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 			case "map":
 			case "transformer":
 				Transformer transformer=new Transformer(jsonValue.asJsonObject());
-				JsonArray flowOutputArray=JsonOutputValue.asJsonArray();
-				if(flowOutputArray.isEmpty())
-					flowOutputArray=null;
-				Map<String, Object> outPutData=null;
-
-				if(flowOutputArray!=null) {
-					outPutData=new HashMap<>();
-					for (JsonValue jsonValue1 : flowOutputArray) {
-						String key=jsonValue1.asJsonObject().getString("text");
-						Object val=dp.get(key);
-						if(val!=null)
-							outPutData.put(key, dp.get(key));
-						else
-							transformer.process(dp);
-					}
-				}
+				transformer.process(dp);
 			break;
 			case "await":
 				Await await=new Await(jsonValue.asJsonObject());
@@ -115,6 +100,6 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 	if(outPutData!=null)
 		dp.putAll(outPutData);
 	if(validationRequired)
-		FlowUtils.validateDocuments(dp, JsonOutputValue);
+		FlowUtils.validateDocuments(dp, JsonOutputValue, validationRequired);
 }
 }
