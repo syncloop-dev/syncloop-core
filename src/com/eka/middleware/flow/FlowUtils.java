@@ -685,7 +685,10 @@ public class FlowUtils {
     private static void validationParser(JsonValue jsonValue, String key, String typePath, DataPipeline dp, Boolean validationRequired)
             throws SnippetException {
 
-        JsonArray assignList = jsonValue.asJsonObject().get("data").asJsonObject().getJsonArray("assignList");
+        JsonArray assignList = null;
+        if (jsonValue.asJsonObject().get("data") != null){
+            assignList = jsonValue.asJsonObject().get("data").asJsonObject().getJsonArray("assignList");
+        }
         String type = jsonValue.asJsonObject().getString("type");
 
         String dpKey=jsonValue.asJsonObject().getString("text");
