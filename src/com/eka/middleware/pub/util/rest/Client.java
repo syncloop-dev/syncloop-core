@@ -206,11 +206,9 @@ public class Client {
 
 			if (!containedBinary) {
 
-
-
 				String form = formData.entrySet().parallelStream()
 						.filter(entry -> {
-							if (sendBlankParams.get() && null == entry.getValue()) {
+							if (sendBlankParams.get() && StringUtils.isBlank(String.valueOf(entry.getValue()))) {
 								return false;
 							}
 							return true;
