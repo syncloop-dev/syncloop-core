@@ -176,7 +176,7 @@ public class Client {
 											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, Map<String, Object> settings, boolean sslValidation) throws Exception {
 		HttpRequest.Builder builder = HttpRequest.newBuilder();
 
-		AtomicBoolean sendBlankParams = new AtomicBoolean(false);
+		AtomicBoolean sendBlankParams = new AtomicBoolean(true);
 		if (null != settings.get("sendBlankParams")) {
 			sendBlankParams.set((Boolean) settings.get("sendBlankParams"));
 		}
@@ -212,15 +212,11 @@ public class Client {
 
 			if (!containedBinary) {
 
-				AtomicBoolean sendBlankFormData = new AtomicBoolean(false);
 
-				if (settings.containsKey("sendBlankParams")) {
-					sendBlankFormData.set((Boolean) settings.get("sendBlankParams"));
-				}
 
 				String form = formData.entrySet().parallelStream()
 						.filter(entry -> {
-							if (sendBlankFormData.get() && StringUtils.isBlank(String.valueOf(entry.getValue()))) {
+							if (sendBlankParams.get() && StringUtils.isBlank(String.valueOf(entry.getValue()))) {
 								return false;
 							}
 							return true;
@@ -257,14 +253,9 @@ public class Client {
 		builder.method(method, bodyPublisher);
 
 
-		AtomicBoolean sendBlankHeader = new AtomicBoolean(false);
-		if (null != settings.get("sendBlankParams")) {
-			sendBlankHeader.set((Boolean) settings.get("sendBlankParams"));
-		}
-
 		reqHeaders.entrySet().stream()
 				.filter(f -> {
-					if (sendBlankHeader.get() && StringUtils.isBlank(f.getValue())) {
+					if (sendBlankParams.get() && StringUtils.isBlank(f.getValue())) {
 						return false;
 					}
 					return true;
