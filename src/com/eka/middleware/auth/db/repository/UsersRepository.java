@@ -88,7 +88,7 @@ public class UsersRepository {
         Map<String, Object> userMap = new HashMap<>();
 
         try (Connection conn = SQL.getProfileConnection(false)) {
-            String userSql = "SELECT * FROM users WHERE user_id = ?";
+            String userSql = "SELECT * FROM users WHERE user_id = ? and deleted=0";
             try (PreparedStatement userStatement = conn.prepareStatement(userSql)) {
                 userStatement.setString(1, userId);
                 ResultSet userResultSet = userStatement.executeQuery();
