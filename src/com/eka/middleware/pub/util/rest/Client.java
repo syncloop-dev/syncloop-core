@@ -182,13 +182,7 @@ public class Client {
 		}
 
 		String queries = StringUtils.join(queryParameters.entrySet().parallelStream()
-
-				.filter(f -> {
-					if (sendBlankParams.get() && StringUtils.isBlank(f.getValue())) {
-						return false;
-					}
-					return true;
-				}).map(m -> {
+				.filter(f -> !(sendBlankParams.get() && StringUtils.isBlank(f.getValue()))).map(m -> {
 
 			try {
 				return String.format("%s=%s", m.getKey(), URLEncoder.encode(m.getValue(), StandardCharsets.UTF_8.toString()));
@@ -254,12 +248,7 @@ public class Client {
 
 
 		reqHeaders.entrySet().stream()
-				.filter(f -> {
-					if (sendBlankParams.get() && StringUtils.isBlank(f.getValue())) {
-						return false;
-					}
-					return true;
-				})
+				.filter(f -> !(sendBlankParams.get() && StringUtils.isBlank(f.getValue())))
 				.forEach(map -> {
 					builder.header(map.getKey(), map.getValue());
 				});
