@@ -210,7 +210,7 @@ public class Client {
 
 				String form = formData.entrySet().parallelStream()
 						.filter(entry -> {
-							if (sendBlankParams.get() && StringUtils.isBlank(String.valueOf(entry.getValue()))) {
+							if (sendBlankParams.get() && null == entry.getValue()) {
 								return false;
 							}
 							return true;
