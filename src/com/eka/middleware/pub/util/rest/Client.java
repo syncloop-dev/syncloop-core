@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class Client {
@@ -175,7 +176,20 @@ public class Client {
 											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, Map<String, Object> settings, boolean sslValidation) throws Exception {
 		HttpRequest.Builder builder = HttpRequest.newBuilder();
 
-		String queries = StringUtils.join(queryParameters.entrySet().parallelStream().map(m -> {
+		AtomicBoolean sendBlankParams = new AtomicBoolean(false);
+		if (null != settings.get("sendBlankParams")) {
+			sendBlankParams.set((Boolean) settings.get("sendBlankParams"));
+		}
+
+		String queries = StringUtils.join(queryParameters.entrySet().parallelStream()
+
+				.filter(f -> {
+					if (sendBlankParams.get() && StringUtils.isBlank(f.getValue())) {
+						return false;
+					}
+					return true;
+				}).map(m -> {
+
 			try {
 				return String.format("%s=%s", m.getKey(), URLEncoder.encode(m.getValue(), StandardCharsets.UTF_8.toString()));
 			} catch (Exception e) {
@@ -197,8 +211,20 @@ public class Client {
 					|| f.getValue() instanceof InputStream || f.getValue() instanceof File);
 
 			if (!containedBinary) {
-				String form = formData.entrySet()
-						.stream()
+
+				AtomicBoolean sendBlankFormData = new AtomicBoolean(false);
+
+				if (settings.containsKey("sendBlankParams")) {
+					sendBlankFormData.set((Boolean) settings.get("sendBlankParams"));
+				}
+
+				String form = formData.entrySet().parallelStream()
+						.filter(entry -> {
+							if (sendBlankFormData.get() && StringUtils.isBlank(String.valueOf(entry.getValue()))) {
+								return false;
+							}
+							return true;
+						})
 						.flatMap(e -> {
 
 							List<String> list = new ArrayList<>();
@@ -215,6 +241,8 @@ public class Client {
 							return list.stream();
 						})
 						.collect(Collectors.joining("&"));
+
+
 				reqHeaders.put("Content-Type", "application/x-www-form-urlencoded");
 				bodyPublisher = HttpRequest.BodyPublishers.ofString(form);
 			} else {
@@ -226,12 +254,24 @@ public class Client {
 			bodyPublisher = HttpRequest.BodyPublishers.ofByteArray(IOUtils.toByteArray(inputStream));
 			//bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(() -> inputStream);
 		}
-
 		builder.method(method, bodyPublisher);
 
-		reqHeaders.entrySet().stream().forEach(map -> {
-			builder.header(map.getKey(), map.getValue());
-		});
+
+		AtomicBoolean sendBlankHeader = new AtomicBoolean(false);
+		if (null != settings.get("sendBlankParams")) {
+			sendBlankHeader.set((Boolean) settings.get("sendBlankParams"));
+		}
+
+		reqHeaders.entrySet().stream()
+				.filter(f -> {
+					if (sendBlankHeader.get() && StringUtils.isBlank(f.getValue())) {
+						return false;
+					}
+					return true;
+				})
+				.forEach(map -> {
+					builder.header(map.getKey(), map.getValue());
+				});
 
 		Long timeout = 30l;
 		if (null != settings.get("requestTimeout")) {
