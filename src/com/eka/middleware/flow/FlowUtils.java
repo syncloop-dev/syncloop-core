@@ -696,7 +696,7 @@ public class FlowUtils {
 
         if (type.equals("document")) {
             JsonArray childrenArray = jsonValue.asJsonObject().getJsonArray("children");
-            processChildren(childrenArray,val,dp);
+            processChildren(childrenArray,dpKey,dp);
         }
 
         if (null != assignList && null==val) {
@@ -738,31 +738,33 @@ public class FlowUtils {
 
     /**
      * @param childrenArray
-     * @param val
      * @param dp
      * @throws SnippetException
      */
-    private static void processChildren(JsonArray childrenArray,Object val ,DataPipeline dp) throws SnippetException {
-        for (JsonValue child : childrenArray) {
-            if (child instanceof JsonObject) {
-                JsonObject childObject = (JsonObject) child;
+    private static void processChildren(JsonArray childrenArray, String parentKey ,DataPipeline dp) throws SnippetException {
+        for (JsonValue jsonValue : childrenArray) {
+            if (jsonValue instanceof JsonObject) {
 
-                JsonObject dataObject = childObject.getJsonObject("data");
-                if (dataObject != null) {
-                    JsonArray assignList = dataObject.getJsonArray("assignList");
-                    if (null != assignList && null==val) {
-                        setValue(assignList, dp);
-                    }
+                JsonArray assignList = null;
+                if (jsonValue.asJsonObject().get("data") != null){
+                    assignList = jsonValue.asJsonObject().get("data").asJsonObject().getJsonArray("assignList");
+                }
+                String type = jsonValue.asJsonObject().getString("type");
+
+                String dpKey=parentKey + "/" + jsonValue.asJsonObject().getString("text");
+                Object val=dp.getValueByPointer(dpKey);
+
+                if (type.equals("document")) {
+                    processChildren(jsonValue.asJsonObject().getJsonArray("children"), dpKey, dp);
                 }
 
-                JsonArray nestedChildren = childObject.getJsonArray("children");
-                if (nestedChildren != null) {
-                    processChildren(nestedChildren, val, dp);
+                if (null != assignList && null==val) {
+                    setValue(assignList, dp);
                 }
+
             }
         }
     }
-
     private static void dataValidator(JsonObject data, JsonValue jv, String key, String typePath, DataPipeline dp, Boolean validationRequired) throws SnippetException {
         if (jv != null && !jv.asJsonArray().isEmpty()) {
             JsonArray jva = jv.asJsonArray();
