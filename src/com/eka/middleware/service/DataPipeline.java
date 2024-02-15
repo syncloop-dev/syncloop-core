@@ -454,7 +454,13 @@ public class DataPipeline {
 			int status = exch.getStatusCode();
 			if (map.get("*" + status) != null)
 				return (Map<String, Object>) map.get("*" + status);
+
+			int statusCodeType = status/100;
+
+			if (map.get("*" + statusCodeType + "xx") != null)
+				return (Map<String, Object>) map.get("*" + statusCodeType + "xx");
 		}
+
 		return map;
 	}
 

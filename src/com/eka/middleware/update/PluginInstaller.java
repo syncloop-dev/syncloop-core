@@ -38,6 +38,9 @@ public class PluginInstaller {
                     try {
                         Plugins installedPlugin = getInstalledPlugin(plugin.getUnique_id(), dataPipeline);
                         plugin.setInstalled(null != installedPlugin);
+                        if (null == installedPlugin) {
+                            installedPlugin = new Plugins();
+                        }
                         plugin.setInstalled_on(installedPlugin.getInstalled_on());
                         if (plugin.isInstalled()
                                 && plugin.getLatest_version_number() > installedPlugin.getLatest_version_number()) {

@@ -187,9 +187,6 @@ public class AutoUpdate {
                 jarUpdated = true;
             }
 
-            if (jarUpdated) {
-                ApplicationShutdownHook.restartServer(dataPipeline);
-            }
 
             // Create restore point
             createRestorePoint(fileName, dataPipeline);
@@ -199,6 +196,11 @@ public class AutoUpdate {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
+            if (jarUpdated) {
+                ApplicationShutdownHook.restartServer(dataPipeline);
+            }
+
             dataPipeline.put("status", true);
             dataPipeline.put("updatedCoreJar", updatedCoreJar);
         } else{
