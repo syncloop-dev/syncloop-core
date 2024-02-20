@@ -182,8 +182,8 @@ public class AutoUpdate {
             boolean jarUpdated = false;
 
             if (jsonValue != null && jsonValue.equals("true") && dataPipeline.rp.getTenant().getName().equals("default")) {
-                String coreDirPath = packagePath + "builds/core";
-                updatedCoreJar = moveFolder(coreDirPath, "/lib");
+                String coreDirPath = packagePath + "core";
+                updatedCoreJar = moveFolder(coreDirPath, "/movables");
                 jarUpdated = true;
             }
 
@@ -383,6 +383,11 @@ public class AutoUpdate {
     public static boolean moveFolder(String sourceDir, String destDir) throws IOException {
         Path sourcePath = Paths.get(sourceDir);
         Path destPath = Paths.get(destDir);
+
+        File movables = new File(destDir);
+        if (!movables.exists()) {
+            movables.mkdir();
+        }
 
         if (Files.exists(sourcePath)) {
             Files.move(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
