@@ -46,10 +46,10 @@ public class EkaScheduler implements Job {
 
     private void executeScheduledJob(String tenantName,String cronExpression,String serviceFqn,String identificationName,String job_name) throws SnippetException {
 
-        final String uuidThread = ServiceUtils.generateUUID("Job Scheduler thread - packages.scheduler.cronJob.services.getSchedulerJobData.java" + System.nanoTime());
-        final String uuid = ServiceUtils.generateUUID("Job Schedule - packages.scheduler.cronJob.services.getSchedulerJobData.java.main" + System.nanoTime());
+        final String uuidThread = ServiceUtils.generateUUID("Job Scheduler thread - packages.ekaScheduler.cronJob.services.getSchedulerJobData.java" + System.nanoTime());
+        final String uuid = ServiceUtils.generateUUID("Job Schedule - packages.ekaScheduler.cronJob.services.getSchedulerJobData.java.main" + System.nanoTime());
 
-        final RuntimePipeline rpThread = RuntimePipeline.create(Tenant.getTenant(tenantName),uuidThread, null, null, "packages.scheduler.cronJob.services.java.getSchedulerJobData.main", "");
+        final RuntimePipeline rpThread = RuntimePipeline.create(Tenant.getTenant(tenantName),uuidThread, null, null, "packages.ekaScheduler.cronJob.services.java.getSchedulerJobData.main", "");
         final DataPipeline dp=rpThread.dataPipeLine;
         Map<String, String> jobData =new HashMap<>();
         final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss");
@@ -73,7 +73,7 @@ public class EkaScheduler implements Job {
         cache.put("scheduler:lastJobTime", startedAt.toString());
         cache.put("scheduler:lastJobFQN", serviceFqn);
         dp.log("Calling startJob for " + serviceFqn + " at time: " + startedAt);
-        ServiceUtils.execute("packages.scheduler.cronJob.handler.startJob.main", dp);
+        ServiceUtils.execute("packages.ekaScheduler.cronJob.handler.startJob.main", dp);
         ZonedDateTime endedAt = ZonedDateTime.now();
         dp.log(serviceFqn + " ended at time: " + dtf.format(endedAt));
         dp.log(serviceFqn + " took : " + (endedAt.toInstant().toEpochMilli() - startedAt.toInstant().toEpochMilli()) + "ms to finish the job.");
