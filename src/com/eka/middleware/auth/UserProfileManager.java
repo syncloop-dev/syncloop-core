@@ -89,6 +89,9 @@ public class UserProfileManager implements IdentityManager {
         String tenantName = dataPipeline.rp.getTenant().getName();
         int tenantId = getTenantIdByName(tenantName);
         if (tenantId != -1) {
+            if (containsSpecialCharacters(groupName)) {
+                throw new Exception("Group name can not contains special characters: " + groupName);
+            }
             Timestamp createdDate = new Timestamp(System.currentTimeMillis());
             // Check if a group with the same name exists and is deleted
             Groups existingGroup = GroupsRepository.getGroupByNameAndTenant(groupName, tenantId);
@@ -106,6 +109,11 @@ public class UserProfileManager implements IdentityManager {
         }else {
             throw new Exception("Tenant not found: " + tenantName);
         }
+    }
+
+    private static boolean containsSpecialCharacters(String input) {
+        String regex = "[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]+";
+        return input.matches(".*" + regex + ".*");
     }
 
     public static void removeGroup(String name) throws Exception {
