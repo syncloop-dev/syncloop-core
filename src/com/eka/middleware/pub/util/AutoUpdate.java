@@ -8,6 +8,7 @@ import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -385,9 +386,9 @@ public class AutoUpdate {
         Path destPath = Paths.get(destDir);
 
         File movables = new File(destDir);
-        if (!movables.exists()) {
-            movables.mkdir();
-        }
+        FileUtils.deleteQuietly(movables);
+        movables.mkdir();
+
 
         if (Files.exists(sourcePath)) {
             Files.move(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
