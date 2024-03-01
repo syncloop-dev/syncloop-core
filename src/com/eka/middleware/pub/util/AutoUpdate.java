@@ -386,8 +386,9 @@ public class AutoUpdate {
         Path destPath = Paths.get(destDir);
 
         File movables = new File(destDir);
-        FileUtils.deleteQuietly(movables);
-        movables.mkdir();
+        if (FileUtils.deleteQuietly(movables)) {
+            movables.mkdir();
+        }
 
 
         if (Files.exists(sourcePath)) {
