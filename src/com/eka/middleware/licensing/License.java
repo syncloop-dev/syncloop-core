@@ -41,10 +41,14 @@ public class License {
     public static LicenseFile parseLicenseFile(String content) throws IOException, ClassNotFoundException {
         byte[] obj = Base64.getDecoder().decode(content);
 
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(obj);
-        ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
-        LicenseFile licenseFile = (LicenseFile) inputStream.readObject();
-        return licenseFile;
+        try {
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(obj);
+            ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
+            LicenseFile licenseFile = (LicenseFile) inputStream.readObject();
+            return licenseFile;
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid License Key. Please add a valid key.");
+        }
     }
 
     public static LicenseFile getLicenseFile(DataPipeline dataPipeline) {

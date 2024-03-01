@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.syncloop.middleware</groupId>
 	<artifactId>core</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.6.4</version>
 	<name>MiddlewareServer</name>
 	<properties>
 		<maven.compiler.source>17</maven.compiler.source>
