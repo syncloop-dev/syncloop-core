@@ -68,22 +68,18 @@ public class Binder {
         Map<String, Object> response = new HashMap<>();
         List<Map<String, Object>> children = new ArrayList<>();
 
-        try {
-            String packageDir = PropertyManager.getPackagePath(Tenant.getTempTenant("default"));
-            File file = new File(packageDir);
-            File fileList[] = file.listFiles();
-            for (File fyle : fileList) {
-                Map<String, Object> childMap = getTreeMap(fyle, "package");
-                if (childMap != null) {
-                    children.add(childMap);
-                } else {
-                    System.err.println("No files found in the directory: " + packageDir);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        String packageDir = PropertyManager.getPackagePath(Tenant.getTempTenant("default"));
 
+        File file = new File(packageDir);
+        File fileList[] = file.listFiles();
+        for (File fyle : fileList) {
+            Map<String, Object> childMap = getTreeMap(fyle, "package");
+            if (childMap != null) {
+                children.add(childMap);
+            } else {
+                System.err.println("No files found in the directory: " + packageDir);
+            }
+        }
         response.put("packages", children);
         return response;
     }
