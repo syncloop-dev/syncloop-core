@@ -133,7 +133,7 @@ public class Function {
 		double maxDbl = 0;
 		if (maximumNumber != null) {
 			maxDbl = Double.parseDouble(maximumNumber.trim());
-			if (value < maxDbl)
+			if (value > maxDbl)
 				return "Maximum integer value allowed is " + maxDbl;
 		}
 
