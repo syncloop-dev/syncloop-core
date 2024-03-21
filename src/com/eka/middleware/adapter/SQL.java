@@ -44,8 +44,6 @@ public class SQL {
                             columnsType.put(paramName, getColumnTypeFromDatabase(sqlCode, paramName, myCon.getMetaData()));
                         }
                     }
-                }
-                if (parameterNames != null) {
                     setStatementParameters(sqlCode, sqlParameters, myCon, outputDocList, parameterNames, columnsType);
                 }
 
@@ -57,11 +55,8 @@ public class SQL {
                             columnsType.put(paramName, getColumnTypeForMySql(sqlCode, paramName, myCon.getMetaData()));
                         }
                     }
+                    setStatementParameters(sqlCode, sqlParameters, myCon, outputDocList, parameterNamesSquare, columnsType);
                 }
-            }
-
-            if (parameterNamesSquare != null) {
-                setStatementParameters(sqlCode, sqlParameters, myCon, outputDocList, parameterNamesSquare, columnsType);
             }
 
             if (logQuery)
