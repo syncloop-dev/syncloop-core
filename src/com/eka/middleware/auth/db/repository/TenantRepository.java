@@ -17,20 +17,20 @@ public class TenantRepository {
     public static int create(String name) throws SystemException {
         try (Connection connection = SQL.getProfileConnection(false)) {
             String sql = "INSERT INTO tenant (name, created_date, modified_date, deleted) VALUES (?, ?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            statement.setString(1, name);
-            statement.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
-            statement.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
-            statement.setInt(4, 0);
+            try(PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                statement.setString(1, name);
+                statement.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+                statement.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
+                statement.setInt(4, 0);
 
-            statement.executeUpdate();
+                statement.executeUpdate();
 
-            ResultSet generatedKeys = statement.getGeneratedKeys();
-            if (generatedKeys.next()) {
-                int id = generatedKeys.getInt(1);
-                return id;
-            } else {
-                throw new SystemException("EKA_MWS_1002", new Exception("Failed to retrieve user_id after insert"));
+                ResultSet generatedKeys = statement.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    throw new SystemException("EKA_MWS_1002", new Exception("Failed to retrieve user_id after insert"));
+                }
             }
 
         } catch (SQLException e) {
