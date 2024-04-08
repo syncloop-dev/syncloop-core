@@ -97,7 +97,12 @@ public class AppScheduler implements Job {
         CronParser parser = new CronParser(cronDefinition);
         ExecutionTime executionTime = ExecutionTime.forCron(parser.parse(cronExpression));
         Optional<ZonedDateTime> zdt = executionTime.nextExecution(now);
-        ZonedDateTime next = zdt.get();
-        return next.toInstant();
+
+        if (zdt.isPresent()) {
+            ZonedDateTime next = zdt.get();
+            return next.toInstant();
+        } else {
+            throw new IllegalArgumentException("No next execution time available for the given cron expression.");
+        }
     }
 }
