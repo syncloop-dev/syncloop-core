@@ -97,14 +97,15 @@ public class AutoUpdate {
                     byte[] buffer = new byte[1024];
                     int len = zis.read(buffer);
                     if (len > 0) {
-                        FileOutputStream fos = new FileOutputStream(newFile);
-                        while (len > 0) {
-                            fos.write(buffer, 0, len);
-                            //buffer = new byte[1024]
-                            len = zis.read(buffer);
+                        try(FileOutputStream fos = new FileOutputStream(newFile)) {
+                            while (len > 0) {
+                                fos.write(buffer, 0, len);
+                                //buffer = new byte[1024]
+                                len = zis.read(buffer);
+                            }
+                            fos.flush();
+                            fos.close();
                         }
-                        fos.flush();
-                        fos.close();
                     }
                 }
                 //close this ZipEntry
