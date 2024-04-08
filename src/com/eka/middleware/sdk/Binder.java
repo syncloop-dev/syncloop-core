@@ -12,6 +12,7 @@ import io.undertow.util.Headers;
 
 import javax.json.Json;
 import javax.json.JsonObject;
+import javax.json.JsonReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -51,10 +52,10 @@ public class Binder {
 
     private static final void executeService(DataPipeline dataPipeline, String apiServiceJson,
                                              JsonObject mainflowJsonObject) throws SnippetException {
-        try {
-            InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
-            mainflowJsonObject = Json.createReader(is).readObject();
-            FlowResolver.execute(dataPipeline, mainflowJsonObject);
+        try (InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
+             JsonReader jsonReader = Json.createReader(is);){
+            JsonObject jsonObject = jsonReader.readObject();
+            FlowResolver.execute(dataPipeline, jsonObject);
         } catch (Throwable e) {
             dataPipeline.clear();
             dataPipeline.put("error", e.getMessage());
