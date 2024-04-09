@@ -180,7 +180,11 @@ public class CustomClassLoader extends ClassLoader {
 			}
 			
 			b = loadClassFromFile(name, dp);
-			return defineClass(name, b, 0, b.length);
+			if (b != null) {
+				return defineClass(name, b, 0, b.length);
+			} else {
+				throw new ClassNotFoundException(name);
+			}
 		} catch (SnippetException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
