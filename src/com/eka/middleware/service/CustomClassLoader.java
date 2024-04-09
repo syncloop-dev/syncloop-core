@@ -59,9 +59,10 @@ public class CustomClassLoader extends ClassLoader {
 
 			for (String path : paths) {
 				if (path != null && path.length() > 0) {
-					final JarFile jar = new JarFile(new File(path));
-					LOGGER.trace("Loading Classes from jar '" + path + "'");
-					classNames.addAll(loadClassFromJar(jar));
+					try(final JarFile jar = new JarFile(new File(path))) {
+						LOGGER.trace("Loading Classes from jar '" + path + "'");
+						classNames.addAll(loadClassFromJar(jar));
+					}
 				}
 			}
 
