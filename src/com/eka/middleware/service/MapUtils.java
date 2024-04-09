@@ -43,7 +43,7 @@ public class MapUtils {
 					obj = arrayList.get(index);
 				else
 					obj = null;
-			} else if (isNumeric) {
+			} else if (isNumeric && obj != null) {
 				int index = Integer.parseInt(key);
 				obj = ((Object[]) obj)[index];
 			} else
@@ -59,7 +59,7 @@ public class MapUtils {
 		}
 		try {
 			ArrayDeque dVal = (ArrayDeque) obj;
-			if (dVal.size() > 0)
+			if (dVal != null && dVal.size() > 0)
 				return dVal.getFirst();
 		} catch (Exception e) {
 			return obj;
