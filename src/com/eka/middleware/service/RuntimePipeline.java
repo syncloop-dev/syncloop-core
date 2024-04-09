@@ -72,7 +72,13 @@ public class RuntimePipeline {
 				String name = sessionId + ".snap";
 				File file = new File(packagePath + "/snapshots/" + resource + "/" + name);
 				file.getParentFile().mkdirs();
-				file.createNewFile();
+
+				boolean isNewFileCreated = file.createNewFile();
+				if (isNewFileCreated) {
+					System.out.println("File created successfully for writing snapshot: " + file.getAbsolutePath());
+				} else {
+					System.out.println("File already exists for writing snapshot: " + file.getAbsolutePath());
+				}
 				BufferedWriter bufferedWriter = Files.newBufferedWriter(Path.of(file.toURI()));
 				bw = bufferedWriter;
 				bw.write("[");
