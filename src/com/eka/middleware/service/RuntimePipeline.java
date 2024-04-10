@@ -17,6 +17,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import com.eka.middleware.logging.AppLogger;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
