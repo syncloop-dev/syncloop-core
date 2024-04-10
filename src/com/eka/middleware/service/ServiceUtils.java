@@ -1467,12 +1467,13 @@ public class ServiceUtils {
 				}
 
 				// write file content
-				FileOutputStream fos = new FileOutputStream(newFile);
-				int len;
-				while ((len = zis.read(buffer)) > 0) {
-					fos.write(buffer, 0, len);
+				try(FileOutputStream fos = new FileOutputStream(newFile)) {
+					int len;
+					while ((len = zis.read(buffer)) > 0) {
+						fos.write(buffer, 0, len);
+					}
+					fos.close();
 				}
-				fos.close();
 			}
 			zipEntry = zis.getNextEntry();
 		}
