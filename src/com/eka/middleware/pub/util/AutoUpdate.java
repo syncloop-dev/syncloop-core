@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.net.URI;
@@ -32,6 +34,8 @@ import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
 
 
 public class AutoUpdate {
+    private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
+
 
     public static boolean importURLAliases(String UrlAliasFilepath, DataPipeline dp) throws Exception{
         Boolean importSuccessful=true;
@@ -69,9 +73,9 @@ public class AutoUpdate {
             importSuccessful=false;
         boolean deletionSuccess = file.delete();
         if (deletionSuccess) {
-            dp.log("File deleted successfully: " + file.getAbsolutePath());
+            LOGGER.info("File created successfully: {}", file.getAbsolutePath());
         } else {
-            dp.log("Failed to delete file: " + file.getAbsolutePath());
+            LOGGER.warn("File already exists: {}", file.getAbsolutePath());
         }
         return importSuccessful;
     }
