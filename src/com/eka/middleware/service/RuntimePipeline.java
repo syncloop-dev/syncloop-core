@@ -31,8 +31,12 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.session.Session;
 import io.undertow.util.Sessions;
+import org.apache.logging.log4j.Logger;
+
 
 public class RuntimePipeline {
+	private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
+
 	private static final Map<String, RuntimePipeline> pipelines = new ConcurrentHashMap<String, RuntimePipeline>();
 	private final String sessionId;
 	private final String correlationId;
@@ -75,9 +79,9 @@ public class RuntimePipeline {
 
 				boolean isNewFileCreated = file.createNewFile();
 				if (isNewFileCreated) {
-					System.out.println("File created successfully for writing snapshot: " + file.getAbsolutePath());
+					LOGGER.info("File created successfully: {}", file.getAbsolutePath());
 				} else {
-					System.out.println("File already exists for writing snapshot: " + file.getAbsolutePath());
+					LOGGER.warn("File already exists: {}", file.getAbsolutePath());
 				}
 				BufferedWriter bufferedWriter = Files.newBufferedWriter(Path.of(file.toURI()));
 				bw = bufferedWriter;
