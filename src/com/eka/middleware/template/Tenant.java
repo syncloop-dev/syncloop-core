@@ -3,6 +3,7 @@ package com.eka.middleware.template;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Base64;
@@ -66,6 +67,17 @@ public class Tenant {
             }
         }
         return tenantMap.get(name);
+    }
+
+    public void rotateKeys() {
+        try {
+            if (new String(Base64.getEncoder().encode(getPrivateKey().getEncoded()), StandardCharsets.UTF_8)
+                    .length() < 515) {
+                Security.generateKeyPair(name);
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
     }
 
     public static boolean exists(String name) {

@@ -165,6 +165,10 @@ public class MiddlewareServer {
 						//ServiceUtils.startTenantServices(tenant);
 						Thread.sleep(2000);
 					}
+
+					if (!Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
+						tent.rotateKeys();
+					}
 				}
 
 				ApplicationShutdownHook.getCurrentProcess();
