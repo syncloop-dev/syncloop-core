@@ -79,9 +79,7 @@ public class DataPipeline {
 	private final Object syncObject = new Object();
 
 	@Getter
-	public Map<String, Object> snapData = new HashMap<>();
-	@Getter @Setter
-	private boolean embeddedSnap;
+	public List<String> snapData = new ArrayList<>();
 
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
 		recursiveDepth = 0;
@@ -542,8 +540,8 @@ public class DataPipeline {
 			map.put(currentResource, new Map[] { servicePayload, payloadStack, globalPayload });
 			map.putAll(meta);
 			String json = ServiceUtils.toPrettyJson(map);
-			if(isEmbeddedSnap()) {
-				snapData.put("json", json);
+			if(isRecordTrace()) {
+				snapData.add(json);
 			} else {
 				rp.writeSnapshot(resource, json);
 			}

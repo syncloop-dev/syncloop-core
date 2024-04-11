@@ -55,7 +55,6 @@ public class Binder {
         try {
             InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
             mainflowJsonObject = Json.createReader(is).readObject();
-            dataPipeline.setEmbeddedSnap(true);
             FlowResolver.execute(dataPipeline, mainflowJsonObject);
         } catch (Throwable e) {
             dataPipeline.clear();
