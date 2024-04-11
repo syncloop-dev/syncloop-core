@@ -94,7 +94,7 @@ public class Security {
 			String priKeyString = props.getProperty(PRIVATE_PROPERTY_KEY_NAME);
 			//if (pubKeyString == null || priKeyString == null) {
 				KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
-				keyPairGen.initialize(515, new SecureRandom(ServiceUtils.generateUUID(System.currentTimeMillis()+"").getBytes()));
+				keyPairGen.initialize(4096, new SecureRandom(ServiceUtils.generateUUID(System.currentTimeMillis()+"").getBytes()));
 				KeyPair pair = keyPairGen.generateKeyPair();
 				PrivateKey privKey = pair.getPrivate();
 				byte[] privateKey = privKey.getEncoded();
@@ -108,7 +108,7 @@ public class Security {
 			ServiceUtils.printException("Failed while generating keypair for '"+tenantName+"'", e);
 		}
 	}
-	private static PrivateKey getPrivateKey(byte[] key) throws Exception {
+	public static PrivateKey getPrivateKey(byte[] key) throws Exception {
 		//X509EncodedKeySpec privateKeySpec = new X509EncodedKeySpec(key, "RSA");
 		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(key);
 		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -116,7 +116,7 @@ public class Security {
 		return privateKey;
 	}
 
-	private static PublicKey getPublicKey(byte[] key) throws Exception {
+	public static PublicKey getPublicKey(byte[] key) throws Exception {
 		X509EncodedKeySpec spec = new X509EncodedKeySpec(key, "RSA");
 //		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(key);
 //		RSAPublicKeySpec spec=new RSAPublicKeySpec
@@ -126,7 +126,7 @@ public class Security {
 	}
 
 	public static String getSecureString(final String data,final String publicKey) throws Exception {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
+		Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA1AndMGF1Padding", "BC");
 		//String publicKey = ServiceUtils.getServerProperty("middleware.server.public.key");
 		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey(Base64.getDecoder().decode(publicKey.getBytes(StandardCharsets.UTF_8))));
 		cipher.update(data.getBytes());
@@ -136,7 +136,7 @@ public class Security {
 	}
 
 	public static String getNormalString(final String secureString, final String privateKey) throws Exception {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
+		Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA1AndMGF1Padding", "BC");
 		//String privateKey = ServiceUtils.getServerProperty("middleware.server.private.key");
 		cipher.init(Cipher.DECRYPT_MODE, getPrivateKey(Base64.getDecoder().decode(privateKey.getBytes(StandardCharsets.UTF_8))));
 		final byte[] decipheredText = cipher.doFinal(Base64.getDecoder().decode(secureString.getBytes(StandardCharsets.UTF_8)));
