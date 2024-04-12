@@ -8,6 +8,7 @@ import com.eka.middleware.service.RuntimePipeline;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
+import com.google.common.collect.Maps;
 import io.undertow.util.Headers;
 
 import javax.json.Json;
@@ -65,6 +66,28 @@ public class Binder {
         }
     }
 
+    /**
+     * @param serviceId
+     * @param serviceJson
+     */
+    public void addEmbeddedService(String serviceId, String serviceJson) {
+        CacheManager.addEmbeddedService(serviceId, serviceJson, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     */
+    public Set<String> getEmbeddedService() {
+        return CacheManager.getEmbeddedServices(Tenant.getTempTenant("default"));
+    }
+
+    /**
+     * @param serviceId
+     * @return
+     */
+    public String getServiceJson(String serviceId) {
+        return CacheManager.getEmbeddedService(serviceId, Tenant.getTempTenant("default"));
+    }
+
     public Map<String, Object> getServices() {
         Map<String, Object> response = new HashMap<>();
         List<Map<String, Object>> children = new ArrayList<>();
@@ -82,6 +105,7 @@ public class Binder {
             }
         }
         response.put("packages", children);
+        response.put("embeddedServices", getEmbeddedService());
         return response;
     }
 
