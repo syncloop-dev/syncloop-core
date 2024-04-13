@@ -11,7 +11,7 @@
 Syncloop is an integration middleware where you can build any sync & async API without coding & consume it less than a 
 minutes.
 
-Read more at [syncloop.com](https://syncloop.com) and the [docs](https://www.syncloop.com/documentation.html?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github).
+Read more at [syncloop.com](https://syncloop.com) and the [docs](https://docs.syncloop.com/?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github).
 
 ------------------
 

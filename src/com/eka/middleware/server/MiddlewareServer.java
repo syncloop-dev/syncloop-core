@@ -54,7 +54,7 @@ public class MiddlewareServer {
 	public static final Builder builder = Undertow.builder();
 	public static Undertow server = null;
 
-	public static final String BUILD_NAME = "v1.6.4";
+	public static final String BUILD_NAME = "v1.6.4.2";
 	public static final boolean IS_COMMUNITY_VERSION = Boolean.parseBoolean(System.getProperty("COMMUNITY_DEPLOYMENT"));
 
 	public static String allowRestrictedHeaders = System.getProperty("jdk.httpclient.allowRestrictedHeaders");
@@ -164,6 +164,10 @@ public class MiddlewareServer {
 						Security.setupTenantSecurity(tenant);
 						//ServiceUtils.startTenantServices(tenant);
 						Thread.sleep(2000);
+					}
+
+					if (!Boolean.parseBoolean(System.getProperty("CORE_DEPLOYMENT"))) {
+						tent.rotateKeys();
 					}
 				}
 

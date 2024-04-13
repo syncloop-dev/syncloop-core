@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -76,6 +77,9 @@ public class DataPipeline {
 	private boolean recordTrace;
 	// private final List<JsonArray> futureTransformers=new ArrayList<>();
 	private final Object syncObject = new Object();
+
+	@Getter
+	public List<String> snapData = new ArrayList<>();
 
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
 		recursiveDepth = 0;
@@ -536,7 +540,11 @@ public class DataPipeline {
 			map.put(currentResource, new Map[] { servicePayload, payloadStack, globalPayload });
 			map.putAll(meta);
 			String json = ServiceUtils.toPrettyJson(map);
-			rp.writeSnapshot(resource, json);
+			if(isRecordTrace()) {
+				snapData.add(json);
+			} else {
+				rp.writeSnapshot(resource, json);
+			}
 		} catch (Exception e) {
 			ServiceUtils.printException(this, "Exception while taking snapshot.", e);
 		}

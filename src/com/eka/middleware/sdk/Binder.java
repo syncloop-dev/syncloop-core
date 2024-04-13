@@ -8,7 +8,10 @@ import com.eka.middleware.service.RuntimePipeline;
 import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import io.undertow.util.Headers;
+import org.apache.commons.io.IOUtils;
 
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -25,14 +28,13 @@ public class Binder {
 
     private final String propLoc;
 
-    public Binder(String propLoc) {
+    public Binder(String propLoc) throws Exception {
         this.propLoc = propLoc;
+        PropertyManager.initConfig(new String[]{propLoc});
     }
 
     public Map<String, Object> run(String sessionId, String apiServiceJson, Map<String, Object> payload)
             throws Exception {
-
-        PropertyManager.initConfig(new String[]{propLoc});
 
         JsonObject mainflowJsonObject = null;
         UUID coId = UUID.randomUUID();
@@ -45,6 +47,7 @@ public class Binder {
         dp.getMap().forEach((k, v) -> {
             response.put(k, v);
         });
+        response.put("__snapData", dp.getSnapData());
         rp.destroy();
         return response;
     }
@@ -64,6 +67,28 @@ public class Binder {
         }
     }
 
+    /**
+     * @param serviceId
+     * @param serviceJson
+     */
+    public void addEmbeddedService(String serviceId, String serviceJson) {
+        CacheManager.addEmbeddedService(serviceId, serviceJson, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     */
+    public Set<String> getEmbeddedService() {
+        return CacheManager.getEmbeddedServices(Tenant.getTempTenant("default"));
+    }
+
+    /**
+     * @param serviceId
+     * @return
+     */
+    public String getServiceJson(String serviceId) {
+        return CacheManager.getEmbeddedService(serviceId, Tenant.getTempTenant("default"));
+    }
+
     public Map<String, Object> getServices() {
         Map<String, Object> response = new HashMap<>();
         List<Map<String, Object>> children = new ArrayList<>();
@@ -81,6 +106,7 @@ public class Binder {
             }
         }
         response.put("packages", children);
+        response.put("embeddedServices", getEmbeddedService());
         return response;
     }
 
@@ -123,39 +149,20 @@ public class Binder {
         try {
             String serviceInfo = null;
             if (location.startsWith("/packages")) {
-                String split[] = location.split(Pattern.quote("."));
-                String ext = split[split.length - 1];
                 location = PropertyManager.getPackagePath(Tenant.getTempTenant("default")) + location;
                 File file = new File(location);
                 if (!file.exists()) {
                     return Collections.singletonMap("error", "File not found");
                 }
 
-                String contentType = java.nio.file.Files.probeContentType(file.toPath());
-                if (contentType == null) {
-                    if (ext.toLowerCase().equals("js"))
-                        contentType = "application/javascript";
-                    if (ext.toLowerCase().equals("json"))
-                        contentType = "application/json";
-                    if (ext.toLowerCase().equals("css"))
-                        contentType = "text/css";
-                }
-                if (contentType == null) {
-                    URLConnection connection = file.toURL().openConnection();
-                    contentType = connection.getContentType();
-                    connection.getInputStream().close();
-                    //contentType="application/";
-                }
-                MultiPart mp = new MultiPart(null, new FileInputStream(file), false);
-                mp.putHeader(Headers.CONTENT_TYPE_STRING, contentType);
-                serviceInfo = mp.toString();
+                serviceInfo = IOUtils.toString(new FileInputStream(file));
             } else {
-                String json = CacheManager.getEmbeddedService(location.replaceAll("/embedded/", "").replaceAll(".api", ""), Tenant.getTempTenant("default"));
-                MultiPart mp = new MultiPart(null, json.getBytes());
-                mp.putHeader(Headers.CONTENT_TYPE_STRING, "application/json");
+                serviceInfo = CacheManager.getEmbeddedService(location.replaceAll("/embedded/", "").replaceAll(".api", ""), Tenant.getTempTenant("default"));
             }
 
-            return Collections.singletonMap("serviceInfo", serviceInfo);
+            Map<String, Object> tokenData = new ObjectMapper().readValue(serviceInfo, Map.class);
+
+            return tokenData;
         } catch (Throwable e) {
             return Collections.singletonMap("error", e.getMessage());
         }
