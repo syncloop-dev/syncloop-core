@@ -632,7 +632,7 @@ public class FlowUtils {
     }
 
     public static void validateDocuments(DataPipeline dp, JsonValue jv, Boolean validationRequired) throws SnippetException {
-        JsonArray jva = jv.asJsonArray();
+         JsonArray jva = jv.asJsonArray();
         if (jva.isEmpty())
             return;
 
@@ -699,7 +699,7 @@ public class FlowUtils {
             processChildren(childrenArray,dpKey,dp);
         }
 
-        if (null != assignList && null==val) {
+        if (null != assignList && (null == val || val.toString().isEmpty())) {
             setValue(assignList, dp);
         }
 
