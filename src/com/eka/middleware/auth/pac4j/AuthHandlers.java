@@ -156,12 +156,9 @@ public class AuthHandlers {
 				} else {
 					try {
 						token = ServiceUtils.decrypt(token, tenantName);
-						/**
-						 * Review Needed for Always False Condition when token is expired
-
 						 if(false && !ServiceUtils.isValid(token)) {
 							throw new Exception("Validation expired.");
-						}*/
+						}
 					} catch (Exception e) {
 						cookie.setExpires(new Date(System.currentTimeMillis()-1000));
 						cookie.setDiscard(true);

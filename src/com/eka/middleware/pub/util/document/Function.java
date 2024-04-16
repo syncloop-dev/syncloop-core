@@ -26,9 +26,11 @@ public class Function {
 		Object obj = value;
 		if (data == null)
 			return false;
-		if (data.containsKey("isRequiredField")) {
-			Boolean isRequired = Boolean.parseBoolean(data.get("isRequiredField"));
-			if (obj == null && isRequired != null && isRequired == true) {
+		String isRequiredFieldKey = "isRequiredField";
+		if (data.containsKey(isRequiredFieldKey)) {
+			String isRequiredFieldValue = data.get(isRequiredFieldKey);
+			Boolean isRequired = Boolean.parseBoolean(isRequiredFieldValue);
+			if (obj == null && isRequired != null && isRequired) {
 				String description = data.get("fieldDescription");
 				if (description != null && description.length() > 0)
 					description = new String(Base64.getDecoder().decode(description));
