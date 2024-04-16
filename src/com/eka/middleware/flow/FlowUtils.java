@@ -758,7 +758,7 @@ public class FlowUtils {
                     processChildren(jsonValue.asJsonObject().getJsonArray("children"), dpKey, dp);
                 }
 
-                if (null != assignList && null==val) {
+                if (null != assignList && (null == val || val.toString().isEmpty())) {
                     setValue(assignList, dp);
                 }
 
