@@ -699,7 +699,7 @@ public class FlowUtils {
             processChildren(childrenArray,dpKey,dp);
         }
 
-        if (null != assignList && (null == val || val.toString().isEmpty())) {
+        if (null != assignList && (null == val || StringUtils.isBlank(val.toString()))) {
             setValue(assignList, dp);
         }
 
@@ -758,7 +758,7 @@ public class FlowUtils {
                     processChildren(jsonValue.asJsonObject().getJsonArray("children"), dpKey, dp);
                 }
 
-                if (null != assignList && (null == val || val.toString().isEmpty())) {
+                if (null != assignList && (null == val || StringUtils.isBlank(val.toString()))) {
                     setValue(assignList, dp);
                 }
 
