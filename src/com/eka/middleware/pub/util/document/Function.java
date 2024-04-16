@@ -26,9 +26,8 @@ public class Function {
 		Object obj = value;
 		if (data == null)
 			return false;
-		String isRequiredFieldKey = "isRequiredField";
-		if (data.containsKey(isRequiredFieldKey)) {
-			String isRequiredFieldValue = data.get(isRequiredFieldKey);
+		String isRequiredFieldValue = data.get("isRequiredField");
+		if (isRequiredFieldValue != null) {
 			Boolean isRequired = Boolean.parseBoolean(isRequiredFieldValue);
 			if (obj == null && isRequired != null && isRequired) {
 				String description = data.get("fieldDescription");
