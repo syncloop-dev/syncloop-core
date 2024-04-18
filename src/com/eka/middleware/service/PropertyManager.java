@@ -295,18 +295,18 @@ public class PropertyManager {
 			String fullFilePath = getConfigFolderPath() + fileName;
 			// URL url = new URL(profileFilePath);
 			File file = new File(fullFilePath);
-			FileOutputStream fos = new FileOutputStream(file);
-			fos.write(data);
-			fos.flush();
-			fos.close();
+			try(FileOutputStream fos = new FileOutputStream(file)) {
+				fos.write(data);
+				fos.flush();
+				fos.close();
+			}
 		} catch (Exception e) {
 			throw new SystemException("EKA_MWS_1007", e);
 		}
 	}
 
 	public static final void writeConfigurationFile(File file, byte data[]) throws SystemException {
-		try {
-			FileOutputStream fos = new FileOutputStream(file);
+		try (FileOutputStream fos = new FileOutputStream(file)){
 			fos.write(data);
 			fos.flush();
 			fos.close();

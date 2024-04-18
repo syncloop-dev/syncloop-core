@@ -150,6 +150,7 @@ public class QueueTaskExecuter {
 					ServiceUtils.printException(
 							"Exception caused while reading tasks from internal random node removal queue: " + nodeID,
 							new Exception(e));
+					throw new InterruptedException(e.getMessage());
 				}
 			}
 		});

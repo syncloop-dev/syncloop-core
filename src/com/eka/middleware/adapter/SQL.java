@@ -428,25 +428,32 @@ public class SQL {
     public static Boolean DDL(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         List<Map<String, Object>> outputDocList = new ArrayList<Map<String, Object>>();
         Boolean isSuccessful = false;
-        if (sqlParameters != null && sqlParameters.size() > 0) {
-            for (Map<String, Object> map : sqlParameters) {
-                String query = sqlCode;
+        PreparedStatement myStmt = null;
+        try {
+            if (sqlParameters != null && sqlParameters.size() > 0) {
+                for (Map<String, Object> map : sqlParameters) {
+                    String query = sqlCode;
 
-                for (String k : map.keySet()) {
-                    String v = map.get(k) + "";
-                    //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
-                    query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
+                    for (String k : map.keySet()) {
+                        String v = map.get(k) + "";
+                        //query=query.replaceAll(Pattern.quote("{"+k+"}"), v);
+                        query = ServiceUtils.replaceAllIgnoreRegx(query, "{" + k + "}", v);
+                    }
+                    if (logQuery)
+                        dp.log(query);
+                    myStmt = myCon.prepareStatement(query);
+                    isSuccessful = myStmt.execute();
                 }
+            } else {
                 if (logQuery)
-                    dp.log(query);
-                PreparedStatement myStmt = myCon.prepareStatement(query);
+                    dp.log(sqlCode);
+                myStmt = myCon.prepareStatement(sqlCode);
                 isSuccessful = myStmt.execute();
             }
-        } else {
-            if (logQuery)
-                dp.log(sqlCode);
-            PreparedStatement myStmt = myCon.prepareStatement(sqlCode);
-            isSuccessful = myStmt.execute();
+        }finally {
+            if (myStmt != null) {
+                myStmt.close();
+            }
         }
         return isSuccessful;
     }
@@ -519,7 +526,11 @@ public class SQL {
         String connectionPropFile = pPath + "packages" + jdbcConnection + ".jdbc";
         dp.log("connectionPropFile: " + connectionPropFile, Level.DEBUG);
         //LOGGER.debug("connectionPropFile:\n"+connectionPropFile);
-        jdbcProperties.load(new FileInputStream(new File(connectionPropFile)));
+        //jdbcProperties.load(new FileInputStream(new File(connectionPropFile)));
+
+        try (FileInputStream fis = new FileInputStream(new File(connectionPropFile))) {
+            jdbcProperties.load(fis);
+        }
 
         String connectionUrl = jdbcProperties.getProperty("url");
         connectionUrl = FlowUtils.placeXPathInternalVariables(connectionUrl, dp);

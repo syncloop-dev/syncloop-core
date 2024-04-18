@@ -21,9 +21,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+
 import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
 
 public class PluginInstaller {
+    private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
 
     /**
      * @param dataPipeline
@@ -229,7 +234,12 @@ public class PluginInstaller {
                 pluginPackage = new Gson().fromJson(new FileReader(file), PluginPackage.class);
             }
         } catch (JsonSyntaxException e) {
-            file.delete();
+            boolean deletionSuccess = file.delete();
+            if (deletionSuccess) {
+                LOGGER.info("File created successfully: {}", file.getAbsolutePath());
+            } else {
+                LOGGER.warn("File already exists: {}", file.getAbsolutePath());
+            }
             pluginPackage.setPlugins(Lists.newArrayList());
         }
 

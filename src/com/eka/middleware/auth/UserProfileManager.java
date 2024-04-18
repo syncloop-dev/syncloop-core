@@ -417,7 +417,7 @@ public class UserProfileManager implements IdentityManager {
             ServiceUtils.printException("Failed while get token from UserProfile", e);
         }
         // String groups[] = { "Guest" };
-        if (groups.size() == 0) {
+        if (groups != null && groups.size() == 0) {
             groups.add("guest");
             groups.add("default");
         }
@@ -660,7 +660,12 @@ public class UserProfileManager implements IdentityManager {
                         /**
                          * Rename profile.json
                          */
-                        file.renameTo(new File(PropertyManager.getConfigFolderPath() + "profiles-v1.4.9.json"));
+                        boolean renameSuccess = file.renameTo(new File(PropertyManager.getConfigFolderPath() + "profiles-v1.4.9.json"));
+                        if (renameSuccess) {
+                            LOGGER.info("File renamed successfully to profiles-v1.4.9.json.");
+                        } else {
+                            LOGGER.warn("Failed to rename the file to profiles-v1.4.9.json.");
+                        }
 					} catch (Exception e) {
 						e.printStackTrace();
 						try {
@@ -684,46 +689,48 @@ public class UserProfileManager implements IdentityManager {
             if (connection != null) {
                 DatabaseMetaData meta = connection.getMetaData();
 
-                String createGroupsTable = "CREATE TABLE IF NOT EXISTS groups (" +
-                        "group_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                        "name TEXT NOT NULL," +
-                        "tenant_id INTEGER," +
-                        "created_date DATETIME," +
-                        "modified_date DATETIME," +
-                        "deleted BOOLEAN" +
-                        ")";
-                connection.createStatement().executeUpdate(createGroupsTable);
+                try (Statement statement = connection.createStatement()) {
+                    String createGroupsTable = "CREATE TABLE IF NOT EXISTS groups (" +
+                            "group_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "name TEXT NOT NULL," +
+                            "tenant_id INTEGER," +
+                            "created_date DATETIME," +
+                            "modified_date DATETIME," +
+                            "deleted BOOLEAN" +
+                            ")";
+                    statement.executeUpdate(createGroupsTable);
 
-                String createTenantTable = "CREATE TABLE IF NOT EXISTS tenant (" +
-                        "tenant_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                        "name TEXT," +
-                        "created_date DATETIME," +
-                        "modified_date DATETIME," +
-                        "deleted BOOLEAN" +
-                        ")";
-                connection.createStatement().executeUpdate(createTenantTable);
+                    String createTenantTable = "CREATE TABLE IF NOT EXISTS tenant (" +
+                            "tenant_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                            "name TEXT," +
+                            "created_date DATETIME," +
+                            "modified_date DATETIME," +
+                            "deleted BOOLEAN" +
+                            ")";
+                    statement.executeUpdate(createTenantTable);
 
-                String createUserGroupMappingTable = "CREATE TABLE IF NOT EXISTS user_group_mapping (" +
-                        "mapping_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                        "user_id TEXT," +
-                        "group_id INTEGER" +
-                        ")";
-                connection.createStatement().executeUpdate(createUserGroupMappingTable);
+                    String createUserGroupMappingTable = "CREATE TABLE IF NOT EXISTS user_group_mapping (" +
+                            "mapping_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "user_id TEXT," +
+                            "group_id INTEGER" +
+                            ")";
+                    statement.executeUpdate(createUserGroupMappingTable);
 
-                String createUsersTable = "CREATE TABLE IF NOT EXISTS users (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                        "password TEXT," +
-                        "email TEXT," +
-                        "tenant_id INTEGER NOT NULL," +
-                        "status TEXT," +
-                        "user_id TEXT NOT NULL," +
-                        "name TEXT," +
-                        "deleted BOOLEAN," +
-                        "created_date DATETIME," +
-                        "modified_date DATETIME," +
-                        "verification_secret TEXT" +
-                        ")";
-                connection.createStatement().executeUpdate(createUsersTable);
+                    String createUsersTable = "CREATE TABLE IF NOT EXISTS users (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                            "password TEXT," +
+                            "email TEXT," +
+                            "tenant_id INTEGER NOT NULL," +
+                            "status TEXT," +
+                            "user_id TEXT NOT NULL," +
+                            "name TEXT," +
+                            "deleted BOOLEAN," +
+                            "created_date DATETIME," +
+                            "modified_date DATETIME," +
+                            "verification_secret TEXT" +
+                            ")";
+                    statement.executeUpdate(createUsersTable);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();

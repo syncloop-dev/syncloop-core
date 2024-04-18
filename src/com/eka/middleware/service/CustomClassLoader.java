@@ -59,9 +59,10 @@ public class CustomClassLoader extends ClassLoader {
 
 			for (String path : paths) {
 				if (path != null && path.length() > 0) {
-					final JarFile jar = new JarFile(new File(path));
-					LOGGER.trace("Loading Classes from jar '" + path + "'");
-					classNames.addAll(loadClassFromJar(jar));
+					try(final JarFile jar = new JarFile(new File(path))) {
+						LOGGER.trace("Loading Classes from jar '" + path + "'");
+						classNames.addAll(loadClassFromJar(jar));
+					}
 				}
 			}
 
@@ -179,7 +180,11 @@ public class CustomClassLoader extends ClassLoader {
 			}
 			
 			b = loadClassFromFile(name, dp);
-			return defineClass(name, b, 0, b.length);
+			if (b != null) {
+				return defineClass(name, b, 0, b.length);
+			} else {
+				throw new ClassNotFoundException(name);
+			}
 		} catch (SnippetException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

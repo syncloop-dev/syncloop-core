@@ -35,6 +35,8 @@ public class IgNode {
 	private static String nodeId = null;
 	private static final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
 
+	private static final Random random = new Random();
+
 	private IgNode() {
 	}
 
@@ -184,79 +186,91 @@ public class IgNode {
 	}
 
 	public static String getRandomClusterNode(Tenant tenant) {
-		if (nodeId == null)
-			return tenant.id;
+		Ignite ignite = IgNode.getIgnite();
 
-		int size = IgNode.getIgnite().cluster().nodes().size();
+		if (nodeId == null || ignite == null) {
+			return tenant.id;
+		}
+
+		int size = ignite.cluster().nodes().size();
 		if (size == 1) {
-			if (nodeId == null)
-				nodeId = ignite.cluster().localNode().id().toString();
+			nodeId = ignite.cluster().localNode().id().toString();
 			return nodeId;
 		}
 
-		int nodeNumber = new Random().nextInt(size);
+		int nodeNumber = random.nextInt(size);
 		final AtomicInteger ai = new AtomicInteger(0);
 		final Map<String, Object> map = new HashMap<>();
-		IgNode.getIgnite().cluster().nodes().forEach(node -> {
-			if (ai.getAndIncrement() == nodeNumber)
-				map.put("id", node.id().toString());
-		});
+		if (ignite.cluster().nodes() != null) {
+			ignite.cluster().nodes().forEach(node -> {
+				if (ai.getAndIncrement() == nodeNumber)
+					map.put("id", node.id().toString());
+			});
+		}
 
 		return (String) map.get("id");
 	}
 
 	public static String getLowUsageNode(Tenant tenant) {
-		if (nodeId == null)
-			return tenant.id;
+		Ignite ignite = IgNode.getIgnite();
 
-		int size = IgNode.getIgnite().cluster().nodes().size();
+		if (nodeId == null || ignite == null) {
+			return tenant.id;
+		}
+
+		int size = ignite.cluster().nodes().size();
 		if (size == 1) {
-			if (nodeId == null)
-				nodeId = ignite.cluster().localNode().id().toString();
+			nodeId = ignite.cluster().localNode().id().toString();
 			return nodeId;
 		}
 
-		int nodeNumber = new Random().nextInt(size);
+		int nodeNumber = random.nextInt(size);
 		final AtomicInteger ai = new AtomicInteger(0);
 		final Map<String, Object> map = new HashMap<>();
-		IgNode.getIgnite().cluster().nodes().forEach(node -> {
-			double cpuUsage = node.metrics().getAverageCpuLoad();
-			double cpu = map.get("cpu") != null ? (double) map.get("cpu") : 1d;
-			if (cpu > cpuUsage) {
-				map.put("cpu", cpuUsage);
-				map.put("id", node.id().toString());
-			}
-			if (map.get("id") == null && ai.getAndIncrement() == nodeNumber)
-				map.put("id", node.id().toString());
-		});
+		if (ignite.cluster().nodes() != null) {
+			ignite.cluster().nodes().forEach(node -> {
+				double cpuUsage = node.metrics().getAverageCpuLoad();
+				double cpu = map.get("cpu") != null ? (double) map.get("cpu") : 1d;
+				if (cpu > cpuUsage) {
+					map.put("cpu", cpuUsage);
+					map.put("id", node.id().toString());
+				}
+				if (map.get("id") == null && ai.getAndIncrement() == nodeNumber)
+					map.put("id", node.id().toString());
+			});
+		}
 
 		return (String) map.get("id");
 	}
 
 	public static String getHighUsageNode(Tenant tenant) {
-		if (nodeId == null)
-			return tenant.id;
+		Ignite ignite = IgNode.getIgnite();
 
-		int size = IgNode.getIgnite().cluster().nodes().size();
+		if (nodeId == null || ignite == null) {
+			return tenant.id;
+		}
+
+		int size = ignite.cluster().nodes().size();
 		if (size == 1) {
-			if (nodeId == null)
-				nodeId = ignite.cluster().localNode().id().toString();
+			nodeId = ignite.cluster().localNode().id().toString();
 			return nodeId;
 		}
 
-		int nodeNumber = new Random().nextInt(size);
+		int nodeNumber = random.nextInt(size);
 		final AtomicInteger ai = new AtomicInteger(0);
 		final Map<String, Object> map = new HashMap<>();
-		IgNode.getIgnite().cluster().nodes().forEach(node -> {
-			double cpuUsage = node.metrics().getAverageCpuLoad();
-			double cpu = map.get("cpu") != null ? (double) map.get("cpu") : 0d;
-			if (cpu < cpuUsage) {
-				map.put("cpu", cpuUsage);
-				map.put("id", node.id().toString());
-			}
-			if (map.get("id") == null && ai.getAndIncrement() == nodeNumber)
-				map.put("id", node.id().toString());
-		});
+		if (ignite.cluster().nodes() != null) {
+			ignite.cluster().nodes().forEach(node -> {
+				double cpuUsage = node.metrics().getAverageCpuLoad();
+				double cpu = map.get("cpu") != null ? (double) map.get("cpu") : 0d;
+				if (cpu < cpuUsage) {
+					map.put("cpu", cpuUsage);
+					map.put("id", node.id().toString());
+				}
+				if (map.get("id") == null && ai.getAndIncrement() == nodeNumber)
+					map.put("id", node.id().toString());
+			});
+		}
 
 		return (String) map.get("id");
 	}

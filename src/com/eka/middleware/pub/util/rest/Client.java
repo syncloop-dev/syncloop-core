@@ -282,12 +282,14 @@ public class Client {
 				httpClientBuilder.sslContext(unsecureCommunication());
 			}
 
-			CloseableHttpResponse response;
+			/*CloseableHttpResponse response;
 			if (null != settings.get("responseAsInputStream") && (Boolean) settings.get("responseAsInputStream")) {
 				response = httpClient.execute(request, HttpClientContext.create());
 			} else {
 				response = httpClient.execute(request, HttpClientContext.create());
-			}
+			}*/
+
+			CloseableHttpResponse response = httpClient.execute(request, HttpClientContext.create());
 
 			int redirectCount = settings.containsKey("redirectCount") ? (int) settings.get("redirectCount") : 0;
 			if (response.getStatusLine().getStatusCode() == 301 || response.getStatusLine().getStatusCode() == 302) {
