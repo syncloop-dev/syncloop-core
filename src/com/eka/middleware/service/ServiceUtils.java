@@ -837,9 +837,8 @@ public class ServiceUtils {
 			if (tempFile == null)
 				inputStream = mp.is;
 			else {
-				try (FileInputStream fis = new FileInputStream(tempFile)) {
+					FileInputStream fis = new FileInputStream(tempFile);
 					inputStream = fis;
-				}
 			}
 //			exchange.startBlocking();
 			Set<String> headers = mp.headers.keySet();
