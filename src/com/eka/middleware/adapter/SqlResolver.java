@@ -1,22 +1,12 @@
 package com.eka.middleware.adapter;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
-
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.service.DataPipeline;
-import com.eka.middleware.service.ServiceUtils;
+
+import javax.json.*;
+import java.io.StringReader;
+import java.sql.Connection;
+import java.util.*;
 
 public class SqlResolver {
     public static void execute(DataPipeline dp, JsonObject mainSqlJsonObject) throws Exception {
@@ -60,13 +50,16 @@ public class SqlResolver {
             isTxn = false;
         }
 
+        Map<String, String> columnsType = extractColumnTypes(sqlInputs.toString());
+
+
         List<Map<String, Object>> outputDocList = null;
 		boolean rollbacked = false;
         try {
             myCon.setAutoCommit(false);
             switch (type) {
                 case "DQL":
-                    outputDocList = SQL.DQL(sqlCode, sqlParameters, myCon, dp, lq);
+                    outputDocList = SQL.DQL(sqlCode, sqlParameters, columnsType, myCon, dp, lq);
                     dp.put("outputDocList", outputDocList);
                     dp.put("rows", outputDocList.size());
                     dp.put("success", true);
@@ -76,13 +69,13 @@ public class SqlResolver {
                     dp.put("success", isSuccessful);
                     break;
                 case "DML":
-                    int rows = SQL.DML(sqlCode, sqlParameters, myCon, dp, lq);
+                    int rows = SQL.DML(sqlCode, sqlParameters, columnsType, myCon, dp, lq);
                     dp.put("rows", rows);
                     dp.put("success", true);
                     myCon.commit();
                     break;
                 case "DML_RGK":
-                    String keys[] = SQL.DML_RGKs(sqlCode, sqlParameters, myCon, dp, lq);
+                    String keys[] = SQL.DML_RGKs(sqlCode, sqlParameters, columnsType, myCon, dp, lq);
                     dp.put("rows", keys.length);
                     dp.put("keys", keys);
                     dp.put("success", true);
@@ -127,6 +120,27 @@ public class SqlResolver {
             dp.putAll(outPutData);
         if (validationRequired)
             FlowUtils.validateDocuments(dp, sqlOutput, validationRequired);
+    }
+
+    private static Map<String, String> extractColumnTypes(String jsonString) {
+        Map<String, String> columnsType = new HashMap<>();
+        JsonReader jsonReader = Json.createReader(new StringReader(jsonString));
+        JsonArray jsonArray = jsonReader.readArray();
+        jsonReader.close();
+
+        for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
+            if (jsonObject.containsKey("children")) {
+                JsonArray children = jsonObject.getJsonArray("children");
+                for (JsonObject child : children.getValuesAs(JsonObject.class)) {
+                    if (child.containsKey("columnType")) {
+                        String columnName = child.getString("text");
+                        String columnType = child.getString("columnType");
+                        columnsType.put(columnName, columnType);
+                    }
+                }
+            }
+        }
+        return columnsType;
     }
 
 }
