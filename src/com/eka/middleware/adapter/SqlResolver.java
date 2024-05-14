@@ -123,24 +123,27 @@ public class SqlResolver {
     }
 
     private static Map<String, String> extractColumnTypes(String jsonString) {
-        Map<String, String> columnsType = new HashMap<>();
-        JsonReader jsonReader = Json.createReader(new StringReader(jsonString));
-        JsonArray jsonArray = jsonReader.readArray();
-        jsonReader.close();
+        Map<String, String> columnTypes = new HashMap<>();
 
-        for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
-            if (jsonObject.containsKey("children")) {
+        try (JsonReader jsonReader = Json.createReader(new StringReader(jsonString))) {
+            JsonArray jsonArray = jsonReader.readArray();
+
+            for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
                 JsonArray children = jsonObject.getJsonArray("children");
+                if (children == null) continue;
+
                 for (JsonObject child : children.getValuesAs(JsonObject.class)) {
-                    if (child.containsKey("columnType")) {
-                        String columnName = child.getString("text");
-                        String columnType = child.getString("columnType");
-                        columnsType.put(columnName, columnType);
-                    }
+                    JsonObject data = child.getJsonObject("data");
+                    if (data == null || !data.containsKey("columnType")) continue;
+
+                    String columnName = child.getString("text");
+                    String columnType = data.getString("columnType");
+                    columnTypes.put(columnName, columnType);
                 }
             }
         }
-        return columnsType;
+
+        return columnTypes;
     }
 
 }
