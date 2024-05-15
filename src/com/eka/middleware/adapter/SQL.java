@@ -3,7 +3,6 @@ package com.eka.middleware.adapter;
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.pooling.DBCPDataSource;
 import com.eka.middleware.service.*;
-import com.google.common.collect.Maps;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
@@ -15,25 +14,27 @@ import org.apache.logging.log4j.Level;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.sql.*;
 import java.sql.Date;
+import java.sql.*;
 import java.util.*;
 
 
 public class SQL {
     //public static Logger LOGGER = LogManager.getLogger(SQL.class);
-    public static List<Map<String, Object>> DQL(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
+    public static List<Map<String, Object>> DQL(String sqlCode, List<Map<String, Object>> sqlParameters, Map<String,String> columnsType, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         List<Map<String, Object>> outputDocList = new ArrayList<>();
+        boolean isColumnsTypeEmpty = columnsType.isEmpty();
+
 
         if (sqlParameters != null && sqlParameters.size() > 0) {
 
             String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
             String[] parameterNamesSquare = StringUtils.substringsBetween(sqlCode, "[", "]");
-            Map<String, String> columnsType = null;
+            //Map<String, String> columnsType = null;
 
             if ((parameterNames != null && parameterNames.length > 0) ||
                     (parameterNamesSquare != null && parameterNamesSquare.length > 0)) {
-                columnsType = new HashMap<>();
+                //columnsType = new HashMap<>();
                 Map<String, Object> firstMap = sqlParameters.get(0);
 
                 if (parameterNames != null) {
@@ -41,7 +42,9 @@ public class SQL {
                         String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
                         if (firstMap.containsKey(paramName)) {
                             sqlCode = sqlCode.replace(valuePlaceholder, "?");
-                            columnsType.put(paramName, getColumnTypeFromDatabase(sqlCode, paramName, myCon.getMetaData()));
+                            if(isColumnsTypeEmpty) {
+                                columnsType.put(paramName, getColumnTypeFromDatabase(sqlCode, paramName, myCon.getMetaData()));
+                            }
                         }
                     }
                     setStatementParameters(sqlCode, sqlParameters, myCon, outputDocList, parameterNames, columnsType);
@@ -136,13 +139,15 @@ public class SQL {
         }
     }
 
-    public static int DML(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
+    public static int DML(String sqlCode, List<Map<String, Object>> sqlParameters, Map<String, String> columnsType, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         int rows = 0;
+
+        boolean isColumnsTypeEmpty = columnsType.isEmpty();
 
         if (sqlParameters != null && sqlParameters.size() > 0) {
             DatabaseMetaData databaseMetaData = myCon.getMetaData();
             Map<String, Object> mapObject = sqlParameters.get(0);
-            Map<String, String> columnsType = Maps.newHashMap();
+            //Map<String, String> columnsType = Maps.newHashMap();
             String query = sqlCode;
             String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
 
@@ -151,7 +156,9 @@ public class SQL {
                     String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
                     if (mapObject.containsKey(paramName)) {
                         query = query.replace(valuePlaceholder, "?");
-                        columnsType.put(paramName, getColumnTypeFromDatabase(query, paramName, databaseMetaData));
+                        if (isColumnsTypeEmpty) {
+                            columnsType.put(paramName, getColumnTypeFromDatabase(query, paramName, databaseMetaData));
+                        }
                     }
                 }
             }
@@ -304,12 +311,13 @@ public class SQL {
         return sqlCode;
     }
 
-    public static String[] DML_RGKs(String sqlCode, List<Map<String, Object>> sqlParameters, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
+    public static String[] DML_RGKs(String sqlCode, List<Map<String, Object>> sqlParameters, Map<String,String> columnsType, Connection myCon, DataPipeline dp, boolean logQuery) throws Exception {
         String ids = "";
+        boolean isColumnsTypeEmpty = columnsType.isEmpty();
 
         if (sqlParameters != null && sqlParameters.size() > 0) {
             DatabaseMetaData metaData = myCon.getMetaData();
-            Map<String, String> columnsType = new HashMap<>();
+            //Map<String, String> columnsType = new HashMap<>();
             String[] parameterNames = StringUtils.substringsBetween(sqlCode, "{", "}");
 
             if (parameterNames != null) {
@@ -319,7 +327,9 @@ public class SQL {
                     String valuePlaceholder = StringUtils.replace(("'{" + paramName + "}'"), "'", "");
                     if (firstMap.containsKey(paramName)) {
                         sqlCode = sqlCode.replace(valuePlaceholder, "?");
-                        columnsType.put(paramName, getColumnTypeFromDatabase(sqlCode, paramName, metaData));
+                        if(isColumnsTypeEmpty) {
+                            columnsType.put(paramName, getColumnTypeFromDatabase(sqlCode, paramName, metaData));
+                        }
                     }
                 }
             }
