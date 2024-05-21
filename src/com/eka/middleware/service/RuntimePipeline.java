@@ -17,6 +17,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import com.eka.middleware.logging.AppLogger;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.undertow.account.Pac4jAccount;
 
@@ -31,8 +32,12 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.session.Session;
 import io.undertow.util.Sessions;
+import org.apache.logging.log4j.Logger;
+
 
 public class RuntimePipeline {
+	private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
+
 	private static final Map<String, RuntimePipeline> pipelines = new ConcurrentHashMap<String, RuntimePipeline>();
 	private final String sessionId;
 	private final String correlationId;
@@ -72,7 +77,13 @@ public class RuntimePipeline {
 				String name = sessionId + ".snap";
 				File file = new File(packagePath + "/snapshots/" + resource + "/" + name);
 				file.getParentFile().mkdirs();
-				file.createNewFile();
+
+				boolean isNewFileCreated = file.createNewFile();
+				if (isNewFileCreated) {
+					LOGGER.info("File created successfully: {}", file.getAbsolutePath());
+				} else {
+					LOGGER.warn("File already exists: {}", file.getAbsolutePath());
+				}
 				BufferedWriter bufferedWriter = Files.newBufferedWriter(Path.of(file.toURI()));
 				bw = bufferedWriter;
 				bw.write("[");

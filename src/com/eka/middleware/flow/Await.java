@@ -217,7 +217,7 @@ public class Await implements FlowBasicInfo {
 								if("Failed".equals(status))
 									dp.log("Batch ID : "+batchID+" "+status);
 							} catch (Exception e) {
-								LOGGER.debug("Valie of time_out is "+metaData.get("*timeout_ms"));
+								LOGGER.debug("Value of time_out is "+metaData.get("*timeout_ms"));
 								try {
 									ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
 								} catch (Exception e2) {

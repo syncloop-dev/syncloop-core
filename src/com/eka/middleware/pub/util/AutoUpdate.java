@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.net.URI;
@@ -22,7 +24,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
-import java.util.HashMap;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -33,6 +34,8 @@ import static com.eka.middleware.pub.util.AppUpdate.updateStatus;
 
 
 public class AutoUpdate {
+    private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
+
 
     public static boolean importURLAliases(String UrlAliasFilepath, DataPipeline dp) throws Exception{
         Boolean importSuccessful=true;
@@ -42,31 +45,38 @@ public class AutoUpdate {
             dp.put("msg","Alias file not found. Path: "+UrlAliasFilepath);
             return true;
         }
-        FileInputStream aliasFIS=new FileInputStream(file);
-        prop.load(aliasFIS);
-        prop.forEach((k,v)->{
-            //if(dp.getString("error")==null){
-                String key=(String)k;
-                String value=(String)v;
-                dp.map("fqn",value);
-                dp.map("alias",key);
-                try{
-                    dp.apply("packages.middleware.pub.server.browse.registerURLAlias");
-                    String msg=dp.getString("msg");
-                    if(!"Saved".equals(msg))
-                        dp.put("error",msg);
+        try (FileInputStream aliasFIS = new FileInputStream(file)) {
+            prop.load(aliasFIS);
+            prop.forEach((k,v)->{
+                //if(dp.getString("error")==null){
+                    String key=(String)k;
+                    String value=(String)v;
+                    dp.map("fqn",value);
+                    dp.map("alias",key);
+                    try{
+                        dp.apply("packages.middleware.pub.server.browse.registerURLAlias");
+                        String msg=dp.getString("msg");
+                        if(!"Saved".equals(msg))
+                            dp.put("error",msg);
 
-                }catch(Exception e){
-                    dp.put("error",e.getMessage());
-                }
-                dp.drop("fqn");
-                dp.drop("alias");
-            //}
-        });
-        aliasFIS.close();
+                    }catch(Exception e){
+                        dp.put("error",e.getMessage());
+                    }
+                    dp.drop("fqn");
+                    dp.drop("alias");
+                //}
+            });
+        } catch (IOException e) {
+            dp.put("error", e.getMessage());
+        }
         if(dp.getString("error")!=null)
             importSuccessful=false;
-        file.delete();
+        boolean deletionSuccess = file.delete();
+        if (deletionSuccess) {
+            LOGGER.info("File created successfully: {}", file.getAbsolutePath());
+        } else {
+            LOGGER.warn("File already exists: {}", file.getAbsolutePath());
+        }
         return importSuccessful;
     }
 
@@ -75,42 +85,42 @@ public class AutoUpdate {
         String unZippedFolderPath=null;
         // create output directory if it doesn't exist
         if(!dir.exists()) dir.mkdirs();
-        FileInputStream fis;
-        //buffer for read and write data to file
+        try (FileInputStream fis = new FileInputStream(zipFilePath);
+             ZipInputStream zis = new ZipInputStream(fis)) {
 
-        fis = new FileInputStream(zipFilePath);
-        ZipInputStream zis = new ZipInputStream(fis);
-        ZipEntry ze = zis.getNextEntry();
-        while(ze != null){
-            String fileName = ze.getName();
-            if(unZippedFolderPath==null)
-                unZippedFolderPath=fileName;
-            else{
-                dp.log("Zipped entry "+fileName);
-                fileName=("#$"+fileName).replace("#$"+unZippedFolderPath,"");
-                File newFile = new File(destDir + File.separator + fileName);
-                new File(newFile.getParent()).mkdirs();
-                byte[] buffer = new byte[1024];
-                int len = zis.read(buffer);
-                if(len>0){
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    while (len > 0) {
-                        fos.write(buffer, 0, len);
-                        //buffer = new byte[1024]
-                        len = zis.read(buffer);
+            ZipEntry ze = zis.getNextEntry();
+            while (ze != null) {
+                String fileName = ze.getName();
+                if (unZippedFolderPath == null)
+                    unZippedFolderPath = fileName;
+                else {
+                    dp.log("Zipped entry " + fileName);
+                    fileName = ("#$" + fileName).replace("#$" + unZippedFolderPath, "");
+                    File newFile = new File(destDir + File.separator + fileName);
+                    new File(newFile.getParent()).mkdirs();
+                    byte[] buffer = new byte[1024];
+                    int len = zis.read(buffer);
+                    if (len > 0) {
+                        try(FileOutputStream fos = new FileOutputStream(newFile)) {
+                            while (len > 0) {
+                                fos.write(buffer, 0, len);
+                                //buffer = new byte[1024]
+                                len = zis.read(buffer);
+                            }
+                            fos.flush();
+                            fos.close();
+                        }
                     }
-                    fos.flush();
-                    fos.close();
                 }
+                //close this ZipEntry
+                zis.closeEntry();
+                ze = zis.getNextEntry();
             }
-            //close this ZipEntry
+            //close last ZipEntry
             zis.closeEntry();
-            ze = zis.getNextEntry();
+            zis.close();
+            fis.close();
         }
-        //close last ZipEntry
-        zis.closeEntry();
-        zis.close();
-        fis.close();
     }
 
     public static void createRestorePoint(String buildName, DataPipeline dataPipeline) throws Exception{
@@ -147,7 +157,7 @@ public class AutoUpdate {
         URL url = new URL(String.format(Build.DISTRIBUTION_REPO + "%s", fileName));
 
         String downloadLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/import/";
-        createFoldersIfNotExist(downloadLocation);   
+        createFoldersIfNotExist(downloadLocation);
 
         File downloadedFile = new File(downloadLocation + fileName);
 
@@ -174,36 +184,42 @@ public class AutoUpdate {
             boolean importSuccessful = importURLAliases(urlAliasFilePath, dataPipeline);
 
             String jsonContent = readJsonFromUrl(returnTenantUpdateUrl());
-            String extractedJsonString = extractJsonPart(jsonContent, "latest");
-            String tenantUpdateFileLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant())+"builds/tenant-update.json";
 
-            String jsonValue = jsonValueFetch(returnTenantUpdateUrl(), "latest.update_core_jar");
+            if (jsonContent != null) {
+                String extractedJsonString = extractJsonPart(jsonContent, "latest");
+                String tenantUpdateFileLocation = PropertyManager.getPackagePath(dataPipeline.rp.getTenant()) + "builds/tenant-update.json";
 
-            boolean updatedCoreJar = false;
-            boolean jarUpdated = false;
+                String jsonValue = jsonValueFetch(returnTenantUpdateUrl(), "latest.update_core_jar");
 
-            if (jsonValue != null && jsonValue.equals("true") && dataPipeline.rp.getTenant().getName().equals("default")) {
-                String coreDirPath = packagePath + "core";
-                updatedCoreJar = moveFolder(coreDirPath, "/movables");
-                jarUpdated = true;
+                boolean updatedCoreJar = false;
+                boolean jarUpdated = false;
+
+                if (jsonValue != null && jsonValue.equals("true") && dataPipeline.rp.getTenant().getName().equals("default")) {
+                    String coreDirPath = packagePath + "core";
+                    updatedCoreJar = moveFolder(coreDirPath, "/movables");
+                    jarUpdated = true;
+                }
+
+
+                // Create restore point
+                createRestorePoint(fileName, dataPipeline);
+
+                try {
+                    writeJsonToFile(extractedJsonString, tenantUpdateFileLocation);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                if (jarUpdated) {
+                    ApplicationShutdownHook.restartServer(dataPipeline);
+                }
+
+                dataPipeline.put("status", true);
+                dataPipeline.put("updatedCoreJar", updatedCoreJar);
+            } else{
+                dataPipeline.put("status", false);
+                dataPipeline.put("updatedCoreJar", false);
             }
-
-
-            // Create restore point
-            createRestorePoint(fileName, dataPipeline);
-
-            try {
-                writeJsonToFile(extractedJsonString, tenantUpdateFileLocation);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            if (jarUpdated) {
-                ApplicationShutdownHook.restartServer(dataPipeline);
-            }
-
-            dataPipeline.put("status", true);
-            dataPipeline.put("updatedCoreJar", updatedCoreJar);
         } else{
             dataPipeline.put("status", false);
             dataPipeline.put("updatedCoreJar", false);

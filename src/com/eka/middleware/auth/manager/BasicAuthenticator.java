@@ -44,9 +44,9 @@ public class BasicAuthenticator extends SimpleTestUsernamePasswordAuthenticator 
         LOGGER.trace("Casting cred...........");
         final var credentials = (UsernamePasswordCredentials) cred;
         var username = credentials.getUsername();
-        LOGGER.trace("User forund: "+username+"...........");
+        LOGGER.trace("User found: "+username+"...........");
         var password = credentials.getPassword();
-        LOGGER.trace("Password forund: *******...........");
+        LOGGER.trace("Password found: *******...........");
         if (CommonHelper.isBlank(username)) {
         	CredentialsException ex=new CredentialsException("Username cannot be blank");
         	ServiceUtils.printException("User is blank", ex);
@@ -57,8 +57,12 @@ public class BasicAuthenticator extends SimpleTestUsernamePasswordAuthenticator 
         	ServiceUtils.printException("Password is blank", ex);
             throw ex;
         }
-        LOGGER.trace("Veify user: "+username+"...........");
-        AuthAccount account=identityManager.verify(username, new PasswordCredential(password.toCharArray()));
+        LOGGER.trace("Verify user: "+username+"...........");
+
+        AuthAccount account = null;
+        if(identityManager != null){
+            account=identityManager.verify(username, new PasswordCredential(password.toCharArray()));
+        }
 
         if (account==null) {
         	CredentialsException ex= new CredentialsException("Username : '" + username + "' does not match password");

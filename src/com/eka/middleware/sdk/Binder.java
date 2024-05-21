@@ -1,34 +1,41 @@
 package com.eka.middleware.sdk;
 
-import com.beust.jcommander.internal.Maps;
 import com.eka.middleware.flow.FlowResolver;
+import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.RuntimePipeline;
+import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.Tenant;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
+import io.undertow.util.Headers;
+import org.apache.commons.io.IOUtils;
 
 import javax.json.Json;
 import javax.json.JsonObject;
+import javax.json.JsonReader;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.regex.Pattern;
 
 public class Binder {
 
     private final String propLoc;
 
-    public Binder(String propLoc) {
+    public Binder(String propLoc) throws Exception {
         this.propLoc = propLoc;
+        PropertyManager.initConfig(new String[]{propLoc});
     }
 
     public Map<String, Object> run(String sessionId, String apiServiceJson, Map<String, Object> payload)
             throws Exception {
-
-        PropertyManager.initConfig(new String[]{propLoc});
 
         JsonObject mainflowJsonObject = null;
         UUID coId = UUID.randomUUID();
@@ -41,16 +48,17 @@ public class Binder {
         dp.getMap().forEach((k, v) -> {
             response.put(k, v);
         });
+        response.put("__snapData", dp.getSnapData());
         rp.destroy();
         return response;
     }
 
     private static final void executeService(DataPipeline dataPipeline, String apiServiceJson,
                                              JsonObject mainflowJsonObject) throws SnippetException {
-        try {
-            InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
-            mainflowJsonObject = Json.createReader(is).readObject();
-            FlowResolver.execute(dataPipeline, mainflowJsonObject);
+        try (InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
+             JsonReader jsonReader = Json.createReader(is);){
+            JsonObject jsonObject = jsonReader.readObject();
+            FlowResolver.execute(dataPipeline, jsonObject);
         } catch (Throwable e) {
             dataPipeline.clear();
             dataPipeline.put("error", e.getMessage());
@@ -60,4 +68,104 @@ public class Binder {
         }
     }
 
+    /**
+     * @param serviceId
+     * @param serviceJson
+     */
+    public void addEmbeddedService(String serviceId, String serviceJson) {
+        CacheManager.addEmbeddedService(serviceId, serviceJson, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     */
+    public Set<String> getEmbeddedService() {
+        return CacheManager.getEmbeddedServices(Tenant.getTempTenant("default"));
+    }
+
+    /**
+     * @param serviceId
+     * @return
+     */
+    public String getServiceJson(String serviceId) {
+        return CacheManager.getEmbeddedService(serviceId, Tenant.getTempTenant("default"));
+    }
+
+    public Map<String, Object> getServices() {
+        Map<String, Object> response = new HashMap<>();
+        List<Map<String, Object>> children = new ArrayList<>();
+
+        String packageDir = PropertyManager.getPackagePath(Tenant.getTempTenant("default"));
+
+        File file = new File(packageDir);
+        File fileList[] = file.listFiles();
+        for (File fyle : fileList) {
+            Map<String, Object> childMap = getTreeMap(fyle, "package");
+            if (childMap != null) {
+                children.add(childMap);
+            } else {
+                System.err.println("No files found in the directory: " + packageDir);
+            }
+        }
+        response.put("packages", children);
+        response.put("embeddedServices", getEmbeddedService());
+        return response;
+    }
+
+    private Map<String, Object> getTreeMap(File file, String type) {
+        Map<String, Object> map = new HashMap<>();
+        String allowedTypes = "service,map,doc,api,flow,package,root,folder,properties,jar,jdbc,sql,pem,graphql,txt,csv";
+        int indx = file.getName().lastIndexOf(".") + 1;
+        String fileType = file.getName().substring(indx);
+
+        if (file.getName().equals("build") && !file.isDirectory()) {
+            return null;
+        }
+
+        map.put("text", file.getName().replace("." + fileType, ""));
+        if (file.isDirectory()) {
+            map.put("type", type);
+            List<Map<String, Object>> children = new ArrayList<>();
+            File fileList[] = file.listFiles();
+            for (File fyle : fileList) {
+                int indx2 = fyle.getName().lastIndexOf(".") + 1;
+                String fileType2 = fyle.getName().substring(indx2);
+                if (allowedTypes.contains(fileType2) || fyle.isDirectory()) {
+                    Map<String, Object> childMap = getTreeMap(fyle, "folder");
+                    if (childMap != null) {
+                        children.add(childMap);
+                    }
+                }
+            }
+            map.put("children", children);
+        } else {
+            if (indx != 0 && allowedTypes.contains(fileType)) {
+                map.put("type", fileType);
+            }
+        }
+        return map;
+    }
+
+
+    public Map<String, Object> getServiceInfo(String location) {
+        try {
+            String serviceInfo = null;
+            if (location.startsWith("/packages")) {
+                location = PropertyManager.getPackagePath(Tenant.getTempTenant("default")) + location;
+                File file = new File(location);
+                if (!file.exists()) {
+                    return Collections.singletonMap("error", "File not found");
+                }
+
+                serviceInfo = IOUtils.toString(new FileInputStream(file));
+            } else {
+                serviceInfo = CacheManager.getEmbeddedService(location.replaceAll("/embedded/", "").replaceAll(".api", ""), Tenant.getTempTenant("default"));
+            }
+
+            Map<String, Object> tokenData = new ObjectMapper().readValue(serviceInfo, Map.class);
+
+            return tokenData;
+        } catch (Throwable e) {
+            return Collections.singletonMap("error", e.getMessage());
+        }
+    }
 }

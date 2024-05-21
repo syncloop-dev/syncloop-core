@@ -2,6 +2,7 @@ package com.eka.middleware.server;
 
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.template.SystemException;
+import org.graalvm.polyglot.io.ProcessHandler;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.util.Optional;
 
 public class ApplicationShutdownHook implements Runnable {
 
@@ -48,8 +50,9 @@ public class ApplicationShutdownHook implements Runnable {
         RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
         String processName = runtimeMXBean.getName();
         pid = Long.parseLong(processName.split("@")[0]);
-        ProcessHandle processHandle = ProcessHandle.of(pid).get();
-        lastProcess = processHandle;
+
+        Optional<ProcessHandle> optionalProcessHandle = ProcessHandle.of(pid);
+        optionalProcessHandle.ifPresent(processHandle -> lastProcess = processHandle);
     }
 
 

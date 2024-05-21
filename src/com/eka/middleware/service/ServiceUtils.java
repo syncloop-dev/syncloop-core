@@ -50,6 +50,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.json.Json;
 import javax.json.JsonObject;
+import javax.json.JsonReader;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -268,8 +269,12 @@ public class ServiceUtils {
 		} catch (Exception e) {
 			throw e;
 		} finally {
-			fis.close();
-			baos.close();
+			if (fis != null) {
+				fis.close();
+			}
+			if (baos != null) {
+				baos.close();
+			}
 		}
 	}
 
@@ -356,7 +361,7 @@ public class ServiceUtils {
 			lastErrorDump.clear();
 			lastErrorDump.put("lastErrorDump", "");
 		}
-		return lastErrorDump.get("lastErrorDump");
+		return lastErrorDump != null ? lastErrorDump.get("lastErrorDump") : null;
 	}
 
 	public static final void execute(String fqn, DataPipeline dataPipeLine) throws SnippetException {
@@ -372,9 +377,9 @@ public class ServiceUtils {
 
 	public static final void executeEmbeddedService(DataPipeline dataPipeline, String apiServiceJson)
 			throws SnippetException {
-		try {
-			InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
-			JsonObject mainflowJsonObject = Json.createReader(is).readObject();
+		try (InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
+			 JsonReader jsonReader = Json.createReader(is)) {
+			JsonObject mainflowJsonObject = jsonReader.readObject();
 			FlowResolver.execute(dataPipeline, mainflowJsonObject);
 		} catch (Throwable e) {
 			dataPipeline.clear();
@@ -508,25 +513,27 @@ public class ServiceUtils {
 			Map<String, String> pathParams = new HashMap<String, String>();
 			boolean reload = PropertyManager.hasTenantFileChanged(URLAliasFilePath);
 			if (reload) {
-				Properties props = PropertyManager.getProperties(URLAliasFilePath);
-				if (props == null)
-					props = new Properties();
-				props.load(new FileInputStream(new File(URLAliasFilePath)));
-				Set<Object> keys = props.keySet();
-				// Add keys
-				for (Object keyStr : keys) {
-					String key = keyStr.toString();
-					urlMappings.put(key, props.get(key));
-					UriTemplate parameterResolver = new UriTemplate(key);
-					parameterResolverMap.put(tenant.getName() + "-" + key, parameterResolver);
-				}
-				// Remove Keys
-				keys = urlMappings.keySet();
-				for (Object keyStr : keys) {
-					String key = keyStr.toString();
-					if (props.get(key) == null) {
-						urlMappings.remove(key);
-						parameterResolverMap.remove(tenant.getName() + "-" + key);
+				try (FileInputStream fis = new FileInputStream(new File(URLAliasFilePath))) {
+					Properties props = PropertyManager.getProperties(URLAliasFilePath);
+					if (props == null)
+						props = new Properties();
+					props.load(fis);
+					Set<Object> keys = props.keySet();
+					// Add keys
+					for (Object keyStr : keys) {
+						String key = keyStr.toString();
+						urlMappings.put(key, props.get(key));
+						UriTemplate parameterResolver = new UriTemplate(key);
+						parameterResolverMap.put(tenant.getName() + "-" + key, parameterResolver);
+					}
+					// Remove Keys
+					keys = urlMappings.keySet();
+					for (Object keyStr : keys) {
+						String key = keyStr.toString();
+						if (props.get(key) == null) {
+							urlMappings.remove(key);
+							parameterResolverMap.remove(tenant.getName() + "-" + key);
+						}
 					}
 				}
 			}
@@ -593,48 +600,48 @@ public class ServiceUtils {
 
 		Builder builder = FormParserFactory.builder();
 
-		final FormDataParser formDataParser = builder.build().createParser(exchange);
-		if (formDataParser != null) {
+		try (final FormDataParser formDataParser = builder.build().createParser(exchange)) {
+			if (formDataParser != null) {
 
 //			try {
 //				ExecutorService threadpool = Executors.newCachedThreadPool();
 //				@SuppressWarnings("unchecked")
 //				Future<Long> futureTask = (Future<Long>) threadpool.submit(() -> {
-			try {
-				// BlockingHttpExchange bht = exchange.startBlocking();
-				FormData formData = null;// new FormData(0);
 				try {
-					formData = formDataParser.parseBlocking();
-				} catch (Exception e) {
-					e.printStackTrace();
-					throw new SnippetException(dataPipeLine,
-							"Could not fetch formData for multipart request.\n" + e.getMessage(), e);
-				}
-				Map<String, Object> formDataMap = new HashMap<String, Object>();
-				List<InputStream> files = new ArrayList<InputStream>();
-				List<String> filesList = new ArrayList<>();
-				for (String key : formData) {
-					for (FormData.FormValue formValue : formData.get(key)) {
-						if (formValue.isFileItem()) {
-							if (key != null && key.trim().length() > 0) {
-								formDataMap.put(key + "_fileName", formValue.getFileName());
-								formDataMap.put(key, formValue.getFileItem().getInputStream());
-								filesList.add(key);
-							}
-							InputStream is = formValue.getFileItem().getInputStream();
-							files.add(is);
-							formDataMap.put(formValue.getFileName(), is);
-						} else
-							formDataMap.put(key, formValue.getValue());
+					// BlockingHttpExchange bht = exchange.startBlocking();
+					FormData formData = null;// new FormData(0);
+					try {
+						formData = formDataParser.parseBlocking();
+					} catch (Exception e) {
+						e.printStackTrace();
+						throw new SnippetException(dataPipeLine,
+								"Could not fetch formData for multipart request.\n" + e.getMessage(), e);
 					}
+					Map<String, Object> formDataMap = new HashMap<String, Object>();
+					List<InputStream> files = new ArrayList<InputStream>();
+					List<String> filesList = new ArrayList<>();
+					for (String key : formData) {
+						for (FormData.FormValue formValue : formData.get(key)) {
+							if (formValue.isFileItem()) {
+								if (key != null && key.trim().length() > 0) {
+									formDataMap.put(key + "_fileName", formValue.getFileName());
+									formDataMap.put(key, formValue.getFileItem().getInputStream());
+									filesList.add(key);
+								}
+								InputStream is = formValue.getFileItem().getInputStream();
+								files.add(is);
+								formDataMap.put(formValue.getFileName(), is);
+							} else
+								formDataMap.put(key, formValue.getValue());
+						}
+					}
+					formDataMap.put("uploadedFiles", files);
+					formDataMap.put("keys", filesList);
+					MultiPart mp = new MultiPart(formDataMap);
+					rp.payload.put("*multiPartRequest", mp);
+				} catch (Exception e) {
+					ServiceUtils.printException(rp.getTenant(), rp.getSessionID() + " Could not process FormDataParser.", e);
 				}
-				formDataMap.put("uploadedFiles", files);
-				formDataMap.put("keys", filesList);
-				MultiPart mp = new MultiPart(formDataMap);
-				rp.payload.put("*multiPartRequest", mp);
-			} catch (Exception e) {
-				ServiceUtils.printException(rp.getTenant(), rp.getSessionID() + " Could not stream file thread.", e);
-			}
 //				});
 //
 //				while (!futureTask.isDone()) {
@@ -648,6 +655,9 @@ public class ServiceUtils {
 //				throw new SnippetException(dataPipeLine, e.getMessage(), e);
 //			}
 
+			}
+		}catch (Exception e) {
+			ServiceUtils.printException(rp.getTenant(), rp.getSessionID() + " Could not stream file thread.", e);
 		}
 		MultiPart mp = null;
 		Map<String, Object> payload = rp.payload;
@@ -700,11 +710,12 @@ public class ServiceUtils {
 					urlMappings.remove(setKey);
 			}
 			urlMappings.setProperty(alias, fqn);
-			FileOutputStream fos = new FileOutputStream(
-					new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
+			try(FileOutputStream fos = new FileOutputStream(
+					new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"))){
 			urlMappings.store(fos, "");
 			fos.flush();
 			fos.close();
+			}
 		} else {
 			msg = "Failed to save. The alias conflicts with the existing FQN (" + existingFQN + ").";
 			return msg;
@@ -733,11 +744,12 @@ public class ServiceUtils {
 			return "Alias not found. Nothing to delete.";
 		}
 
-		FileOutputStream fos = new FileOutputStream(
-				new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"));
-		urlMappings.store(fos, "");
-		fos.flush();
-		fos.close();
+		try(FileOutputStream fos = new FileOutputStream(
+				new File(PropertyManager.getPackagePath(dp.rp.getTenant()) + "URLAliasMapping.properties"))) {
+			urlMappings.store(fos, "");
+			fos.flush();
+			fos.close();
+		}
 
 		return "Alias deleted successfully.";
 	}
@@ -824,8 +836,9 @@ public class ServiceUtils {
 
 			if (tempFile == null)
 				inputStream = mp.is;
-			else
+			else {
 				inputStream = new FileInputStream(tempFile);
+			}
 //			exchange.startBlocking();
 			Set<String> headers = mp.headers.keySet();
 
@@ -1314,15 +1327,18 @@ public class ServiceUtils {
 			}
 			return;
 		}
-		FileInputStream fis = new FileInputStream(fileToZip);
-		ZipEntry zipEntry = new ZipEntry(fileName);
-		zipOut.putNextEntry(zipEntry);
-		byte[] bytes = new byte[1024];
-		int length;
-		while ((length = fis.read(bytes)) >= 0) {
-			zipOut.write(bytes, 0, length);
+		try(FileInputStream fis = new FileInputStream(fileToZip)) {
+			ZipEntry zipEntry = new ZipEntry(fileName);
+			zipOut.putNextEntry(zipEntry);
+			byte[] bytes = new byte[1024];
+			int length;
+			while ((length = fis.read(bytes)) >= 0) {
+				zipOut.write(bytes, 0, length);
+			}
+			fis.close();
+		}catch (IOException e) {
+			e.printStackTrace();
 		}
-		fis.close();
 	}
 
 	public static OIDCProviderMetadata fetchMetadata(String discoveryUrl, JWSAlgorithm jwsAlgo) throws Exception {
@@ -1444,7 +1460,7 @@ public class ServiceUtils {
 
 	public static void unzipBuildFile(String srcZip, String destinationBasePath) throws IOException {
 		byte[] buffer = new byte[1024];
-		ZipInputStream zis = new ZipInputStream(new FileInputStream(srcZip));
+		try(ZipInputStream zis = new ZipInputStream(new FileInputStream(srcZip))){
 		ZipEntry zipEntry = zis.getNextEntry();
 		while (zipEntry != null) {
 			File newFile = newFile(new File(destinationBasePath), zipEntry);
@@ -1460,17 +1476,22 @@ public class ServiceUtils {
 				}
 
 				// write file content
-				FileOutputStream fos = new FileOutputStream(newFile);
-				int len;
-				while ((len = zis.read(buffer)) > 0) {
-					fos.write(buffer, 0, len);
+				try(FileOutputStream fos = new FileOutputStream(newFile)) {
+					int len;
+					while ((len = zis.read(buffer)) > 0) {
+						fos.write(buffer, 0, len);
+					}
+					fos.close();
 				}
-				fos.close();
 			}
 			zipEntry = zis.getNextEntry();
 		}
 		zis.closeEntry();
 		zis.close();
+		}catch (IOException e) {
+			e.printStackTrace();
+			throw e;
+		}
 	}
 
 	/**
@@ -1668,7 +1689,9 @@ public class ServiceUtils {
 		flowRef = location + flowRef;
 		if (mainflowJsonObject == null || timeout == 0l) { // -----reset fix
 			timeout = System.currentTimeMillis() + resetServiceInMS; // -----reset fix
-			mainflowJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+			try (JsonReader reader = Json.createReader(new FileInputStream(new File(flowRef)))) {
+				mainflowJsonObject = reader.readObject();
+			}
 		}
 		return mainflowJsonObject;
 	}
@@ -1726,9 +1749,10 @@ public class ServiceUtils {
 
 		Properties props = new Properties();
 		String filePath = PropertyManager.getConfigFolderPath() + "server.properties";
-		FileInputStream inputStream = new FileInputStream(filePath);
-		props.load(new FileInputStream(filePath));
-		inputStream.close();
+		try(FileInputStream inputStream = new FileInputStream(filePath)) {
+			props.load(inputStream);
+			inputStream.close();
+		}
 
 		for (Map.Entry<String, Object> entry : properties.entrySet()) {
 			String key = entry.getKey();
@@ -1739,9 +1763,10 @@ public class ServiceUtils {
 			}
 		}
 
-		FileOutputStream outputStream = new FileOutputStream(filePath);
-		props.store(outputStream, "");
-		outputStream.flush();
-		outputStream.close();
+		try(FileOutputStream outputStream = new FileOutputStream(filePath)) {
+			props.store(outputStream, "");
+			outputStream.flush();
+			outputStream.close();
+		}
 	}
 }

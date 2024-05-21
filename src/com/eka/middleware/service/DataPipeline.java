@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -76,6 +77,9 @@ public class DataPipeline {
 	private boolean recordTrace;
 	// private final List<JsonArray> futureTransformers=new ArrayList<>();
 	private final Object syncObject = new Object();
+
+	@Getter
+	public List<String> snapData = new ArrayList<>();
 
 	public DataPipeline(RuntimePipeline runtimePipeline, String resource, String urlPath) {
 		recursiveDepth = 0;
@@ -476,7 +480,12 @@ public class DataPipeline {
 			dir.mkdirs();
 		try {
 			if (!file.exists()) {
-				file.createNewFile();
+				boolean isNewFileCreated = file.createNewFile();
+				if (isNewFileCreated) {
+					LOGGER.info("File created successfully: {}", file.getAbsolutePath());
+				} else {
+					LOGGER.warn("File already exists: {}", file.getAbsolutePath());
+				}
 			}
 			Map<String, Object> map = new HashMap<String, Object>();
 			map.put("@sessionId", getSessionId());
@@ -486,10 +495,11 @@ public class DataPipeline {
 			payload.put("@DataPipeLineMetaData", map);
 			String json = toJson();
 			if (json != null) {
-				FileOutputStream fos = new FileOutputStream(file);
-				fos.write(json.getBytes());
-				fos.flush();
-				fos.close();
+				try(FileOutputStream fos = new FileOutputStream(file)) {
+					fos.write(json.getBytes());
+					fos.flush();
+					fos.close();
+				}
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -536,7 +546,11 @@ public class DataPipeline {
 			map.put(currentResource, new Map[] { servicePayload, payloadStack, globalPayload });
 			map.putAll(meta);
 			String json = ServiceUtils.toPrettyJson(map);
-			rp.writeSnapshot(resource, json);
+			if(isRecordTrace()) {
+				snapData.add(json);
+			} else {
+				rp.writeSnapshot(resource, json);
+			}
 		} catch (Exception e) {
 			ServiceUtils.printException(this, "Exception while taking snapshot.", e);
 		}
@@ -567,6 +581,7 @@ public class DataPipeline {
 		return streams;
 	}
 
+	@Deprecated(since = "v1.0")
 	public String getFileName(InputStream fileStream) throws SnippetException {
 		Object obj = getMultiPart().formData.get(fileStream);
 		return (String) obj;
@@ -741,11 +756,12 @@ public class DataPipeline {
 
 	public List<Map<String, Object>> getFuture() {
 		final List<Map<String, Object>> futureList = new ArrayList<>();
-		if (this.futureList != null && this.futureList.size() > 0)
+		if (this.futureList != null && this.futureList.size() > 0) {
 			this.futureList.forEach(map -> {
 				futureList.add(map);
 			});
-		this.futureList.clear();
+			this.futureList.clear();
+		}
 		this.futureList = new ArrayList<>();
 		return futureList;
 	}
@@ -1351,8 +1367,8 @@ public class DataPipeline {
 		LOGGER.log(level, dpl);
 	}
 
-	public void logException(Throwable exception) {
-		new SnippetException(this, "Eexception reported by " + getCurrentResource(), new Exception(exception));
+	public void logException(Throwable exception) throws SnippetException {
+        throw new SnippetException(this, "Exception reported by " + getCurrentResource(), new Exception(exception));
 	}
 
 	public void logDataPipeline() {
