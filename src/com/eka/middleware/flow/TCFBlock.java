@@ -1,14 +1,15 @@
 package com.eka.middleware.flow;
 
+import java.util.HashMap;
+
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
-import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class TCFBlock implements FlowBasicInfo {
@@ -105,7 +106,7 @@ public class TCFBlock implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid, Maps.newHashMap());
+				dp.snapAfter(comment, guid, new HashMap<String, Object>());
 				if (null != snapshot || null != snapCondition) {
 					dp.drop("*snapshot");
 				}

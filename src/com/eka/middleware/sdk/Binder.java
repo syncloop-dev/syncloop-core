@@ -1,16 +1,16 @@
 package com.eka.middleware.sdk;
 
+import com.eka.lite.heap.CacheManager;
+import com.eka.lite.service.DataPipeline;
+import com.eka.lite.service.RuntimePipeline;
+import com.eka.lite.template.Tenant;
 import com.eka.middleware.flow.FlowResolver;
-import com.eka.middleware.heap.CacheManager;
-import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.sdk.api.SyncloopFunctionScanner;
+import com.eka.middleware.sdk.api.outline.ServiceOutline;
 import com.eka.middleware.service.PropertyManager;
-import com.eka.middleware.service.RuntimePipeline;
-import com.eka.middleware.template.MultiPart;
+import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
-import com.eka.middleware.template.Tenant;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
-import io.undertow.util.Headers;
 import org.apache.commons.io.IOUtils;
 
 import javax.json.Json;
@@ -20,10 +20,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class Binder {
 
@@ -39,7 +37,7 @@ public class Binder {
 
         JsonObject mainflowJsonObject = null;
         UUID coId = UUID.randomUUID();
-        RuntimePipeline rp = RuntimePipeline.create(Tenant.getTempTenant("default"), sessionId.toString(), coId.toString(), null, "standalone",
+        RuntimePipeline rp = RuntimePipeline.create(Tenant.getTempTenant("default"), sessionId.toString(), coId.toString(), "standalone",
                 null);
         DataPipeline dp = rp.dataPipeLine;
         dp.putAll(payload);
@@ -82,6 +80,10 @@ public class Binder {
         return CacheManager.getEmbeddedServices(Tenant.getTempTenant("default"));
     }
 
+    public Map<String, String> getFunctions() {
+        return CacheManager.getMethods(Tenant.getTempTenant("default"));
+    }
+
     /**
      * @param serviceId
      * @return
@@ -108,6 +110,7 @@ public class Binder {
         }
         response.put("packages", children);
         response.put("embeddedServices", getEmbeddedService());
+        response.put("functions", getFunctions());
         return response;
     }
 
@@ -157,6 +160,8 @@ public class Binder {
                 }
 
                 serviceInfo = IOUtils.toString(new FileInputStream(file));
+            } else if (location.endsWith(".function")) {
+                serviceInfo = CacheManager.getMethod(location.replaceAll(".function", ""), Tenant.getTempTenant("default"));
             } else {
                 serviceInfo = CacheManager.getEmbeddedService(location.replaceAll("/embedded/", "").replaceAll(".api", ""), Tenant.getTempTenant("default"));
             }
@@ -166,6 +171,21 @@ public class Binder {
             return tokenData;
         } catch (Throwable e) {
             return Collections.singletonMap("error", e.getMessage());
+        }
+    }
+
+    /**
+     * @param aClass
+     */
+    public void addFunctionClass(Class<?> aClass) throws Exception {
+        List<ServiceOutline> serviceOutlines = SyncloopFunctionScanner.addClass(aClass, false);
+
+        for (ServiceOutline serviceOutline: serviceOutlines) {
+            CacheManager.addMethod(
+                    String.format("%s.%s",
+                            serviceOutline.getLatest().getData().getAcn(),
+                            serviceOutline.getLatest().getData().getFunction()),
+                    new ServiceUtils().ObjectToJson(serviceOutline.getLatest() ), Tenant.getTempTenant("default"));
         }
     }
 }

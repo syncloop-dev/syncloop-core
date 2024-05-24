@@ -11,9 +11,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
-import com.eka.middleware.heap.CacheManager;
+import com.eka.lite.heap.CacheManager;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.RTCompile;
 import com.eka.middleware.service.ServiceUtils;

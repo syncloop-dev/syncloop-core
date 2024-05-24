@@ -1,5 +1,6 @@
 package com.eka.middleware.flow;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -7,10 +8,9 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
-import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class Scope implements FlowBasicInfo {
@@ -47,7 +47,7 @@ public class Scope implements FlowBasicInfo {
 	}
 	
 	public void process(DataPipeline dp) throws SnippetException{
-		Map<String, Object> snapMeta = Maps.newHashMap();
+		Map<String, Object> snapMeta = new HashMap<String, Object>();
 		snapMeta.put("GROUP_SEQUENCE_CONDITION_EVAL", evaluateCondition);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
@@ -185,6 +185,17 @@ public class Scope implements FlowBasicInfo {
 									await.process(dp);
 							}
 							break;
+						case "function":
+							Function function = new Function(jsonValue.asJsonObject());
+							if(!evaluateCondition) {
+								function.process(dp);
+							}else {
+								boolean canExecute =FlowUtils.evaluateCondition(function.getCondition(),dp);
+								snapMeta.put("canExecute", canExecute);
+								if(canExecute)
+									function.process(dp);
+							}
+							break;
 					}
 			}
 			dp.putGlobal("*hasError", false);
@@ -275,4 +286,5 @@ public class Scope implements FlowBasicInfo {
 	private boolean evaluateCondition;
 	private JsonObject scope;
 	private String comment;
+
 }

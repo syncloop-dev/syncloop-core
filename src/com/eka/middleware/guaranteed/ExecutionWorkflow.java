@@ -3,13 +3,13 @@ package com.eka.middleware.guaranteed;
 import java.util.Date;
 import java.util.Map;
 
-import com.eka.middleware.heap.CacheManager;
-import com.eka.middleware.heap.HashMap;
+import com.eka.lite.heap.CacheManager;
+import com.eka.lite.heap.HashMap;
+import com.eka.lite.service.DataPipeline;
+import com.eka.lite.service.RuntimePipeline;
+import com.eka.lite.template.Tenant;
 import com.eka.middleware.server.ServiceManager;
-import com.eka.middleware.service.DataPipeline;
-import com.eka.middleware.service.RuntimePipeline;
 import com.eka.middleware.service.ServiceUtils;
-import com.eka.middleware.template.Tenant;
 
 
 public class ExecutionWorkflow implements WorkflowTask{
@@ -33,7 +33,7 @@ public class ExecutionWorkflow implements WorkflowTask{
 				RuntimePipeline rpRef = null;
 				long startTime = System.currentTimeMillis();
 				try {
-					final RuntimePipeline rpAsync = RuntimePipeline.create(tenant, uuidAsync, correlationID, null,
+					final RuntimePipeline rpAsync = RuntimePipeline.create(tenant, uuidAsync, correlationID, 
 							fqnOfFunction, "");
 					rpRef = rpAsync;
 

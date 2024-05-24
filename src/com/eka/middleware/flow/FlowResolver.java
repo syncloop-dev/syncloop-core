@@ -7,7 +7,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
 
@@ -70,6 +70,10 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 				Await await=new Await(jsonValue.asJsonObject());
 				await.process(dp);
 			break;
+			case "function":
+				Function function = new Function(jsonValue.asJsonObject());
+				function.process(dp);
+				break;
 		}	
 	}
 	

@@ -1,5 +1,6 @@
 package com.eka.middleware.flow;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -7,12 +8,11 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
-import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.logging.log4j.Level;
 
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
@@ -59,7 +59,7 @@ public class Switch implements FlowBasicInfo {
 
 
 	public void process(DataPipeline dp) throws SnippetException {
-		Map<String, Object> snapMeta = Maps.newHashMap();
+		Map<String, Object> snapMeta = new HashMap<String, Object>();
 		snapMeta.put("switch", switchXpath);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));

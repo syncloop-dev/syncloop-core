@@ -23,10 +23,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 
-import com.eka.middleware.server.MiddlewareServer;
+import com.eka.lite.service.DataPipeline;
+import com.eka.lite.template.Tenant;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
-import com.eka.middleware.template.Tenant;
 
 public class PropertyManager {
 	private static final Map<String, Properties> propertiesMap = new ConcurrentHashMap<String, Properties>();
@@ -266,16 +266,12 @@ public class PropertyManager {
 	public static final void initConfig(String[] args) throws Exception {
 		InetAddress localhost = InetAddress.getLocalHost();
 		local_IP = localhost.getHostAddress().trim();
-		if (args == null || args.length == 0 || args[0].trim().length() == 0) {
-			configFolderPath = MiddlewareServer.class.getResource("/").toString() + "resources/config/";
-			configureLog4j();
-			LOGGER.info("Please provide the path config folder(format:- D:\\server\\config\\)");
-		} else { // */
-			configFolderPath = args[0];
-			File file = new File(configFolderPath);
-			configFolderPath = file.getAbsolutePath();
-			configureLog4j();
-		}
+
+		configFolderPath = args[0];
+		File file = new File(configFolderPath);
+		configFolderPath = file.getAbsolutePath();
+		configureLog4j();
+
 		String ip = ServiceUtils.getServerProperty("middleware.server.remote_ip");
 		if (ip != null) {
 			local_IP = ip;

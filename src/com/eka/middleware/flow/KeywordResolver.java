@@ -1,6 +1,6 @@
 package com.eka.middleware.flow;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.PropertyManager;
 import com.eka.middleware.service.ServiceUtils;
 import org.apache.commons.lang3.StringUtils;

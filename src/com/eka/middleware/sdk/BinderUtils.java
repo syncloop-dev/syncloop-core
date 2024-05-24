@@ -1,13 +1,12 @@
 package com.eka.middleware.sdk;
 
-import com.google.common.collect.Sets;
-
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.Set;
 
 public class BinderUtils {
@@ -137,7 +136,7 @@ public class BinderUtils {
             return;
         JsonArray jva = jsonValue.asJsonArray();
         if (!jva.isEmpty()) {
-            Set<String> requiredFields = Sets.newHashSet();
+            Set<String> requiredFields = new HashSet<String>();
             for (JsonValue jsonVal : jva) {
                 JsonObject jo = jsonVal.asJsonObject();
                 JsonValue jvdata = jo.get("data");

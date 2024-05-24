@@ -1,6 +1,6 @@
 package com.eka.middleware.server;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.template.SystemException;
 import org.graalvm.polyglot.io.ProcessHandler;
 

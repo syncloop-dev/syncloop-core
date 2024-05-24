@@ -1,6 +1,6 @@
 package #package;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.adapter.SqlResolver;
@@ -14,7 +14,7 @@ import java.util.Properties;
 import com.eka.middleware.service.PropertyManager;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
-import com.eka.middleware.heap.CacheManager;//-----reset fix
+import com.eka.lite.heap.CacheManager;//-----reset fix
 
 public final class #className {
 

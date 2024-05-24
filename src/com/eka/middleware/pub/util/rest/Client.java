@@ -1,7 +1,6 @@
 package com.eka.middleware.pub.util.rest;
 
 import com.eka.middleware.pub.util.auth.aws.AWS4SignerForChunkedUpload;
-import com.google.common.collect.Maps;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -114,7 +113,7 @@ public class Client {
 
 		Map<String, List<String>> responseHeaderFields = conn.getHeaderFields();
 
-		Map<String, String> responseHeaders = Maps.newHashMap();
+		Map<String, String> responseHeaders = new HashMap<String, String>();
 
 		for (Map.Entry<String, List<String>> responseHeaderField : responseHeaderFields.entrySet()) {
 			if (null != responseHeaderField.getKey()) {
@@ -170,7 +169,7 @@ public class Client {
 	 */
 	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
 											 Map<String, String> reqHeaders, String payload, InputStream inputStream, Map<String, String> queryParameters, boolean sslValidation) throws Exception {
-		return invoke(url, method, formData, reqHeaders, payload, inputStream, queryParameters, Maps.newHashMap(), sslValidation);
+		return invoke(url, method, formData, reqHeaders, payload, inputStream, queryParameters, new HashMap<String, Object>(), sslValidation);
 	}
 
 
@@ -257,7 +256,9 @@ public class Client {
 				}
 			} else if (StringUtils.isNotBlank(payload)) {
 				bodyEntity = new ByteArrayEntity(payload.getBytes(StandardCharsets.UTF_8));
-				reqHeaders.put("Content-Type", "application/json");
+				if (StringUtils.isBlank(reqHeaders.get("Content-Type"))) {
+					reqHeaders.put("Content-Type", "application/json");
+				}
 			} else if (null != inputStream) {
 				byte[] inputBytes = IOUtils.toByteArray(inputStream);
 				bodyEntity = new ByteArrayEntity(inputBytes);

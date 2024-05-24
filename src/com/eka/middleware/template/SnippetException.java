@@ -1,13 +1,13 @@
 package com.eka.middleware.template;
 
+import com.eka.lite.heap.HashMap;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowMeta;
-import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 
 import java.util.List;
@@ -26,7 +26,7 @@ public class SnippetException extends Exception {
 
     public SnippetException(DataPipeline dataPipeLine, String errMsg, Exception e) {
         super(e);
-        meta = Maps.newHashMap();
+        meta = new HashMap<String, Object>();
         propagate = !errMsg.equals(e.getMessage());
         message = e.getMessage();
         this.errorStack = dataPipeLine.getErrorStack();

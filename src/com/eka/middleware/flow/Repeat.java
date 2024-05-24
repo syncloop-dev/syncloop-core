@@ -1,5 +1,6 @@
 package com.eka.middleware.flow;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -7,13 +8,12 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
-import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
@@ -85,7 +85,7 @@ public class Repeat implements FlowBasicInfo {
     }
 
     public void process(DataPipeline dp) throws SnippetException {
-        Map<String, Object> snapMeta = Maps.newHashMap();
+        Map<String, Object> snapMeta = new HashMap<String, Object>();
         snapMeta.put("*indexVar", indexVar);
 
         if (dp.isDestroyed()) {
@@ -302,6 +302,16 @@ public class Repeat implements FlowBasicInfo {
 							await.process(dp);
 					}
 				break;
+                case "function":
+                    Function function = new Function(jsonValue.asJsonObject());
+                    if(!evaluateCondition) {
+                        function.process(dp);
+                    }else {
+                        boolean canExecute =FlowUtils.evaluateCondition(function.getCondition(),dp);
+                        if(canExecute)
+                            function.process(dp);
+                    }
+                    break;
             }
         }
     }

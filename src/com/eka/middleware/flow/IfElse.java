@@ -1,5 +1,6 @@
 package com.eka.middleware.flow;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -7,10 +8,9 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
-import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class IfElse implements FlowBasicInfo {
@@ -55,7 +55,7 @@ public class IfElse implements FlowBasicInfo {
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
-		Map<String, Object> snapMeta = Maps.newHashMap();
+		Map<String, Object> snapMeta = new HashMap<String, Object>();
 		if (dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread",
 					new Exception("Service runtime pipeline destroyed manually"));

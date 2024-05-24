@@ -17,17 +17,16 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.nimbusds.jose.shaded.gson.JsonElement;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
-import com.eka.middleware.heap.HashMap;
+import com.eka.lite.heap.HashMap;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.pub.util.document.Function;
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.MapUtils;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;

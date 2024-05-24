@@ -10,10 +10,9 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
-import com.google.common.collect.Maps;
 import lombok.Getter;
 
 public class Loop implements FlowBasicInfo {
@@ -64,7 +63,7 @@ public class Loop implements FlowBasicInfo {
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
-		Map<String, Object> snapMeta = Maps.newHashMap();
+		Map<String, Object> snapMeta = new HashMap<String, Object>();
 		snapMeta.put("*indexVar", indexVar);
 		if(dp.isDestroyed()) {
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
@@ -220,6 +219,10 @@ public class Loop implements FlowBasicInfo {
 									Await await=new Await(jsonValue.asJsonObject());
 									await.process(dp);
 									break;
+								case "function":
+									Function function = new Function(jsonValue.asJsonObject());
+									function.process(dp);
+									break;
 							}
 					}
 
@@ -308,4 +311,5 @@ public class Loop implements FlowBasicInfo {
 	public void setLabel(String label) {
 		this.label = label;
 	}
+
 }

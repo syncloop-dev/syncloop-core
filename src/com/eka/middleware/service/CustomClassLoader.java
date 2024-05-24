@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 

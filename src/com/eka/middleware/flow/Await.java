@@ -1,5 +1,6 @@
 package com.eka.middleware.flow;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -12,13 +13,12 @@ import javax.json.JsonValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.eka.middleware.server.MiddlewareServer;
-import com.eka.middleware.service.DataPipeline;
+import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.fasterxml.jackson.databind.node.BooleanNode;
-import com.google.common.collect.Maps;
+
 import lombok.Getter;
 
 public class Await implements FlowBasicInfo {
@@ -244,7 +244,7 @@ public class Await implements FlowBasicInfo {
 			throw e;
 		} finally {
 			if(canSnap) {
-				dp.snapAfter(comment, guid, Maps.newHashMap());
+				dp.snapAfter(comment, guid, new HashMap<String, Object>());
 				if (null != snapshot || null != snapCondition) {
 					dp.drop("*snapshot");
 				}
@@ -276,4 +276,5 @@ public class Await implements FlowBasicInfo {
 	public void setLabel(String label) {
 		this.label = label;
 	}
+
 }
