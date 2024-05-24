@@ -37,8 +37,7 @@ public class Binder {
 
         JsonObject mainflowJsonObject = null;
         UUID coId = UUID.randomUUID();
-        RuntimePipeline rp = RuntimePipeline.create(Tenant.getTempTenant("default"), sessionId.toString(), coId.toString(), "standalone",
-                null);
+        RuntimePipeline rp = RuntimePipeline.create(Tenant.getTempTenant("default"), sessionId.toString(), coId.toString(), null, "standalone");
         DataPipeline dp = rp.dataPipeLine;
         dp.putAll(payload);
         executeService(dp, apiServiceJson, mainflowJsonObject);
@@ -84,6 +83,10 @@ public class Binder {
         return CacheManager.getMethods(Tenant.getTempTenant("default"));
     }
 
+    public Set<String> getContextObjects() {
+        return CacheManager.getContextObjectsNames(Tenant.getTempTenant("default"));
+    }
+
     /**
      * @param serviceId
      * @return
@@ -111,6 +114,7 @@ public class Binder {
         response.put("packages", children);
         response.put("embeddedServices", getEmbeddedService());
         response.put("functions", getFunctions());
+        response.put("context", getContextObjects());
         return response;
     }
 
@@ -160,6 +164,8 @@ public class Binder {
                 }
 
                 serviceInfo = IOUtils.toString(new FileInputStream(file));
+            } else if (location.endsWith(".object")) {
+                serviceInfo = CacheManager.getContextObjectServiceViewConfig();
             } else if (location.endsWith(".function")) {
                 serviceInfo = CacheManager.getMethod(location.replaceAll(".function", ""), Tenant.getTempTenant("default"));
             } else {
@@ -185,7 +191,11 @@ public class Binder {
                     String.format("%s.%s",
                             serviceOutline.getLatest().getData().getAcn(),
                             serviceOutline.getLatest().getData().getFunction()),
-                    new ServiceUtils().ObjectToJson(serviceOutline.getLatest() ), Tenant.getTempTenant("default"));
+                    ServiceUtils.objectToJson(serviceOutline.getLatest()), Tenant.getTempTenant("default"));
         }
+    }
+
+    public void addContextObject(Object object) {
+        CacheManager.addContextObject(object.toString(), object, Tenant.getTempTenant("default"));
     }
 }

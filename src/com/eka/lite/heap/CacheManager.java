@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.eka.middleware.sdk.api.SyncloopFunctionScanner;
+import com.eka.middleware.service.ServiceUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.eka.lite.template.Tenant;
@@ -113,6 +115,55 @@ public class CacheManager {
         }
 
         return services.get(StringUtils.strip(key, "/"));
+    }
+
+    public static Set<String> getContextObjectsNames(Tenant tenant) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects");
+        if (null == services) {
+            services = new HashMap<>();
+        }
+
+        return services.keySet();
+    }
+
+    /**
+     * @return
+     */
+    public static String getContextObjectServiceViewConfig() {
+        try {
+            return ServiceUtils.objectToJson(SyncloopFunctionScanner.getContextObjectServiceViewConfig().getLatest());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object getContextObjects(String key, Tenant tenant) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects");
+        if (null == services) {
+            services = new HashMap<>();
+        }
+
+        return services.get(StringUtils.strip(key, "/"));
+    }
+
+
+    public static void addContextObject(String key, Object object, Tenant tenant) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects");
+        if (null == services) {
+            services = new HashMap<>();
+            cache.put("context_objects", services);
+        }
+
+        services.put(key, object);
     }
 
     public static Map getOrCreateNewCache(Tenant tenant, String name) {

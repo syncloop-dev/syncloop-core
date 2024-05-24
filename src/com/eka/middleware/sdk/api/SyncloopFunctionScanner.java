@@ -1,5 +1,8 @@
 package com.eka.middleware.sdk.api;
+
+
 import com.eka.middleware.sdk.api.outline.*;
+import com.eka.middleware.service.ServiceUtils;
 import com.sun.jdi.event.EventSet;
 import org.apache.commons.lang3.StringUtils;
 
@@ -12,32 +15,32 @@ import javax.script.Bindings;
 import javax.script.SimpleBindings;
 import javax.swing.*;
 import java.awt.*;
-import java.beans.beancontext.BeanContext;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.security.AuthProvider;
 import java.security.Provider;
-import java.util.*;
 import java.util.List;
+import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.jar.Attributes;
 
 public class SyncloopFunctionScanner {
 
-    public static List<ServiceOutline> addClass(Class aClass, boolean restrictSyncloopFunctions) {
+    public static List<ServiceOutline> addClass(Class aClass, boolean allowNonSyncloopFunctions) {
 
-        List<ServiceOutline> serviceOutlines = new ArrayList<ServiceOutline>();
+        List<ServiceOutline> serviceOutlines = new ArrayList<>();
         Method[] methods = aClass.getDeclaredMethods();
 
         for (Method method: methods) {
 
-            if (!Modifier.isStatic(method.getModifiers())) {
+            if (Modifier.isPrivate(method.getModifiers()) || Modifier.isProtected(method.getModifiers())) {
                 continue;
             }
 
             SyncloopFunction methodExport = method.getAnnotation(SyncloopFunction.class);
 
-            if (null == methodExport && !restrictSyncloopFunctions) {
+            if (null == methodExport && !allowNonSyncloopFunctions) {
                 continue;
             } else if (null == methodExport) {
                 methodExport = new SyncloopFunction() {
@@ -75,13 +78,12 @@ public class SyncloopFunctionScanner {
                 };
             }
 
-            //TODO Generic Type, Collection & Primitive Type is pending.
-
             String[] parametersName = methodExport.in();
             String outputParameterName = methodExport.out();
             String methodName = method.getName();
             Class returnType = method.getReturnType();
             String packageName = method.getDeclaringClass().getPackage().getName();
+            boolean isStatic = Modifier.isStatic(method.getModifiers());
             String className = method.getDeclaringClass().getName();
             Parameter[] parameters = method.getParameters();
             Class[] parametersTypes = new Class[parameters.length];
@@ -98,6 +100,7 @@ public class SyncloopFunctionScanner {
             dataOutline.setArguments(parametersName);
             dataOutline.setReturnWrapper(returnType.getName());
             dataOutline.setArgumentsWrapper(parametersTypesStr);
+            dataOutline.setStaticFunction(isStatic);
             dataOutline.setOutputArguments(outputParameterName);
 
             ApiInfoOutline apiInfoOutline = new ApiInfoOutline();
@@ -108,40 +111,53 @@ public class SyncloopFunctionScanner {
             latestOutline.setApi_info(apiInfoOutline);
             latestOutline.setData(dataOutline);
 
-            List<IOOutline> input = new ArrayList<IOOutline>();
-            for (int i = 0 ; i < parameters.length ; i++) {
-                IOOutline ioOutline = new IOOutline();
-                ioOutline.setText(parametersName[i]);
-                //ioOutline.setType(parameters[i].getType().getSimpleName().toLowerCase());
-                ioOutline.setType(mapTypeToString(parameters[i].getParameterizedType(), true));
-                input.add(ioOutline);
+            List<IOOutline> inputs = new ArrayList<>();
+
+            if (!isStatic) {
+                IOOutline invokingObject = new IOOutline();
+                invokingObject.setText("invokingObject");
+                invokingObject.setType("javaObject");
+                inputs.add(invokingObject);
             }
 
-            IOOutline in = new IOOutline();
-            in.setText("in");
-            in.setType("document");
-            in.setChildren(input);
+            if (parameters.length > 0) {
+                List<IOOutline> input = new ArrayList<>();
+                for (int i = 0 ; i < parameters.length ; i++) {
+                    IOOutline ioOutline = new IOOutline();
+                    ioOutline.setText(parametersName[i]);
+                    //ioOutline.setType(parameters[i].getType().getSimpleName().toLowerCase());
+                    ioOutline.setType(mapTypeToString(parameters[i].getParameterizedType(), true));
+                    input.add(ioOutline);
+                }
 
-            List<IOOutline> inputList = new ArrayList<>();
-            inputList.add(in);
-            
-            latestOutline.setInput(inputList);
+                IOOutline in = new IOOutline();
+                in.setText("in");
+                in.setType("document");
+                in.setChildren(input);
+                inputs.add(in);
 
-            List<IOOutline> output = new ArrayList<IOOutline>();
-            IOOutline ioOutline = new IOOutline();
-            ioOutline.setText(outputParameterName);
-            ioOutline.setType(mapTypeToString(method.getGenericReturnType(), true));
-            output.add(ioOutline);
+            }
+            latestOutline.setInput(inputs);
 
-            IOOutline out = new IOOutline();
-            out.setText("out");
-            out.setType("document");
-            out.setChildren(output);
+            String outputType = mapTypeToString(method.getGenericReturnType(), true);
 
-            List<IOOutline>  outputList = new ArrayList<>();
-            outputList.add(out);
-            
-            latestOutline.setOutput(outputList);
+            List<IOOutline> output = new ArrayList<>();
+
+            if (StringUtils.isNotBlank(outputType)) {
+                IOOutline ioOutline = new IOOutline();
+                ioOutline.setText(outputParameterName);
+                ioOutline.setType(outputType);
+                output.add(ioOutline);
+
+                IOOutline out = new IOOutline();
+                out.setText("out");
+                out.setType("document");
+                out.setChildren(output);
+
+                List<IOOutline> outlines = new ArrayList();
+                outlines.add(out);
+                latestOutline.setOutput(outlines);
+            }
 
             ServiceOutline serviceOutline = new ServiceOutline();
             serviceOutline.setLatest(latestOutline);
@@ -152,6 +168,31 @@ public class SyncloopFunctionScanner {
         return serviceOutlines;
     }
 
+    public static ServiceOutline getContextObjectServiceViewConfig() {
+
+        ApiInfoOutline apiInfoOutline = new ApiInfoOutline();
+        apiInfoOutline.setTitle("");
+        apiInfoOutline.setDescription("");
+
+        LatestOutline latestOutline = new LatestOutline();
+        latestOutline.setApi_info(apiInfoOutline);
+
+        List<IOOutline> inputs = new ArrayList<>();
+        latestOutline.setInput(inputs);
+
+        IOOutline invokingObject = new IOOutline();
+        invokingObject.setText("invokingObject");
+        invokingObject.setType("javaObject");
+
+        List<IOOutline> outlines = new ArrayList();
+        outlines.add(invokingObject);
+        latestOutline.setOutput(outlines);
+
+        ServiceOutline serviceOutline = new ServiceOutline();
+        serviceOutline.setLatest(latestOutline);
+
+        return serviceOutline;
+    }
 
     private static String mapTypeToString(Type type, boolean isSimpleType) {
         String dataType = "javaObject";
@@ -163,6 +204,8 @@ public class SyncloopFunctionScanner {
         } else if ((type == Double.class || type == Float.class || type == Long.class || type == Number.class ||
                 type == double.class || type == float.class || type == long.class) && isSimpleType) {
             dataType = "number";
+        } else if ((type == Void.class || type == void.class) && isSimpleType) {
+            dataType = "";
         } else if (type == Date.class && isSimpleType) {
             dataType = "date";
         } else if ((type == Byte.class || type == byte.class) && isSimpleType) {
@@ -191,51 +234,83 @@ public class SyncloopFunctionScanner {
     }
 
 
-    private static final Set<Class> MAP_CLASSES = getMapClasses();
-    
-    
-    private static Set<Class> getMapClasses(){
-    	Set<Class> MAP_CLASSES = new HashSet<>();
-    	Collections.addAll(MAP_CLASSES,AbstractMap.class,
-                Attributes.class, AuthProvider.class,
-                ConcurrentHashMap.class,
-                ConcurrentSkipListMap.class, Map.class,
-                EnumMap.class,
-                HashMap.class,
-                com.eka.lite.heap.HashMap.class,
-                Hashtable.class, IdentityHashMap.class, LinkedHashMap.class,
-                PrinterStateReasons.class, Properties.class, Provider.class,
-                RenderingHints.class, SimpleBindings.class, TabularDataSupport.class, TreeMap.class, UIDefaults.class, WeakHashMap.class,
-                Bindings.class, ConcurrentMap.class, ConcurrentNavigableMap.class, NavigableMap.class, SortedMap.class);
-    	return MAP_CLASSES;
-    }
+    private static final Set<Class> MAP_CLASSES = new HashSet<>();
 
-    private static final Set<Class> COLLECTION_CLASSES = getCollectionClasses();
+    private static final Set<Class> COLLECTION_CLASSES = new HashSet();
 
-    
-    private static Set<Class> getCollectionClasses(){
-    	Set<Class> COLLECTION_CLASSES= new HashSet<>();
-    			Collections.addAll(COLLECTION_CLASSES,
-                BlockingDeque.class, BlockingQueue.class, Deque.class,
-                EventSet.class, List.class, NavigableSet.class, Queue.class, Set.class,
-                SortedSet.class, TransferQueue.class,
-                AbstractCollection.class,
-                AbstractList.class, AbstractQueue.class, AbstractSequentialList.class, AbstractSet.class,
-                ArrayBlockingQueue.class, ArrayDeque.class, ArrayList.class, AttributeList.class,
-                ConcurrentHashMap.KeySetView.class,
-                ConcurrentLinkedDeque.class, ConcurrentLinkedQueue.class, ConcurrentSkipListSet.class, CopyOnWriteArrayList.class, CopyOnWriteArraySet.class,
-                DelayQueue.class, EnumSet.class, HashSet.class, LinkedBlockingDeque.class,
-                LinkedBlockingQueue.class, LinkedHashSet.class, LinkedList.class, LinkedTransferQueue.class,
-                PriorityBlockingQueue.class, PriorityQueue.class, RoleList.class,
-                RoleUnresolvedList.class,
-                Stack.class, SynchronousQueue.class, TreeSet.class, Vector.class
-            );
-    	return COLLECTION_CLASSES;
-    }
-    
-    public static final Map<String, Class> PRIMITIVE_TYPE = new HashMap<String, Class>();
+    public static final Map<String, Class> PRIMITIVE_TYPE = new HashMap();
 
     static {
+
+        MAP_CLASSES.add(AbstractMap.class);
+        MAP_CLASSES.add(Attributes.class );
+        MAP_CLASSES.add(AuthProvider.class);
+        MAP_CLASSES.add(ConcurrentHashMap.class);
+        MAP_CLASSES.add(ConcurrentSkipListMap.class );
+        MAP_CLASSES.add(Map.class);
+        MAP_CLASSES.add(EnumMap.class);
+        MAP_CLASSES.add(HashMap.class);
+        MAP_CLASSES.add(com.eka.lite.heap.HashMap.class);
+        MAP_CLASSES.add(Hashtable.class );
+        MAP_CLASSES.add(IdentityHashMap.class );
+        MAP_CLASSES.add(LinkedHashMap.class);
+        MAP_CLASSES.add(PrinterStateReasons.class );
+        MAP_CLASSES.add(Properties.class );
+        MAP_CLASSES.add(Provider.class);
+        MAP_CLASSES.add(RenderingHints.class );
+        MAP_CLASSES.add(SimpleBindings.class );
+        MAP_CLASSES.add(TabularDataSupport.class);
+        MAP_CLASSES.add(TreeMap.class );
+        MAP_CLASSES.add(UIDefaults.class);
+        MAP_CLASSES.add(WeakHashMap.class);
+        MAP_CLASSES.add(Bindings.class );
+        MAP_CLASSES.add(ConcurrentMap.class );
+        MAP_CLASSES.add(ConcurrentNavigableMap.class );
+        MAP_CLASSES.add(NavigableMap.class );
+        MAP_CLASSES.add(SortedMap.class);
+
+        COLLECTION_CLASSES.add(BlockingDeque.class);
+        COLLECTION_CLASSES.add(BlockingQueue.class);
+        COLLECTION_CLASSES.add(Deque.class);
+        COLLECTION_CLASSES.add(EventSet.class );
+        COLLECTION_CLASSES.add(List.class );
+        COLLECTION_CLASSES.add(NavigableSet.class );
+        COLLECTION_CLASSES.add(Queue.class );
+        COLLECTION_CLASSES.add(Set.class);
+        COLLECTION_CLASSES.add(SortedSet.class );
+        COLLECTION_CLASSES.add(TransferQueue.class);
+        COLLECTION_CLASSES.add(AbstractCollection.class);
+        COLLECTION_CLASSES.add(AbstractList.class );
+        COLLECTION_CLASSES.add(AbstractQueue.class );
+        COLLECTION_CLASSES.add(AbstractSequentialList.class );
+        COLLECTION_CLASSES.add(AbstractSet.class);
+        COLLECTION_CLASSES.add(ArrayBlockingQueue.class );
+        COLLECTION_CLASSES.add(ArrayDeque.class );
+        COLLECTION_CLASSES.add(ArrayList.class );
+        COLLECTION_CLASSES.add(AttributeList.class);
+        COLLECTION_CLASSES.add(ConcurrentHashMap.KeySetView.class);
+        COLLECTION_CLASSES.add(ConcurrentLinkedDeque.class );
+        COLLECTION_CLASSES.add(ConcurrentLinkedQueue.class );
+        COLLECTION_CLASSES.add(ConcurrentSkipListSet.class );
+        COLLECTION_CLASSES.add(CopyOnWriteArrayList.class );
+        COLLECTION_CLASSES.add(CopyOnWriteArraySet.class);
+        COLLECTION_CLASSES.add(DelayQueue.class );
+        COLLECTION_CLASSES.add(EnumSet.class );
+        COLLECTION_CLASSES.add(HashSet.class );
+        COLLECTION_CLASSES.add(LinkedBlockingDeque.class);
+        COLLECTION_CLASSES.add(LinkedBlockingQueue.class );
+        COLLECTION_CLASSES.add(LinkedHashSet.class );
+        COLLECTION_CLASSES.add(LinkedList.class );
+        COLLECTION_CLASSES.add(LinkedTransferQueue.class);
+        COLLECTION_CLASSES.add(PriorityBlockingQueue.class);
+        COLLECTION_CLASSES.add(PriorityQueue.class );
+        COLLECTION_CLASSES.add(RoleList.class);
+        COLLECTION_CLASSES.add(RoleUnresolvedList.class);
+        COLLECTION_CLASSES.add(Stack.class );
+        COLLECTION_CLASSES.add(SynchronousQueue.class );
+        COLLECTION_CLASSES.add(TreeSet.class );
+        COLLECTION_CLASSES.add(Vector.class);
+
         PRIMITIVE_TYPE.put("int", int.class);
         PRIMITIVE_TYPE.put("short", short.class);
         PRIMITIVE_TYPE.put("void", void.class);

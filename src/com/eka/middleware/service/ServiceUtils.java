@@ -79,7 +79,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 
 
 public class ServiceUtils {
@@ -90,7 +89,6 @@ public class ServiceUtils {
 
 	private static final ObjectMapper om = new ObjectMapper();
 	public static final XmlMapper xmlMapper = new XmlMapper();
-	public static final YAMLMapper yamlMapper = new YAMLMapper();
 	public static Logger LOGGER = LogManager.getLogger(ServiceUtils.class);
 	private static final String OS = System.getProperty("os.name").toLowerCase();
 
@@ -267,23 +265,6 @@ public class ServiceUtils {
 			return map;
 		} catch (Exception e) {
 			printException("Could not convert json to map", e);
-		}
-		return null;
-	}
-
-	public static final String toYaml(Map<String, Object> map) throws Exception {
-		yamlMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-		String xml = yamlMapper.writeValueAsString(map);
-		return xml;
-	}
-
-	public static final Map<String, Object> yamlToMap(String json) {
-		try {
-			yamlMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
-			Map<String, Object> map = yamlMapper.readValue(json, Map.class);
-			return map;
-		} catch (JsonProcessingException e) {
-			printException("Could not convert xml to map", e);
 		}
 		return null;
 	}

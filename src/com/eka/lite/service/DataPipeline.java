@@ -427,16 +427,6 @@ public class DataPipeline {
 		return payloadStack.get(currentResource);
 	}
 
-	public String toYaml() {
-		try {
-
-			return ServiceUtils.toYaml(getStatusBasedOutput());
-		} catch (Exception e) {
-			ServiceUtils.printException(this, "Could not convert datapipeline '" + rp.getSessionID() + "' to Yaml", e);
-		}
-		return null;
-	}
-
 	private Map<String, Object> getStatusBasedOutput() throws Exception {
 		Map<String, Object> map = payloadStack.get(currentResource);
 		return map;
