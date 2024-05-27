@@ -14,5 +14,5 @@ public class DataOutline {
     private String function;
 
     private boolean staticFunction;
-
+    private boolean constructor;
 }
