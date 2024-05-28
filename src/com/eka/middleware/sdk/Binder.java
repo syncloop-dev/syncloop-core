@@ -184,13 +184,23 @@ public class Binder {
      * @param aClass
      */
     public void addFunctionClass(Class<?> aClass) throws Exception {
-        List<ServiceOutline> serviceOutlines = SyncloopFunctionScanner.addClass(aClass, false);
+        addFunctionClass(aClass, false);
+    }
+
+    /**
+     * @param aClass
+     * @param allowNonSyncloopFunctions
+     * @throws Exception
+     */
+    public void addFunctionClass(Class<?> aClass, boolean allowNonSyncloopFunctions) throws Exception {
+        List<ServiceOutline> serviceOutlines = SyncloopFunctionScanner.addClass(aClass, allowNonSyncloopFunctions);
 
         for (ServiceOutline serviceOutline: serviceOutlines) {
             CacheManager.addMethod(
-                    String.format("%s.%s",
+                    String.format("%s.%s_%s",
                             serviceOutline.getLatest().getData().getAcn(),
-                            serviceOutline.getLatest().getData().getFunction()),
+                            serviceOutline.getLatest().getData().getFunction(),
+                            serviceOutline.getLatest().getData().getIdentifier()),
                     ServiceUtils.objectToJson(serviceOutline.getLatest()), Tenant.getTempTenant("default"));
         }
     }

@@ -15,4 +15,6 @@ public class DataOutline {
 
     private boolean staticFunction;
     private boolean constructor;
+
+    private String identifier;
 }

@@ -29,7 +29,9 @@ public class CacheManager {
 
     public static Map<String, Object> getCacheAsMap(Tenant tenant) {
         Map<String, Object> tenantMap = tenantCache.get(tenant.getName());
-        tenantMap = new ConcurrentHashMap<String, Object>();
+        if (null == tenantMap) {
+            tenantMap = new ConcurrentHashMap<String, Object>();
+        }
         tenantCache.put(tenant.getName(), tenantMap);
         return tenantMap;
     }

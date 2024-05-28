@@ -3,6 +3,7 @@ package com.eka.middleware.sdk.api;
 
 import com.eka.middleware.sdk.api.outline.*;
 import com.sun.jdi.event.EventSet;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.management.AttributeList;
@@ -207,6 +208,17 @@ public class SyncloopFunctionScanner {
         dataOutline.setArgumentsWrapper(parametersTypesStr);
         dataOutline.setStaticFunction(isStatic);
         dataOutline.setConstructor(isConstructor);
+
+        String preSignature = String.format("%s.%s#s",
+                className,
+                methodName,
+                StringUtils.join(parametersName)
+        );
+
+        String signature = DigestUtils.md5Hex(preSignature);
+
+        dataOutline.setIdentifier(signature);
+
         dataOutline.setOutputArguments(outputParameterName);
 
         ApiInfoOutline apiInfoOutline = new ApiInfoOutline();
