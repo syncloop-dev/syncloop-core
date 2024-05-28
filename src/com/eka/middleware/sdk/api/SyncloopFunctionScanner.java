@@ -2,7 +2,6 @@ package com.eka.middleware.sdk.api;
 
 
 import com.eka.middleware.sdk.api.outline.*;
-import com.eka.middleware.service.ServiceUtils;
 import com.sun.jdi.event.EventSet;
 import org.apache.commons.lang3.StringUtils;
 
@@ -80,7 +79,7 @@ public class SyncloopFunctionScanner {
 
             String[] parametersName = methodExport.in();
             String outputParameterName = methodExport.out();
-            String methodName = constructor.getName();
+            String methodName = "new";
             String packageName = constructor.getDeclaringClass().getPackage().getName();
             boolean isStatic = Modifier.isStatic(constructor.getModifiers());
             boolean isConstructor = true;
