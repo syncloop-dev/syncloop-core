@@ -58,7 +58,7 @@ public class Binder {
             throws Exception {
 
         UUID coId = UUID.randomUUID();
-        RuntimePipeline rp = RuntimePipeline.create(Tenant.getTempTenant("default"), sessionId.toString(), coId.toString(), null, "standalone");
+        RuntimePipeline rp = RuntimePipeline.create(Tenant.getTempTenant("default"), sessionId.toString(), coId.toString(), "standalone", null);
         DataPipeline dp = rp.dataPipeLine;
         dp.putAll(payload);
         executeService(dp, apiServiceJson);
