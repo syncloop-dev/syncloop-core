@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Binder {
 
@@ -30,6 +31,27 @@ public class Binder {
     public Binder(String propLoc) throws Exception {
         this.propLoc = propLoc;
         PropertyManager.initConfig(new String[]{propLoc});
+    }
+
+    public Map<String, Object> runAsync(String sessionId, String apiServiceJson, Map<String, Object> payload) throws Exception {
+
+        AtomicReference<Map<String, Object>> resp = new AtomicReference<>();
+
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    resp.set(Binder.this.run(sessionId, apiServiceJson, payload));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                };
+            }
+        });
+
+        thread.start();
+        thread.join();
+
+        return resp.get();
     }
 
     public Map<String, Object> run(String sessionId, String apiServiceJson, Map<String, Object> payload)
