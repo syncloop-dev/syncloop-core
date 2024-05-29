@@ -1,11 +1,9 @@
-package com.eka.lite.service;
+package com.eka.middleware.service;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,10 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.UUID;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,27 +20,19 @@ import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
-import lombok.Setter;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
-import com.eka.lite.heap.CacheManager;
-import com.eka.lite.heap.HashMap;
-import com.eka.lite.template.MultiPart;
-import com.eka.lite.template.Tenant;
+import com.eka.middleware.heap.CacheManager;
+import com.eka.middleware.heap.HashMap;
+import com.eka.middleware.template.MultiPart;
 
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
 
 import com.eka.middleware.server.ServiceManager;
-import com.eka.middleware.service.FlowBasicInfo;
-import com.eka.middleware.service.FlowMeta;
-import com.eka.middleware.service.MapUtils;
-import com.eka.middleware.service.PropertyManager;
-import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
 import lombok.Getter;
@@ -1301,12 +1288,14 @@ public class DataPipeline {
 	}
 
 	public List<FlowMeta> getErrorStack() {
-		// TODO Auto-generated method stub
-		return null;
+		return errorStack;
 	}
 
-	public Object getSnapData() {
-		// TODO Auto-generated method stub
-		return null;
+	public List<String> getSnapData() {
+		return snapData;
+	}
+
+	public void setSnapData(List<String> snapData) {
+		this.snapData = snapData;
 	}
 }

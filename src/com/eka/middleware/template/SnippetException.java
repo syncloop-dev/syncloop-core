@@ -1,7 +1,7 @@
 package com.eka.middleware.template;
 
-import com.eka.lite.heap.HashMap;
-import com.eka.lite.service.DataPipeline;
+import com.eka.middleware.heap.HashMap;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowMeta;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;

@@ -3,7 +3,7 @@ package com.eka.middleware.server;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.eka.lite.service.DataPipeline;
+import com.eka.middleware.service.DataPipeline;
 
 import java.io.*;
 import java.net.URL;

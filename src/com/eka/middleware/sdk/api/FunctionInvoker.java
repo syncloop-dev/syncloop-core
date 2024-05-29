@@ -1,6 +1,6 @@
 package com.eka.middleware.sdk.api;
 
-import com.eka.lite.service.DataPipeline;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.flow.ContextObject;
 import com.eka.middleware.flow.Function;
 

@@ -1,6 +1,6 @@
 package #package;
 
-import com.eka.lite.service.DataPipeline;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.flow.FlowResolver;
@@ -15,7 +15,7 @@ import java.util.*;
 import java.net.*;
 import java.util.concurrent.ConcurrentHashMap;
 import io.undertow.util.HttpString;
-import com.eka.lite.heap.CacheManager;//-----reset fix
+import com.eka.middleware.heap.CacheManager;//-----reset fix
 
 public final class #className {
 

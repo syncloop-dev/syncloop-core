@@ -1,16 +1,9 @@
 package com.eka.middleware.service;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -26,10 +19,7 @@ import javax.tools.ToolProvider;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.eka.lite.service.DataPipeline;
 import com.eka.middleware.flow.FlowUtils;
-import com.eka.middleware.server.ServiceManager;
-import com.eka.middleware.template.SnippetException;
 
 //import sun.jvm.hotspot.HelloWorld;
 

@@ -7,9 +7,8 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.eka.lite.service.DataPipeline;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.template.SnippetException;
-import com.eka.middleware.template.SystemException;
 
 public class FlowResolver {
 public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws SnippetException{

@@ -1,9 +1,9 @@
 package com.eka.middleware.sdk;
 
-import com.eka.lite.heap.CacheManager;
-import com.eka.lite.service.DataPipeline;
-import com.eka.lite.service.RuntimePipeline;
-import com.eka.lite.template.Tenant;
+import com.eka.middleware.heap.CacheManager;
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.RuntimePipeline;
+import com.eka.middleware.template.Tenant;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.sdk.api.SyncloopFunctionScanner;
 import com.eka.middleware.sdk.api.outline.ServiceOutline;

@@ -1,12 +1,12 @@
-package com.eka.lite.template;
+package com.eka.middleware.template;
 
 import java.io.File;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.eka.lite.service.DataPipeline;
-import com.eka.lite.service.RuntimePipeline;
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.RuntimePipeline;
 
 public class MultiPart {
 	// final Map<String, Object> payload;

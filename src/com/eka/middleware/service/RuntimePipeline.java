@@ -1,4 +1,4 @@
-package com.eka.lite.service;
+package com.eka.middleware.service;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -18,11 +18,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.eka.lite.heap.CacheManager;
-import com.eka.lite.template.Tenant;
+import com.eka.middleware.heap.CacheManager;
+import com.eka.middleware.template.Tenant;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
-import com.eka.middleware.service.PropertyManager;
-import com.eka.middleware.service.ServiceUtils;
 
 
 public class RuntimePipeline {

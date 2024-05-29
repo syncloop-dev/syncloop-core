@@ -379,7 +379,7 @@ public class SyncloopFunctionScanner {
         MAP_CLASSES.add(Map.class);
         MAP_CLASSES.add(EnumMap.class);
         MAP_CLASSES.add(HashMap.class);
-        MAP_CLASSES.add(com.eka.lite.heap.HashMap.class);
+        MAP_CLASSES.add(com.eka.middleware.heap.HashMap.class);
         MAP_CLASSES.add(Hashtable.class );
         MAP_CLASSES.add(IdentityHashMap.class );
         MAP_CLASSES.add(LinkedHashMap.class);

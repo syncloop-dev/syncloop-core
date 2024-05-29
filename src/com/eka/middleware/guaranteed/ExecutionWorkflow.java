@@ -3,11 +3,11 @@ package com.eka.middleware.guaranteed;
 import java.util.Date;
 import java.util.Map;
 
-import com.eka.lite.heap.CacheManager;
-import com.eka.lite.heap.HashMap;
-import com.eka.lite.service.DataPipeline;
-import com.eka.lite.service.RuntimePipeline;
-import com.eka.lite.template.Tenant;
+import com.eka.middleware.heap.CacheManager;
+import com.eka.middleware.heap.HashMap;
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.RuntimePipeline;
+import com.eka.middleware.template.Tenant;
 import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.service.ServiceUtils;
 

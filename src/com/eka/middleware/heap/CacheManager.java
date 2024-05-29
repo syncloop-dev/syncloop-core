@@ -1,4 +1,4 @@
-package com.eka.lite.heap;
+package com.eka.middleware.heap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +10,7 @@ import com.eka.middleware.sdk.api.SyncloopFunctionScanner;
 import com.eka.middleware.service.ServiceUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import com.eka.lite.template.Tenant;
+import com.eka.middleware.template.Tenant;
 
 
 public class CacheManager {

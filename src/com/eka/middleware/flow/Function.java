@@ -1,7 +1,7 @@
 package com.eka.middleware.flow;
 
 
-import com.eka.lite.service.DataPipeline;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.sdk.api.SyncloopFunctionScanner;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;

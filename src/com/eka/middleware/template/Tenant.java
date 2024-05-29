@@ -1,29 +1,16 @@
-package com.eka.lite.template;
+package com.eka.middleware.template;
 
-import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.util.Base64;
-import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.crypto.spec.SecretKeySpec;
-
-import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 
-import com.eka.lite.heap.HashMap;
-import com.eka.middleware.service.PropertyManager;
+import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.service.ServiceUtils;
 import org.apache.logging.log4j.ThreadContext;
-import org.apache.logging.log4j.spi.LoggerContext;
 
 public class Tenant {
     private final String name;

@@ -1,18 +1,14 @@
 package com.eka.middleware.flow;
 
-import com.eka.lite.heap.CacheManager;
-import com.eka.lite.service.DataPipeline;
-import com.eka.middleware.sdk.api.SyncloopFunctionScanner;
+import com.eka.middleware.heap.CacheManager;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import com.eka.middleware.template.SnippetException;
 import lombok.Getter;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
-import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class ContextObject implements FlowBasicInfo {
 
