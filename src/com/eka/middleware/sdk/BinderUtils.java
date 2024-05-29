@@ -5,13 +5,11 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class BinderUtils {
 
-    public static JsonEntity convert(String json) {
+    public static Object convert(String json) {
 
         JsonEntity mainEntity = new JsonEntity();
         mainEntity.setType("object");
@@ -118,7 +116,9 @@ public class BinderUtils {
             }
         }
 
-        return mainEntity;
+        Map<String, Object> schemaMap = new HashMap<>();
+        schemaMap.put("schema", mainEntity);
+        return schemaMap;
 
     }
 
@@ -136,7 +136,7 @@ public class BinderUtils {
             return;
         JsonArray jva = jsonValue.asJsonArray();
         if (!jva.isEmpty()) {
-            Set<String> requiredFields = new HashSet<String>();
+            Set<String> requiredFields = new HashSet<>();
             for (JsonValue jsonVal : jva) {
                 JsonObject jo = jsonVal.asJsonObject();
                 JsonValue jvdata = jo.get("data");
@@ -228,4 +228,5 @@ public class BinderUtils {
             schema.setRequired(requiredFields);
         }
     }
+
 }

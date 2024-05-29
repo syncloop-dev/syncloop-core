@@ -35,12 +35,11 @@ public class Binder {
     public Map<String, Object> run(String sessionId, String apiServiceJson, Map<String, Object> payload)
             throws Exception {
 
-        JsonObject mainflowJsonObject = null;
         UUID coId = UUID.randomUUID();
         RuntimePipeline rp = RuntimePipeline.create(Tenant.getTempTenant("default"), sessionId.toString(), coId.toString(), null, "standalone");
         DataPipeline dp = rp.dataPipeLine;
         dp.putAll(payload);
-        executeService(dp, apiServiceJson, mainflowJsonObject);
+        executeService(dp, apiServiceJson);
         final Map<String, Object> response = new HashMap<>();
         dp.getMap().forEach((k, v) -> {
             response.put(k, v);
@@ -50,13 +49,14 @@ public class Binder {
         return response;
     }
 
-    private static final void executeService(DataPipeline dataPipeline, String apiServiceJson,
-                                             JsonObject mainflowJsonObject) throws SnippetException {
+    private static final void executeService(DataPipeline dataPipeline, String apiServiceJson) throws SnippetException {
         try (InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
              JsonReader jsonReader = Json.createReader(is);){
             JsonObject jsonObject = jsonReader.readObject();
+            dataPipeline.setRecordTrace(true);
             FlowResolver.execute(dataPipeline, jsonObject);
         } catch (Throwable e) {
+            e.printStackTrace();
             dataPipeline.clear();
             dataPipeline.put("error", e.getMessage());
             dataPipeline.put("status", "Service error");
@@ -99,7 +99,7 @@ public class Binder {
         Map<String, Object> response = new HashMap<>();
         List<Map<String, Object>> children = new ArrayList<>();
 
-        String packageDir = PropertyManager.getPackagePath(Tenant.getTempTenant("default"));
+        String packageDir = PropertyManager.getPackagePath(Tenant.getTempTenant("default")) +"packages/";
 
         File file = new File(packageDir);
         File fileList[] = file.listFiles();
@@ -111,10 +111,19 @@ public class Binder {
                 System.err.println("No files found in the directory: " + packageDir);
             }
         }
-        response.put("packages", children);
+
+        Map<String, Object> root = new HashMap<>();
+        root.put("text", "packages");
+        root.put("type", "root");
+        root.put("children", children);
+
+        List<Object> list = new ArrayList<>();
+        list.add(root);
+
+        response.put("packages", list);
         response.put("embeddedServices", getEmbeddedService());
         response.put("functions", getFunctions());
-        response.put("context", getContextObjects());
+        response.put("contexts", getContextObjects());
         return response;
     }
 
