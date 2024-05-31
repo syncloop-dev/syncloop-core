@@ -1,0 +1,55 @@
+package #package;
+
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.ServiceUtils;
+import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.adapter.SqlResolver;
+import java.io.File;
+import java.io.FileInputStream;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+import java.util.Properties;
+import com.eka.middleware.service.PropertyManager;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import com.eka.middleware.heap.CacheManager;//-----reset fix
+
+public final class #className {
+
+	private static final Map<String,JsonObject> mainSqlJsonObjectMap=new ConcurrentHashMap<String,JsonObject>();
+	private static long timeout=0;//-----reset fix
+    private static int resetServiceInMS=5000;//-----reset fix
+	static final String syncBlock=new String("sync");
+	public static final void main(DataPipeline dataPipeline) throws SnippetException{
+		try{
+		    Map<String, Object> chache=CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());//-----reset fix
+        	Boolean resetEnabled=(Boolean)chache.get("ekamw.promote.runtime.service.reload");//-----reset fix
+        	if(timeout<System.currentTimeMillis() && (resetEnabled==null || resetEnabled==true))//-----reset fix
+        		timeout=0;//-----reset fix
+		  JsonObject mainSqlJsonObject=mainSqlJsonObjectMap.get(dataPipeline.rp.getTenant().id);
+		  if(mainSqlJsonObject==null || timeout==0)//-----reset fix
+			synchronized(syncBlock){
+			  String location = PropertyManager.getPackagePath(dataPipeline.rp.getTenant());
+			  String flowRef = location+"#flowRef";
+			  if(mainSqlJsonObject==null || timeout==0){ //-----reset fix
+			      timeout=System.currentTimeMillis()+resetServiceInMS;  //-----reset fix
+				  mainSqlJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+				  mainSqlJsonObjectMap.put(dataPipeline.rp.getTenant().id,mainSqlJsonObject);
+			  }
+			  if(mainSqlJsonObject==null)
+				  mainSqlJsonObject = Json.createReader(new FileInputStream(new File(flowRef))).readObject();
+			}
+		  Properties myProps=dataPipeline.getMyProperties();
+		  dataPipeline.put("sqlLocalProperties",myProps);
+		  SqlResolver.execute(dataPipeline,mainSqlJsonObject);
+		}catch(Throwable e) {
+			dataPipeline.clear();
+			dataPipeline.put("error", e.getMessage());
+			//dataPipeline.setResponseStatus(500);
+			dataPipeline.put("status", "SQL Service error");
+			throw new SnippetException(dataPipeline,"Failed to execute #className", new Exception(e));
+		}
+	}
+}

@@ -1,0 +1,124 @@
+{
+  "users" : {
+    "admin" : {
+      "password" : "[#]9283a032-46ef-3dac-9c21-a9b137817ec1",
+      "profile" : {
+        "name" : "Administrator",
+        "lastName" : "User",
+        "email" : {
+          "id" : "info@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "0000000000",
+          "verified" : true
+        },
+        "groups" : [ "developers", "administrators" ],
+        "tenant" : "dev"
+      }
+    },
+    "ekaDev" : {
+      "password" : "[#]cb2b11ca-e245-3c27-9b1a-1f070946e5e7",
+      "profile" : {
+        "name" : "RND",
+        "lastName" : "User",
+        "email" : {
+          "id" : "dev@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "9898765789",
+          "verified" : true
+        },
+        "groups" : [ "developers", "administrators", "rnd" ],
+        "tenant" : "dev"
+      }
+    },
+    "consumer1" : {
+      "password" : "[#]298d7b42-bef5-3e0f-8234-3cc5032a3232",
+      "profile" : {
+        "name" : "RND",
+        "lastName" : "User",
+        "email" : {
+          "id" : "dev@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "9898765789",
+          "verified" : true
+        },
+        "groups" : [ "abc" ],
+        "tenant" : "dev"
+      }
+    },
+    "consumer2" : {
+      "password" : "[#]9b3bf57c-be49-33ef-9696-c69667505c5c",
+      "profile" : {
+        "name" : "RND",
+        "lastName" : "User",
+        "email" : {
+          "id" : "dev@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "9898765789",
+          "verified" : true
+        },
+        "groups" : [ "xyz" ],
+        "tenant" : "dev"
+      }
+    },
+    "user1" : {
+      "password" : "[#]7d1b5a43-29b6-378e-9765-08ab9a49ee3d",
+      "profile" : {
+        "name" : "RND",
+        "lastName" : "User",
+        "email" : {
+          "id" : "dev@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "9898765789",
+          "verified" : true
+        },
+        "groups" : [ "group1", "administrators" ],
+        "tenant" : "dev"
+      }
+    },
+    "user2" : {
+      "password" : "[#]72881e28-5cdb-3f93-b0dc-df1db0d9a869",
+      "profile" : {
+        "name" : "RND",
+        "lastName" : "User",
+        "email" : {
+          "id" : "dev@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "9898765789",
+          "verified" : true
+        },
+        "groups" : [ "group2" ],
+        "tenant" : "dev"
+      }
+    },
+    "su" : {
+      "password" : "[#]9e31172c-82c6-39c0-a472-1131d319d06c",
+      "profile" : {
+        "name" : "RND",
+        "lastName" : "User",
+        "email" : {
+          "id" : "dev@ekamw.org",
+          "verified" : true
+        },
+        "phone" : {
+          "number" : "0980988909",
+          "verified" : true
+        },
+        "groups" : [ "developers", "administrators", "rnd" ],
+        "tenant" : "default"
+      }
+    }
+  },
+  "tenants":["dev","test"]
+}
