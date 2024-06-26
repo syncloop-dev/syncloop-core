@@ -4,8 +4,43 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.syncloop.middleware</groupId>
 	<artifactId>core</artifactId>
-	<version>1.6.6-beta</version>
-	<name>Binder</name>
+	<version>1.6.7</version>
+	<packaging>jar</packaging>
+
+	<name>syncloop-core</name>
+	<description>The Syncloop Embedded Server Runtime is a Java library that executes the Syncloop API created from the API Editor. This library can be added to any type of Java Maven project and will function as part of the existing project.</description>
+	<url>https://www.syncloop.com/syncloop-embedded.html</url>
+
+	<licenses>
+		<license>
+			<name>Apache License</name>
+			<url>https://apache.org/licenses/LICENSE-2.0</url>
+		</license>
+	</licenses>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<developers>
+		<developer>
+			<name>Nature9 Inc.</name>
+			<email>info@naturenine.com</email>
+			<organization>com.nature9</organization>
+			<organizationUrl>https://naturenine.com/</organizationUrl>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git://github.com/syncloop-dev/syncloop-core.git</connection>
+		<developerConnection>scm:git:git://github.com/syncloop-dev/syncloop-core.git</developerConnection>
+		<url>https://github.com/syncloop-dev/syncloop-core</url>
+	</scm>
+
+
 	<properties>
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
@@ -35,6 +70,11 @@
 					<target>17</target>
 					<fork>true</fork>
 					<compilerArgs>
+						<arg>-J--add-opens=java.base/java.util=ALL-UNNAMED</arg>
+						<arg>-J--add-opens=java.base/java.lang.reflect=ALL-UNNAMED</arg>
+						<arg>-J--add-opens=java.base/java.text=ALL-UNNAMED</arg>
+						<arg>-J--add-opens=java.desktop/java.awt.font=ALL-UNNAMED</arg>
+
 						<arg>
 							-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
 						<arg>
@@ -132,6 +172,81 @@
 						--add-opens=java.base/java.util=ALL-UNNAMED</argLine>
 				</configuration>
 			</plugin>
+
+
+			<!--<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.7</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.2.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>-->
+			<!--<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.9.1</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+						<configuration>
+							<keyname>0x49247F0B</keyname>
+							<gpgArguments>
+								<arg>- -pinentry-mode</arg>
+								<arg>loopback</arg>
+							</gpgArguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>-->
+
 		</plugins>
 	</build>
 	<dependencies>
