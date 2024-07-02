@@ -24,12 +24,7 @@ import javax.crypto.spec.SecretKeySpec;
 import com.eka.middleware.template.SnippetException;
 
 /**
- * Example: Signing AWS Requests with Signature Version 4 in Java.
  *
- * @reference: http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html
- * @author javaQuery
- * @date 19th January, 2016
- * @Github: https://github.com/javaquery/Examples
  */
 public class AWSV4Auth {
 
@@ -155,7 +150,6 @@ public class AWSV4Auth {
      * Task 4: Add the Signing Information to the Request. We'll return Map of
      * all headers put this headers in your request.
      *
-     * @return
      */
     public static void addAwsHeaders(Map<String, String> headers,String httpMethodName,Map<String,String> queryParametes,
                                                  String canonicalURI,String accessKeyID, String secretAccessKey, String regionName, 

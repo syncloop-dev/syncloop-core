@@ -45,16 +45,7 @@ public abstract class AWS4SignerBase {
     
     /**
      * Create a new AWS V4 signer.
-     * 
-     * @param endpointUri
-     *            The service endpoint, including the path to any resource.
-     * @param httpMethod
-     *            The HTTP verb for the request, e.g. GET.
-     * @param serviceName
-     *            The signing name of the service, e.g. 's3'.
-     * @param regionName
-     *            The system name of the AWS region associated with the
-     *            endpoint, e.g. us-east-1.
+     *
      */
     public AWS4SignerBase(URL endpointUrl, String httpMethod,
             String serviceName, String regionName) {
@@ -156,17 +147,6 @@ public abstract class AWS4SignerBase {
     }
     
     /**
-     * Examines the specified query string parameters and returns a
-     * canonicalized form.
-     * <p>
-     * The canonicalized query string is formed by first sorting all the query
-     * string parameters, then URI encoding both the key and value and then
-     * joining them, in order, separating key value pairs with an '&'.
-     *
-     * @param parameters
-     *            The query string parameters to be canonicalized.
-     *
-     * @return A canonicalized form for the specified query string parameters.
      */
     public static String getCanonicalizedQueryString(Map<String, String> parameters) {
         if ( parameters == null || parameters.isEmpty() ) {
