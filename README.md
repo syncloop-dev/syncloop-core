@@ -109,7 +109,7 @@ The developer needs to follow a few instructions to enable the Syncloop Embedded
 
 1. Open your pom.xml in your mvn project and follow the dependency in the repositories tag and dependencies tag, respectively.
 ```
-<dependency>
+    <dependency>
    		<groupId>com.syncloop.middleware</groupId>
    		<artifactId>core</artifactId>
    		<version>1.6.7</version>
