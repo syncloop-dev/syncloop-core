@@ -1,235 +1,376 @@
 # Syncloop Core
 
-[![Latest release](https://img.shields.io/badge/release-vSL_330_Phase_3-blue)](https://github.com/ekamiddleware/syncloop-core/releases/latest)
+[![Maven Central](https://img.shields.io/maven-central/v/com.syncloop.middleware/core.svg?style=plastic)](https://search.maven.org/artifact/com.syncloop.middleware/core) 
+[![Latest release](https://img.shields.io/github/v/release/syncloop-dev/syncloop-core)](https://github.com/ekamiddleware/syncloop-core/releases/latest)
 <a href="https://www.syncloop.com/"><img src="https://www.syncloop.com/assets/img/logo/syncloop-logo.svg" align="right" width="200" ></a>
-[![Docs](https://img.shields.io/badge/docs-vSL_330_Phase_3-brightgreen.svg?style=flat)](https://www.syncloop.com/documentation.html?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github)
+[![Docs](https://img.shields.io/badge/docs-v1.6.6-brightgreen.svg?style=flat)](https://docs.syncloop.com/?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github)
 
 <a href="https://discord.com/invite/EnazFJpGQs"><img src="https://img.shields.io/badge/chat-discord-brightgreen.svg?logo=discord&style=flat"></a>
 <a href="https://twitter.com/Syncloop_dev"><img src="https://img.shields.io/badge/Follow-SyncloopDev-blue.svg?style=flat&logo=twitter"></a>
 <a href="https://www.youtube.com/@syncloop"><img src="https://img.shields.io/badge/YouTube-Tutorials-yellow.svg?style=flat"></a>
 
-Syncloop is an integration middleware where you can build any sync & async API without coding & consume it less than a 
-minutes.
+Syncloop Core is an advanced extension for the Syncloop Server repository, designed to enhance the server runtime for Syncloop's embedded solutions. Our technology optimizes performance and scalability, making it the ideal choice for seamless integration and efficient operation in diverse environments.
 
-Read more at [syncloop.com](https://syncloop.com) and the [docs](https://docs.syncloop.com/?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github).
-
-------------------
-
-## Create APIs
-Syncloop speeds up the creation of APIs for applications
-
-* Create Integrations using available plugins
-* Reduce API development time by 65%
-* Visual Experience in API development
-
-![Syncloop API Service Demo](https://www.syncloop.com/assets/img/Api_img-1.gif)
+Read more at [syncloop.com](https://www.syncloop.com/syncloop-embedded.html) and the [docs](https://docs.syncloop.com/docs/syncloop-embedded-integration/introduction?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github).
 
 ------------------
 
-## Map Attributes
-The Mapper component is the heart of any integration and complex API workflows
+## Introduction
 
-* Advanced user experience-based mapper
-* Supports complex object mapping
-* Conditional mapping and field configurations
+Syncloop also provides the client and server-side SDK that allows easy integration of the Syncloop platform to your existing applications. Everything can be deployed within your current application.
 
-![Data Transformation Demo](https://www.syncloop.com/assets/img/mapper_img-2.gif)
+The main purpose of the SDK is you don't require a separate managed container/server to create APIs/Rules. You can create and execute APIs/Rules within your existing application.
 
-------------------
+*i.e. If you have a spring-boot application & you want to use Syncloop in the same application. So you can use this SDK.*
 
-## Go Live
-Traditional hosting and deployment models took days and weeks to go live, with built-in CI/CD see your services go live in minutes
+Syncloop SDK comes in two forms: **UI SDK** & **Server Runtime**. This document will explain how to use and integrate both SDKs.
 
-* Easy export and import for custom migration
-* Built-in promotion management
-* Easy control over built, migration, and service activation
+### Prerequisite
 
-![Deploying a service](https://www.syncloop.com/assets/img/go_live-4.gif)
+1. **UI SDK**: Syncloop Embedded UI Editor is only available for integration as in iframe and not available for responsive screens. This documentation will explain how to integrate and invoke APIs from the editor.
+2. **Server Runtime**: Syncloop platform runs on Java 17, & needs a JRE for its server runtime.
 
 
-## Architecture
+### Request a License
 
-Syncloop is devided into two major parts UI & Middleware API Platform which has Core APIs, User Developer Composite APIs
-, Business Workflow Orchestration & Integrations API which are available as plugins.
+You can request a new enterprise or open source license for embedded [Get a license](https://www.syncloop.com/request-enterprise-license.html)
 
-![Syncloop Architecture](https://www.syncloop.com/assets/img/img_light.webp)
 
 
--------------------
+### UI SDK
 
-## Syncloop API Development Platform Documentation
-At Syncloop, dedicated developers, Architects, and Tech Leaders plan and create APIs on a start-up-friendly and enterprise-ready API development platform. The platform acts as a bridge between the vendor database and the visual experience interface. It provides a high-quality, fast, comprehensive API development, management & deployment platform to enable organizations to be more agile. Syncloop offers the following key features:
+Syncloop UI SDK is used in HTML and it enables Syncloop UI editor which is used to create the API/rule. It enables all UI major components which is
+available in Syncloop workspace and the use of all components is similar. it has the following steps to enable & integrate the editor in your application.
 
-* Provide a visual experience-based development environment where APIs are efficiently built, integrated, deployed, and made go live in seconds.
-* Reduce 65% of the time in API development, 80% in debugging, and 90% in API deployment and management as compared to its other counterparts.
-* Work with API development objectives to bring the most value and the quickest return on investment by automating workflows from a single platform.
-* Address various integration issues that are mostly the outcome of legacy system adaptation.
-* Furnish a collaborative role for all stakeholders to work in the best no-code technical architecture.
-* Improve team agility through continuous coaching, training, documentation, discussion, blogs, case studies, and use cases.
+1. Download the [SDK](https://www.syncloop.com/download-sdk.html).
+2. Extract the syncloop-ui-sdk zip. (It would contain 2 zip files inside the SDK zip).
+3. Host UI SDK on a web server where it can be accessible for your application.
+2. Now call the `editor.html` file in an iframe into your HTML page with the following path `<BASE_PATH>/files/gui/middleware/pub/server/ui/workspace/web/editor/editor.html` in an iframe
+   like this: \
+   \
+   `<iframe id="syncloop_iframe" src="<BASE_PATH>/files/gui/middleware/pub/server/ui/workspace/web/editor/editor.html"></iframe>` \
+   \
+   and API editor will look like as the below screenshot.
 
-[Learn More](https://www.syncloop.com/documentation.html?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github)
+![APIEditor](https://docs.syncloop.com/assets/img/docs/sdk/editor.png)
+*Note: The above images have sample components created. For you, the editor will be empty.*
 
---------------------
+3. If you can see the API editor on your page, it means that it has been successfully enabled.
+   To learn more about syncloop API building follow this [documentation](https://docs.syncloop.com/docs/user-guide/service/api) or syncloop's [YouTube channel](https://www.youtube.com/@syncloop).
 
-# Quick Start Syncloop
+   
+#### JS Functions
+Syncloop Embedded provides the following JS functions:
+1. `save()`: The save() function will extract all Syncloop API in the JSON form. You can later send/save and execute the JSON. \
 
-## Create your first API "Hello World"
+   Example: Consider the above iframe integration
+```
+  var iframe = document.getElementById("syncloop_iframe");
+   var iframeWindow = iframe.contentWindow;
+   const apiServiceJson = iframeWindow.save(); // will return json format {...}
+   // ... send/save apiServiceJson's data.`
+```
 
-Right-click on **Packages** select **New Package**
+2. `loadService()`: This function is designed to load data into the editor. It allows you to edit data that has already been saved in a database or elsewhere. To use this function, provide the saved API's JSON as a parameter.
+```
+  Example: Just put saved API's JSON in parameters.
+   var iframe = document.getElementById("syncloop_iframe");
+   var iframeWindow = iframe.contentWindow;
+   iframeWindow.loadService({...})
+```
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image004.png)
 
-A create package window will be displayed
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image005.jpg)
+### Integration Module
 
-Type the name of the package as **Messaging** and click the **OK** button. A package named **Messaging** will be created successfully and will be visible in the package explorer window.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image006.png)
+Syncloop offers a free library called Integration Module, which includes the most common Java & API services (***i.e. Date, String, IO***) that can be invoked in your [API services](https://docs.syncloop.com/docs/user-guide/control-structures/service) in Embedded Editor.
 
-A **dependency** folder, a **config** folder, and a default **package** will be created in the Package Explorer Window.
+You can download the Syncloop integration module by clicking on this [link](https://www.syncloop.com/download-sdk.html).
 
-Right Click on **Messaging** Package and select **New Folder**
+Unzip the downloaded file (*integration-module.zip* from SDK zip file) in a location that can be accessed from the filesystem. This integration module is required for the [Server Runtime](https://docs.syncloop.com/docs/syncloop-embedded-integration/server-runtime).
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image007.png)
+Integration module will also include a service.properties file. Add Integration module path followed by /integration/middleware/
 
-Type the name of the folder and click **Ok** button
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image008.png)
+Example (server.properties):
 
-After clicking the folder, the folder **DemoMessage** will be visible as the child item of Package **Messaging**.
+`middleware.server.home.dir=/home/root/integration-module/integration/middleware/`
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image009.png)
 
 
-Right-click on **DemoMessage** click on **New 🡪 New Folder** and create a new **API**.
+### Server Runtime
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image010.png)
 
-Type the name of the new **API**, select the **developer groups** and click **OK** Button
+The Syncloop Embedded Server Runtime is a Java library that executes the Syncloop API created from the API Editor. This library can be added to any type of Java Maven project and will function as part of the existing project.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image011.png)
 
-A new API **messageService** will be created under **Messaging 🡪 DemoMessage** package
+The developer needs to follow a few instructions to enable the Syncloop Embedded Runtime.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image012.png)
+1. Open your pom.xml in your mvn project and follow the dependency in the repositories tag and dependencies tag, respectively.
+```
+...
+   <dependencies>
+   ...
+   	<dependency>
+   		<groupId>com.syncloop.middleware</groupId>
+   		<artifactId>core</artifactId>
+   		<version>1.6.7</version>
+   	</dependency>
+    ...
+   </dependencies>
+```
+
+2. Now create an object of `com.eka.middleware.sdk.Binder` class & pass the [Server.properties](https://docs.syncloop.com/docs/syncloop-embedded-integration/integration-module)'s file containing the directory path.
+   Example: \
+   `Binder binder = new Binder("/home/root/integration-module/");`
+
+3. Invoke the `run()` method of the above object. `run()` method required 3 parameters
+    1. **Unique ID**
+    2. **Syncloop API's JSON**
+    3. **API's Input Parameters**
+
+```
+    Example: \
+    public static void main(String[] args) throws Exception {
 
-Double click on **MessageService** and this will open a **Workspace** Window on the right side of the environment. The works
+        Binder binder = new Binder("/home/root/integration-module/");;
+        String serviceJson = "{...}";
+        Map<String, Object> input = Maps.newHashMap();
+        
+        input.put("params1", "value1");
+        input.put("params2", "value2");
+        
+        Map<String, Object> resp = binder.run(UUID.randomUUID().toString(), serviceJson, input);
+       
+        //response will contains out parameters which are mentioned in the API
+    }
+```
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image013.jpg)
 
-Once the API is created the service is automatically saved. Once we work on the workspace the work should be periodically saved by pressing the save button in the toolbar.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image014.jpg)
+### Integration & Embedded Services
 
-The save message dialog will be displayed. Click on the **Okay** button to confirm.
+Inside the [Integration Module](https://docs.syncloop.com/docs/syncloop-embedded-integration/integration-module) of the SDK that contains the most common Java & API services (***i.e. Date, String, IO***) can be invoked in [API services](https://docs.syncloop.com/docs/user-guide/control-structures/service) using Embedded Editor.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image015.png)
 
-The Service will be saved.
+![Choose-a-Service](https://docs.syncloop.com/assets/img/docs/sdk/choose-a-service.png)
 
-Right-click on the **Workspace** window, an **API DESIGNER** context menu will appear. Select **TRANSFORMER** from the menu.
+The above popup will be displayed once you right-click on the main panel & go to **Service > Others.** You can choose any service from the list to invoke API/Rule.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image016.png)
+To enable the feature follow the following easy steps:
 
+<h2 id="Syncloop_embedded_integration_service_list"> </h2>
 
-This will open a new window having input and output variable/parameter sections
+### Service List
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image017.jpg)
+1. Create an endpoint with `/tenant/default/public/apiList2` & method should be `GET`.
+2. Call `com.eka.middleware.sdk.Binder.getServices()` method and send out Map in the response from the service.
+3. This is an example of the spring-boot application.
+```
+    Example: \
+    @GetMapping("/tenant/default/public/apiList2")
+    public ResponseEntity<Map<String, Object>> getServices() {
+        Binder binder = new Binder("/home/root/integration-module/");
+        Map<String, Object> packages = binder.getServices();
+        return new ResponseEntity<Map<String, Object>>(packages, HttpStatus.OK);
+    }
+```
 
+### Services from the Database
+If you have services created from API editor and its json is saved in the database (*i.e. or in other place*) then you also can list out these services
+inside **choose a service** popup under embedded package. call the following function of binder class to add the services.
 
-The parameters will be the input and output that are responsible for getting the request from the client and providing the necessary response. The sections available in the workspace are used to create and manipulate variables.
+1. To add service call `binder.addEmbeddedService(String serviceId, String serviceJson)`. This method required two parameters
 
-Right-click on the response section, an **OUTPUT SCHEMA** context menu will appear. Select **String** from the context menu.
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image018.png)
+   i. `serviceId`: Provide the name of the service, and it will show as the name of service.
+   ii. `serviceJson`: Provide the JSON of the service.
+   Example
 
-A string parameter will be created in the Response Section
+```
+Example: 
+    @GetMapping("/tenant/default/public/apiList2")
+    public ResponseEntity<Map<String, Object>> getServices() {
+        Binder binder = new Binder("/home/root/integration-module/");
+        
+        binder.addEmbeddedService('HTTPService', "{...}"); //Call always before binder.getServices();
+        binder.addEmbeddedService('HTTPService2', "{...}");
+        
+        Map<String, Object> packages = binder.getServices();
+        return new ResponseEntity<Map<String, Object>>(packages, HttpStatus.OK);
+    }
+```
+2. The below image is showing a service coming inside embedded package.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image019.png)
+![Choose-a-Service](https://docs.syncloop.com/assets/img/docs/embedded-services-popup.png)
 
-Right Click on the **STRING** parameter and rename it to **strMessage**
+*Note: Make sure you called `binder.addEmbeddedService()` method always before `binder.getServices()` otherwise your services will not be shown in the popup*
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image020.png)
+### Service Detail
 
-Click on the Pen tool
+1. Create an endpoint with `/tenant/default/public/getServiceAsResponse` the method should be `GET`.
+2. Call `com.eka.middleware.sdk.Binder.getServiceInfo(String location)` method and send out Map in the response from the service.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image021.png)
+This is an example of the spring-boot application.
+```
+    Example: \
+    @GetMapping("/tenant/default/public/getServiceAsResponse")
+    public ResponseEntity<Map<String, Object>> getServiceInfo(@RequestParam String location) {
+        Binder binder = new Binder("/home/root/integration-module/");
+        Map<String, Object> info = binder.getServiceInfo(location);
+        return new ResponseEntity<Map<String, Object>>(info, HttpStatus.OK);
+    }
+```
+4. The output of this service will be used for the mapping Line View with the Service parameters.
 
-A **Set** window will appear. This window is used to assign value to the parameter **strMessage**. Once the window appears type **Hello World...!!** I in the text box and click **OK** button to confirm.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image022.png)
 
-Right Click on the **Output Parameter Section** of the **Workspace Window, Output Schema Menu** will appear. Select **String** from the menu.
+### Local Java Function Integration
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image023.png)
+Syncloop offers to invoke your application's java function from the API/Rule & the function will work similarly as
+how it works in your java application. Syncloop provides few easy APIs to integrate this feature.
 
-Create a similar parameter **strMessage** as **String** in the Output Parameter Section.
+Follow the following steps:
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image024.png)
+1. `@SyncloopFunction`: Add this annotation on the java function which you want to export and use in API/Rule &
+   those class's function considered to be available in API/Rule editor. These are the following attributes of this
+   annotation. This annotation is applicable on functions & constructors in the class.
 
+   i. **in**: Mention the name of the parameters of the function in the same sequence.
 
-This can also be done by clicking and dragging the variable to the output parameter section while pressing the **CTRL** key on the keyboard. These complete the service creation.
+   ii. **out**: Mention the name of the output parameter.
 
-Now Click on the **Save** Button placed at the top of the workspace window to save the service. This should be done periodically so that the work remains saved.
+   iii. **title**: Put a title for the function.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image025.jpg)
+   iv. **description**: Provide a description of the function.
 
-The Save message box will appear confirming the save operation has been done successfully.
+Example
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image015.png)
+```
+public class Example {
+    @SyncloopFunction(in = {"orderId", "paymentId"}, title = "Payment Confirmation", description = "Confirm the order Payment", out = "status")
+    public static Boolean paymentCapture(String orderId, String paymentId) throw PaymentException {
+        ....
+    }
+    
+    
+    public static Boolean paymentRefund(String orderId, String paymentId) throw PaymentException { 
+        ....
+    }
+}
+```
 
-With this our first web service **MessageService** is created and now we need to test this service.
+2. `addFunctionClass()`: This function allows you to add your local Java function automatically to the syncloop service pool,
+   which will later be available on the API/Rule editor.
 
-Any client tool can be used for testing. Here we are using **Postman** for testing.
+   This function has following parameters: \
+   i. **Class object**: Pass a java.lang.Class reference of a class. *e.g. object.getClass() or Example.class*. \
+   ii. **allowNonSyncloopFunctions**: Pass a boolean value true/false. if you want to export only @SyncloopFunction's marked functions then pass it *false* or pass *true*.
 
-**Note: if you have not installed postman click on the link below and install it.**
+Example:
 
-https://www.postman.com/downloads/
+```
+Binder binder = new Binder("/home/root/integration-module/");
+ binder.addFunctionClass(Example.class, false) //It will automatically capture all syncloop functions from this class.
+ binder.addFunctionClass(Student.class, true) //It will automatically capture all syncloop functions from this class.
+```
 
-Once the post is installed start the application and create a new service request by clicking on the (+) sign and opening a new tab.
+3. `addContextObject()`: This function allows you to add your java object into syncloop service pool, these objects will use to invoke non-static functions from
+   API/Rule editor.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image026.jpg)
+   This function has following parameters: \
+   i. **objectName**: Name of the object which will be show on API/Rule editor. \
+   ii. **object**: Object which you want to store.
 
-Get the URL from the Syncloop platform by double-clicking on **MessageService** and selecting the configuration tool from **Workspace** Window. Copy the **Service Endpoint** path from the window by clicking on the **copy** icon.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image027.png)
+3. **Function/List**: Implement the same API service list to get your function. If you have already implemented the `binder.getServices()` function, you don't have to do anything. The same function will fetch all types of services.
 
-Paste the Service Endpoint link in the **Request URL** text box of the Postman API tester.
+4.	Once you complete all the above steps, your java function will be loaded in the **Choose a Service** popup along with other services, as shown in the screenshot below.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image028.jpg)
+### **Choose a Service** Popup View (Only `@SyncloopFunction` Enabled function)
 
-For authorization, select the **Bearer Token** option from the **Authorization** menu in the Postman API testing.
+![Choose-a-Service](https://docs.syncloop.com/assets/img/docs/sdk/choose-a-service-sl-m.png)
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image029.jpg)
+### API editor view after function choose & Mapping view
 
-Copy the token text from API platform workspace by clicking on the API token in the Syncloop IDE Tool Box.
+![Choose-a-Service](https://docs.syncloop.com/assets/img/docs/sdk/api-service-sl-m.png)
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image030.png)
+### **Choose a Service** Popup View (Non-Static functions)
 
-Copy the token text from the **API Token** window and click the **OK** button. Syncloop also allows to select the **expiration** time of the **Bearer Token**.
+![Choose-a-Service](https://docs.syncloop.com/assets/img/docs/sdk/choose-a-service-sl-m-ns.png)
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image031.jpg)
+### API editor view after function choose & Mapping view
 
-Paste the token value in the token text box of the Postman API tester.
+![Choose-a-Service](https://docs.syncloop.com/assets/img/docs/sdk/api-service-sl-m-ns.png)
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image032.jpg)
 
-Now click on button and send the request to the server. Visualize the output in the response section of the Postman API tester.
 
-![Syncloop](https://www.syncloop.com/assets/img/docs/quickstart/image034.jpg)
+## Enable Test & Trace
 
-The output **Hello World...!!** is clearly visible in the response window. With this, you have successfully tested your first API on the Syncloop Platform.
+The Syncloop Embedded SDK is a helpful tool for developers as it provides a way to test APIs on their platform. The SDK also has an interactive debugging feature that makes it easy for developers to navigate their service step-by-step and visualize all the input and output parameters at each step. The debugging process is implemented using Snapshots, which keep track of input and output variables at each step. These variables can be visually analyzed in the Syncloop workspace. The same features can also be used on the Syncloop Embedded SDK. Additionally, the SDK provides options for testing & tracing the API that has been created in the SDK environment.
 
---------------------
+---
 
-## License
+[How to enable Snapshot/Tracing in API](https://docs.syncloop.com/docs/user-guide/dashboard/workspace/services/api/debugging#debugging_syncloop_enable_snapshot)
 
 
-The Syncloop Core is available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) (Apache-2.0).
 
+---
 
+### JavaScript Integration
 
+1. `enableEmbeddedTest()`: By enabling this function, developers can activate the test feature on the user interface of the API editor. This will allow developers to test and verify the functionality of their APIs in a safe and controlled environment, without affecting any live systems. It is a useful tool for ensuring that your API works as intended before releasing it to users. Learn [UI Editor Integration](https://docs.syncloop.com/docs/syncloop-embedded-integration/ui-editor-integration). Once the **Test** button is enabled it starts appearing on the top right. \
+   Example
+```
+  var iframe = document.getElementById("syncloop_iframe");
+   var iframeWindow = iframe.contentWindow;
+   iframeWindow.enableEmbeddedTest()
+```
+2. `enableEmbeddedTrace()`: While testing APIs using the 'Test your API' popup, the developers can use this function to enable API debugging. By doing so, the developers will be able to perform more comprehensive service checks and obtain more detailed information about the API's behavior during the testing process. This can be quite useful in identifying and resolving issues more quickly and efficiently than they would be able to otherwise. Read more about [Debugging Service](https://www.syncloop.com/developers.html)
+   Example
+```
+  var iframe = document.getElementById("syncloop_iframe");
+   var iframeWindow = iframe.contentWindow;
+   iframeWindow.enableEmbeddedTrace()
+```
 
+### Server Side Integration
+To activate Test & Tracing, it is necessary to set up two services on the server side. To do this, there are a few steps that need to be followed. By completing these steps, the services will be enabled.
 
+### JsonToSchema
 
+This service will convert Syncloop embedded input to a JSON schema.
 
+1. Create an endpoint with `/tenant/default/public/jsonToSchema` & Method should be POST & enable the request payload.
+2. Call `com.eka.middleware.sdk.BinderUtils.convert(JSON)` and pass the JSON received from the request payload.
+3. Return the output of the above function as a response.
+4. This is an example of the spring-boot application.
+
+```
+  @PostMapping("/tenant/default/public/jsonToSchema")
+    public ResponseEntity<Object> getServiceInfo(@RequestBody Map<String, String> payload) {
+        Object schema = BinderUtils.convert(payload.get("json"));
+        return new ResponseEntity<Object>(schema, HttpStatus.OK);
+    }
+```
+
+### executeApi
+
+This service will execute the API/Rule.
+
+1. Create an endpoint with `/tenant/default/public/executeApi` & Method should be set to POST &  the request payload should be enabled.
+2. Follow the [Server Runtime](https://docs.syncloop.com/docs/syncloop-embedded-integration/server-runtime) to call the method.
+3. Return the output of the above function as a response.
+4. This is an example of the spring-boot application.
+
+```
+  @PostMapping("/tenant/default/public/executeApi")
+    public ResponseEntity<Map<String, Object>> executeApi(@RequestBody Map<String, Object> payload) throws Exception {
+        Binder binder = new Binder("/home/root/integration-module/");
+        Map<String, Object> resp = binder.runAsync(UUID.randomUUID().toString(), payload.get("apiJson").toString(), (Map)payload.get("payload"));
+        return new ResponseEntity<Map<String, Object>>(resp, HttpStatus.OK);
+    }
+```
+5. `binder.run()` is also available & use it when you want to execute api in same worker thread.
+
+*Note: All internal functionalities are integrated, you have to enable & create the endpoint on your server. Make sure all endpoints are accessible to the UI editor.*
