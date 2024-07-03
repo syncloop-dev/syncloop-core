@@ -1,6 +1,6 @@
 # Syncloop Core
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.syncloop.middleware/core.svg?style=plastic)](https://search.maven.org/artifact/com.syncloop.middleware/core) 
+[![Maven Central](https://img.shields.io/maven-central/v/com.syncloop.middleware/core.svg?style=flat)](https://search.maven.org/artifact/com.syncloop.middleware/core) 
 [![Latest release](https://img.shields.io/github/v/release/syncloop-dev/syncloop-core)](https://github.com/ekamiddleware/syncloop-core/releases/latest)
 <a href="https://www.syncloop.com/"><img src="https://www.syncloop.com/assets/img/logo/syncloop-logo.svg" align="right" width="200" ></a>
 [![Docs](https://img.shields.io/badge/docs-v1.6.6-brightgreen.svg?style=flat)](https://docs.syncloop.com/?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github)
