@@ -9,7 +9,7 @@
 <a href="https://twitter.com/Syncloop_dev"><img src="https://img.shields.io/badge/Follow-SyncloopDev-blue.svg?style=flat&logo=twitter"></a>
 <a href="https://www.youtube.com/@syncloop"><img src="https://img.shields.io/badge/YouTube-Tutorials-yellow.svg?style=flat"></a>
 
-Syncloop Core is an advanced extension for the Syncloop Server repository, designed to enhance the server runtime for Syncloop's embedded solutions. Our technology optimizes performance and scalability, making it the ideal choice for seamless integration and efficient operation in diverse environments.
+Syncloop Core is an advanced extension for the [Syncloop Server](https://github.com/syncloop-dev/syncloop-server) repository, designed to enhance the server runtime for Syncloop's embedded solutions. Our technology optimizes performance and scalability, making it the ideal choice for seamless integration and efficient operation in diverse environments.
 
 Read more at [syncloop.com](https://www.syncloop.com/syncloop-embedded.html) and the [docs](https://docs.syncloop.com/docs/syncloop-embedded-integration/introduction?utm_source=Website&utm_medium=click&utm_id=documentation&utm_content=github).
 
