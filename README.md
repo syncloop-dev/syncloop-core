@@ -65,18 +65,18 @@ Syncloop Embedded provides the following JS functions:
 
    Example: Consider the above iframe integration
 ```
-  var iframe = document.getElementById("syncloop_iframe");
-   var iframeWindow = iframe.contentWindow;
-   const apiServiceJson = iframeWindow.save(); // will return json format {...}
-   // ... send/save apiServiceJson's data.`
+var iframe = document.getElementById("syncloop_iframe");
+var iframeWindow = iframe.contentWindow;
+const apiServiceJson = iframeWindow.save(); // will return json format {...}
+// ... send/save apiServiceJson's data.`
 ```
 
 2. `loadService()`: This function is designed to load data into the editor. It allows you to edit data that has already been saved in a database or elsewhere. To use this function, provide the saved API's JSON as a parameter.
 ```
-  Example: Just put saved API's JSON in parameters.
-   var iframe = document.getElementById("syncloop_iframe");
-   var iframeWindow = iframe.contentWindow;
-   iframeWindow.loadService({...})
+//Example: Just put saved API's JSON in parameters.
+var iframe = document.getElementById("syncloop_iframe");
+var iframeWindow = iframe.contentWindow;
+iframeWindow.loadService({...})
 ```
 
 
@@ -112,7 +112,7 @@ The developer needs to follow a few instructions to enable the Syncloop Embedded
 <dependency>
     <groupId>com.syncloop.middleware</groupId>
    	<artifactId>core</artifactId>
-   	<version>1.6.7</version>
+   	<version>1.6.6</version>
 </dependency>
 ```
 
@@ -126,20 +126,19 @@ The developer needs to follow a few instructions to enable the Syncloop Embedded
     3. **API's Input Parameters**
 
 ```
-    Example: \
-    public static void main(String[] args) throws Exception {
-
-        Binder binder = new Binder("/home/root/integration-module/");;
-        String serviceJson = "{...}";
-        Map<String, Object> input = Maps.newHashMap();
-        
-        input.put("params1", "value1");
-        input.put("params2", "value2");
-        
-        Map<String, Object> resp = binder.run(UUID.randomUUID().toString(), serviceJson, input);
+Example:
+public static void main(String[] args) throws Exception {
+    Binder binder = new Binder("/home/root/integration-module/");;
+    String serviceJson = "{...}";
+    Map<String, Object> input = Maps.newHashMap();
        
-        //response will contains out parameters which are mentioned in the API
-    }
+    input.put("params1", "value1");
+    input.put("params2", "value2");
+        
+    Map<String, Object> resp = binder.run(UUID.randomUUID().toString(), serviceJson, input);
+       
+    //response will contains out parameters which are mentioned in the API
+}
 ```
 
 
@@ -163,13 +162,13 @@ To enable the feature follow the following easy steps:
 2. Call `com.eka.middleware.sdk.Binder.getServices()` method and send out Map in the response from the service.
 3. This is an example of the spring-boot application.
 ```
-    Example: \
-    @GetMapping("/tenant/default/public/apiList2")
-    public ResponseEntity<Map<String, Object>> getServices() {
-        Binder binder = new Binder("/home/root/integration-module/");
-        Map<String, Object> packages = binder.getServices();
-        return new ResponseEntity<Map<String, Object>>(packages, HttpStatus.OK);
-    }
+//Example:
+@GetMapping("/tenant/default/public/apiList2")
+public ResponseEntity<Map<String, Object>> getServices() {
+   Binder binder = new Binder("/home/root/integration-module/");
+   Map<String, Object> packages = binder.getServices();
+   return new ResponseEntity<Map<String, Object>>(packages, HttpStatus.OK);
+}
 ```
 
 ### Services from the Database
@@ -183,17 +182,17 @@ inside **choose a service** popup under embedded package. call the following fun
    Example
 
 ```
-Example: 
-    @GetMapping("/tenant/default/public/apiList2")
-    public ResponseEntity<Map<String, Object>> getServices() {
-        Binder binder = new Binder("/home/root/integration-module/");
+//Example: 
+@GetMapping("/tenant/default/public/apiList2")
+public ResponseEntity<Map<String, Object>> getServices() {
+   Binder binder = new Binder("/home/root/integration-module/");
         
-        binder.addEmbeddedService('HTTPService', "{...}"); //Call always before binder.getServices();
-        binder.addEmbeddedService('HTTPService2', "{...}");
+   binder.addEmbeddedService('HTTPService', "{...}"); //Call always before binder.getServices();
+   binder.addEmbeddedService('HTTPService2', "{...}");
         
-        Map<String, Object> packages = binder.getServices();
-        return new ResponseEntity<Map<String, Object>>(packages, HttpStatus.OK);
-    }
+   Map<String, Object> packages = binder.getServices();
+   return new ResponseEntity<Map<String, Object>>(packages, HttpStatus.OK);
+}
 ```
 2. The below image is showing a service coming inside embedded package.
 
@@ -208,13 +207,13 @@ Example:
 
 This is an example of the spring-boot application.
 ```
-    Example: \
-    @GetMapping("/tenant/default/public/getServiceAsResponse")
-    public ResponseEntity<Map<String, Object>> getServiceInfo(@RequestParam String location) {
-        Binder binder = new Binder("/home/root/integration-module/");
-        Map<String, Object> info = binder.getServiceInfo(location);
-        return new ResponseEntity<Map<String, Object>>(info, HttpStatus.OK);
-    }
+//Example:
+@GetMapping("/tenant/default/public/getServiceAsResponse")
+public ResponseEntity<Map<String, Object>> getServiceInfo(@RequestParam String location) {
+    Binder binder = new Binder("/home/root/integration-module/");
+    Map<String, Object> info = binder.getServiceInfo(location);
+    return new ResponseEntity<Map<String, Object>>(info, HttpStatus.OK);
+}
 ```
 4. The output of this service will be used for the mapping Line View with the Service parameters.
 
@@ -266,8 +265,8 @@ Example:
 
 ```
 Binder binder = new Binder("/home/root/integration-module/");
- binder.addFunctionClass(Example.class, false) //It will automatically capture all syncloop functions from this class.
- binder.addFunctionClass(Student.class, true) //It will automatically capture all syncloop functions from this class.
+binder.addFunctionClass(Example.class, false) //It will automatically capture all syncloop functions from this class.
+binder.addFunctionClass(Student.class, true) //It will automatically capture all syncloop functions from this class.
 ```
 
 3. `addContextObject()`: This function allows you to add your java object into syncloop service pool, these objects will use to invoke non-static functions from
@@ -298,8 +297,6 @@ Binder binder = new Binder("/home/root/integration-module/");
 
 ![Choose-a-Service](https://docs.syncloop.com/assets/img/docs/sdk/api-service-sl-m-ns.png)
 
-
-
 ## Enable Test & Trace
 
 The Syncloop Embedded SDK is a helpful tool for developers as it provides a way to test APIs on their platform. The SDK also has an interactive debugging feature that makes it easy for developers to navigate their service step-by-step and visualize all the input and output parameters at each step. The debugging process is implemented using Snapshots, which keep track of input and output variables at each step. These variables can be visually analyzed in the Syncloop workspace. The same features can also be used on the Syncloop Embedded SDK. Additionally, the SDK provides options for testing & tracing the API that has been created in the SDK environment.
@@ -317,16 +314,16 @@ The Syncloop Embedded SDK is a helpful tool for developers as it provides a way 
 1. `enableEmbeddedTest()`: By enabling this function, developers can activate the test feature on the user interface of the API editor. This will allow developers to test and verify the functionality of their APIs in a safe and controlled environment, without affecting any live systems. It is a useful tool for ensuring that your API works as intended before releasing it to users. Learn [UI Editor Integration](https://docs.syncloop.com/docs/syncloop-embedded-integration/ui-editor-integration). Once the **Test** button is enabled it starts appearing on the top right. \
    Example
 ```
-  var iframe = document.getElementById("syncloop_iframe");
-   var iframeWindow = iframe.contentWindow;
-   iframeWindow.enableEmbeddedTest()
+var iframe = document.getElementById("syncloop_iframe");
+var iframeWindow = iframe.contentWindow;
+iframeWindow.enableEmbeddedTest()
 ```
 2. `enableEmbeddedTrace()`: While testing APIs using the 'Test your API' popup, the developers can use this function to enable API debugging. By doing so, the developers will be able to perform more comprehensive service checks and obtain more detailed information about the API's behavior during the testing process. This can be quite useful in identifying and resolving issues more quickly and efficiently than they would be able to otherwise. Read more about [Debugging Service](https://www.syncloop.com/developers.html)
    Example
 ```
-  var iframe = document.getElementById("syncloop_iframe");
-   var iframeWindow = iframe.contentWindow;
-   iframeWindow.enableEmbeddedTrace()
+var iframe = document.getElementById("syncloop_iframe");
+var iframeWindow = iframe.contentWindow;
+iframeWindow.enableEmbeddedTrace()
 ```
 
 ### Server Side Integration
@@ -342,11 +339,11 @@ This service will convert Syncloop embedded input to a JSON schema.
 4. This is an example of the spring-boot application.
 
 ```
-  @PostMapping("/tenant/default/public/jsonToSchema")
-    public ResponseEntity<Object> getServiceInfo(@RequestBody Map<String, String> payload) {
-        Object schema = BinderUtils.convert(payload.get("json"));
-        return new ResponseEntity<Object>(schema, HttpStatus.OK);
-    }
+@PostMapping("/tenant/default/public/jsonToSchema")
+public ResponseEntity<Object> getServiceInfo(@RequestBody Map<String, String> payload) {
+    Object schema = BinderUtils.convert(payload.get("json"));
+    return new ResponseEntity<Object>(schema, HttpStatus.OK);
+}
 ```
 
 ### executeApi
@@ -359,12 +356,12 @@ This service will execute the API/Rule.
 4. This is an example of the spring-boot application.
 
 ```
-  @PostMapping("/tenant/default/public/executeApi")
-    public ResponseEntity<Map<String, Object>> executeApi(@RequestBody Map<String, Object> payload) throws Exception {
-        Binder binder = new Binder("/home/root/integration-module/");
-        Map<String, Object> resp = binder.runAsync(UUID.randomUUID().toString(), payload.get("apiJson").toString(), (Map)payload.get("payload"));
-        return new ResponseEntity<Map<String, Object>>(resp, HttpStatus.OK);
-    }
+@PostMapping("/tenant/default/public/executeApi")
+public ResponseEntity<Map<String, Object>> executeApi(@RequestBody Map<String, Object> payload) throws Exception {
+   Binder binder = new Binder("/home/root/integration-module/");
+   Map<String, Object> resp = binder.runAsync(UUID.randomUUID().toString(), payload.get("apiJson").toString(), (Map)payload.get("payload"));
+   return new ResponseEntity<Map<String, Object>>(resp, HttpStatus.OK);
+}
 ```
 5. `binder.run()` is also available & use it when you want to execute api in same worker thread.
 
