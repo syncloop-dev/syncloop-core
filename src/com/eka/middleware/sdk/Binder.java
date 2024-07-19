@@ -44,7 +44,8 @@ public class Binder {
                     resp.set(Binder.this.run(sessionId, apiServiceJson, payload));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
-                };
+                }
+                ;
             }
         });
 
@@ -73,7 +74,7 @@ public class Binder {
 
     private static final void executeService(DataPipeline dataPipeline, String apiServiceJson) throws SnippetException {
         try (InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
-             JsonReader jsonReader = Json.createReader(is);){
+             JsonReader jsonReader = Json.createReader(is);) {
             JsonObject jsonObject = jsonReader.readObject();
             dataPipeline.setRecordTrace(true);
             FlowResolver.execute(dataPipeline, jsonObject);
@@ -92,21 +93,72 @@ public class Binder {
      * @param serviceJson
      */
     public void addEmbeddedService(String serviceId, String serviceJson) {
-        CacheManager.addEmbeddedService(serviceId, serviceJson, Tenant.getTempTenant("default"));
+       addEmbeddedService(serviceId, serviceJson, "");
     }
 
     /**
+     *
+     * @param serviceId
+     * @param serviceJson
+     * @param identifier
+     */
+    public void addEmbeddedService(String serviceId, String serviceJson, String identifier) {
+        CacheManager.addEmbeddedService(serviceId, serviceJson, identifier, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     *
+     * @param serviceId
+     * @param identifier
+     */
+    public void clearEmbeddedService(String serviceId, String identifier) {
+        CacheManager.clearEmbeddedService(serviceId, identifier,  Tenant.getTempTenant("default"));
+    }
+
+    /**
+     *
+     * @param identifier
+     */
+    public void clearEmbeddedService(String identifier) {
+        CacheManager.clearEmbeddedService(Tenant.getTempTenant("default"), identifier);
+    }
+
+    /**
+     *
      */
     public Set<String> getEmbeddedService() {
         return CacheManager.getEmbeddedServices(Tenant.getTempTenant("default"));
     }
 
-    public Map<String, String> getFunctions() {
-        return CacheManager.getMethods(Tenant.getTempTenant("default"));
+    public Set<String> getEmbeddedService(String identifier) {
+        return CacheManager.getEmbeddedServices(Tenant.getTempTenant("default"), identifier);
     }
 
+    public Map<String, String> getFunctions() {
+        return getFunctions("");
+    }
+
+    /**
+     * @param identifier
+     * @return
+     */
+    public Map<String, String> getFunctions(String identifier) {
+        return CacheManager.getMethods(Tenant.getTempTenant("default"), identifier);
+    }
+
+    /**
+     * @return
+     */
     public Set<String> getContextObjects() {
-        return CacheManager.getContextObjectsNames(Tenant.getTempTenant("default"));
+        return getContextObjects("");
+    }
+
+    /**
+     * @param identifier
+     * @return
+     */
+    public Set<String> getContextObjects(String identifier) {
+        return CacheManager.getContextObjectsNames(Tenant.getTempTenant("default"), identifier);
     }
 
     /**
@@ -114,14 +166,35 @@ public class Binder {
      * @return
      */
     public String getServiceJson(String serviceId) {
-        return CacheManager.getEmbeddedService(serviceId, Tenant.getTempTenant("default"));
+        return getServiceJson(serviceId, "");
     }
 
+    /**
+     *
+     * @param serviceId
+     * @param identifier
+     * @return
+     */
+    public String getServiceJson(String serviceId, String identifier) {
+        return CacheManager.getEmbeddedService(serviceId, identifier, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     * @return
+     */
     public Map<String, Object> getServices() {
+        return getServices("");
+    }
+
+    /**
+     * @param identifier
+     * @return
+     */
+    public Map<String, Object> getServices(String identifier) {
         Map<String, Object> response = new HashMap<>();
         List<Map<String, Object>> children = new ArrayList<>();
 
-        String packageDir = PropertyManager.getPackagePath(Tenant.getTempTenant("default")) +"packages/";
+        String packageDir = PropertyManager.getPackagePath(Tenant.getTempTenant("default")) + "packages/";
 
         File file = new File(packageDir);
         File fileList[] = file.listFiles();
@@ -143,9 +216,9 @@ public class Binder {
         list.add(root);
 
         response.put("packages", list);
-        response.put("embeddedServices", getEmbeddedService());
-        response.put("functions", getFunctions());
-        response.put("contexts", getContextObjects());
+        response.put("embeddedServices", getEmbeddedService(identifier));
+        response.put("functions", getFunctions(identifier));
+        response.put("contexts", getContextObjects(identifier));
         return response;
     }
 
@@ -185,6 +258,15 @@ public class Binder {
 
 
     public Map<String, Object> getServiceInfo(String location) {
+        return getServiceInfo(location, "");
+    }
+
+    /**
+     * @param location
+     * @param identifier
+     * @return
+     */
+    public Map<String, Object> getServiceInfo(String location, String identifier) {
         try {
             String serviceInfo = null;
             if (location.startsWith("/packages")) {
@@ -198,9 +280,9 @@ public class Binder {
             } else if (location.endsWith(".object")) {
                 serviceInfo = CacheManager.getContextObjectServiceViewConfig();
             } else if (location.endsWith(".function")) {
-                serviceInfo = CacheManager.getMethod(location.replaceAll(".function", ""), Tenant.getTempTenant("default"));
+                serviceInfo = CacheManager.getMethod(location.replaceAll(".function", ""), identifier, Tenant.getTempTenant("default"));
             } else {
-                serviceInfo = CacheManager.getEmbeddedService(location.replaceAll("/embedded/", "").replaceAll(".api", ""), Tenant.getTempTenant("default"));
+                serviceInfo = CacheManager.getEmbeddedService(location.replaceAll("/embedded/", "").replaceAll(".api", ""), identifier, Tenant.getTempTenant("default"));
             }
 
             Map<String, Object> tokenData = new ObjectMapper().readValue(serviceInfo, Map.class);
@@ -213,30 +295,99 @@ public class Binder {
 
     /**
      * @param aClass
+     * @param identifier
+     * @throws Exception
      */
-    public void addFunctionClass(Class<?> aClass) throws Exception {
-        addFunctionClass(aClass, false);
+    public void addFunctionClass(Class<?> aClass, String identifier) throws Exception {
+        addFunctionClass(aClass, false, identifier);
     }
 
     /**
+     *
+     * @param aClass
+     * @throws Exception
+     */
+    public void addFunctionClass(Class<?> aClass) throws Exception {
+        addFunctionClass(aClass, false, "");
+    }
+
+    /**
+     *
      * @param aClass
      * @param allowNonSyncloopFunctions
      * @throws Exception
      */
     public void addFunctionClass(Class<?> aClass, boolean allowNonSyncloopFunctions) throws Exception {
+        addFunctionClass(aClass, allowNonSyncloopFunctions, "");
+    }
+
+    /**
+     * @param aClass
+     * @param allowNonSyncloopFunctions
+     * @param identifier
+     * @throws Exception
+     */
+    public void addFunctionClass(Class<?> aClass, boolean allowNonSyncloopFunctions, String identifier) throws Exception {
         List<ServiceOutline> serviceOutlines = SyncloopFunctionScanner.addClass(aClass, allowNonSyncloopFunctions);
 
-        for (ServiceOutline serviceOutline: serviceOutlines) {
+        for (ServiceOutline serviceOutline : serviceOutlines) {
             CacheManager.addMethod(
                     String.format("%s.%s_%s",
                             serviceOutline.getLatest().getData().getAcn(),
                             serviceOutline.getLatest().getData().getFunction(),
                             serviceOutline.getLatest().getData().getIdentifier()),
-                    ServiceUtils.objectToJson(serviceOutline.getLatest()), Tenant.getTempTenant("default"));
+                    ServiceUtils.objectToJson(serviceOutline.getLatest()), identifier, Tenant.getTempTenant("default"));
         }
     }
 
+    /**
+     * @param identifier
+     * @throws Exception
+     */
+    public void clearFunctionClass(String identifier) throws Exception {
+        CacheManager.clearMethod(Tenant.getTempTenant("default"), identifier);
+    }
+
+    /**
+     * @param key
+     * @param identifier
+     * @throws Exception
+     */
+    public void clearFunctionClass(String key, String identifier) throws Exception {
+        CacheManager.clearMethod(key, identifier, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     *
+     * @param objectName
+     * @param object
+     */
     public void addContextObject(String objectName, Object object) {
         CacheManager.addContextObject(objectName, object, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     *
+     * @param objectName
+     * @param object
+     * @param identifier
+     */
+    public void addContextObject(String objectName, Object object, String identifier) {
+        CacheManager.addContextObject(objectName, object, identifier, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     * @param objectName
+     * @param identifier
+     */
+    public void clearContextObject(String objectName, String identifier) {
+        CacheManager.clearContextObject(objectName, identifier, Tenant.getTempTenant("default"));
+    }
+
+    /**
+     * @param identifier
+     */
+    public void clearContextObject(String identifier) {
+        CacheManager.clearContextObject(Tenant.getTempTenant("default"), identifier);
     }
 }

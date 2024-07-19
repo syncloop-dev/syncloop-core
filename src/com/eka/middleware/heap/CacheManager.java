@@ -37,13 +37,24 @@ public class CacheManager {
     }
 
     public static void addEmbeddedService(String key, String json, Tenant tenant) {
+        addEmbeddedService(key, json, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param json
+     * @param identifier
+     * @param tenant
+     */
+    public static void addEmbeddedService(String key, String json, String identifier, Tenant tenant) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, String> services = (Map<String, String>) cache.get("embedded_service");
+        Map<String, String> services = (Map<String, String>) cache.get("embedded_service" + identifier);
         if (null == services) {
             services = new HashMap<>();
-            cache.put("embedded_service", services);
+            cache.put("embedded_service" + identifier, services);
         }
 
         services.put(key, json);
@@ -51,13 +62,71 @@ public class CacheManager {
 
     /**
      * @param tenant
-     * @return
      */
-    public static Set<String> getEmbeddedServices(Tenant tenant) {
+    public static void clearEmbeddedService(Tenant tenant) {
+        clearEmbeddedService(tenant, "");
+    }
+
+    /**
+     *
+     * @param tenant
+     * @param identifier
+     */
+    public static void clearEmbeddedService(Tenant tenant, String identifier) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, String> services = (Map<String, String>) cache.get("embedded_service");
+        Map<String, String> services = (Map<String, String>) cache.get("embedded_service" + identifier);
+        if (null != services) {
+            services = new HashMap<>();
+            cache.put("embedded_service" + identifier, services);
+        }
+    }
+
+    /**
+     *
+     * @param key
+     * @param tenant
+     */
+    public static void clearEmbeddedService(String key, Tenant tenant) {
+        clearEmbeddedService(key, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param tenant
+     */
+    public static void clearEmbeddedService(String key, String identifier, Tenant tenant) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, String> services = (Map<String, String>) cache.get("embedded_service" + identifier);
+        if (null != services) {
+            services.remove(key);
+            cache.put("embedded_service" + identifier, services);
+        }
+    }
+
+    /**
+     * @param tenant
+     * @return
+     */
+    public static Set<String> getEmbeddedServices(Tenant tenant) {
+        return getEmbeddedServices(tenant, "");
+    }
+
+    /**
+     *
+     * @param tenant
+     * @param identifier
+     * @return
+     */
+    public static Set<String> getEmbeddedServices(Tenant tenant, String identifier) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, String> services = (Map<String, String>) cache.get("embedded_service" + identifier);
         if (null == services) {
             services = new HashMap<>();
         }
@@ -65,11 +134,28 @@ public class CacheManager {
         return services.keySet();
     }
 
+    /**
+     *
+     * @param key
+     * @param tenant
+     * @return
+     */
     public static String getEmbeddedService(String key, Tenant tenant) {
+        return getEmbeddedService(key, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param identifier
+     * @param tenant
+     * @return
+     */
+    public static String getEmbeddedService(String key, String identifier, Tenant tenant) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, String> services = (Map<String, String>) cache.get("embedded_service");
+        Map<String, String> services = (Map<String, String>) cache.get("embedded_service" + identifier);
         if (null == services) {
             services = new HashMap<>();
         }
@@ -78,17 +164,83 @@ public class CacheManager {
     }
 
 
+    /**
+     *
+     * @param key
+     * @param json
+     * @param tenant
+     */
     public static void addMethod(String key, String json, Tenant tenant) {
+       addMethod(key, json, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param json
+     * @param tenant
+     */
+    public static void addMethod(String key, String json, String identifier, Tenant tenant) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method");
+        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method" + identifier);
         if (null == services) {
             services = new HashMap<>();
-            cache.put("syncloop_method", services);
+            cache.put("syncloop_method" + identifier, services);
         }
 
         services.put(key, json);
+    }
+
+    /**
+     *
+     * @param tenant
+     */
+    public static void clearMethod(Tenant tenant) {
+        clearMethod(tenant, "");
+    }
+
+    /**
+     *
+     * @param tenant
+     */
+    public static void clearMethod(Tenant tenant, String identifier) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method" + identifier);
+        if (null != services) {
+            services = new HashMap<>();
+            cache.put("syncloop_method" + identifier, services);
+        }
+    }
+
+    /**
+     *
+     * @param key
+     * @param tenant
+     */
+    public static void clearMethod(String key, Tenant tenant) {
+        clearMethod(key, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param identifier
+     * @param tenant
+     */
+    public static void clearMethod(String key, String identifier, Tenant tenant) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method" + identifier);
+        if (null != services) {
+            services.remove(key);
+            cache.put("syncloop_method" + identifier, services);
+        }
+
     }
 
     /**
@@ -96,10 +248,20 @@ public class CacheManager {
      * @return
      */
     public static Map<String, String> getMethods(Tenant tenant) {
+        return getMethods(tenant, "");
+    }
+
+    /**
+     *
+     * @param tenant
+     * @param identifier
+     * @return
+     */
+    public static Map<String, String> getMethods(Tenant tenant, String identifier) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method");
+        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method" + identifier);
         if (null == services) {
             services = new HashMap<>();
         }
@@ -108,10 +270,21 @@ public class CacheManager {
     }
 
     public static String getMethod(String key, Tenant tenant) {
+        return getMethod(key, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param identifier
+     * @param tenant
+     * @return
+     */
+    public static String getMethod(String key, String identifier, Tenant tenant) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method");
+        Map<String, String> services = (Map<String, String>) cache.get("syncloop_method" + identifier);
         if (null == services) {
             services = new HashMap<>();
         }
@@ -119,11 +292,26 @@ public class CacheManager {
         return services.get(StringUtils.strip(key, "/"));
     }
 
+    /**
+     *
+     * @param tenant
+     * @return
+     */
     public static Set<String> getContextObjectsNames(Tenant tenant) {
+        return getContextObjectsNames(tenant, "");
+    }
+
+    /**
+     *
+     * @param tenant
+     * @param identifier
+     * @return
+     */
+    public static Set<String> getContextObjectsNames(Tenant tenant, String identifier) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects");
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects" + identifier);
         if (null == services) {
             services = new HashMap<>();
         }
@@ -143,10 +331,21 @@ public class CacheManager {
     }
 
     public static Object getContextObjects(String key, Tenant tenant) {
+       return getContextObjects(key, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param identifier
+     * @param tenant
+     * @return
+     */
+    public static Object getContextObjects(String key, String identifier, Tenant tenant) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects");
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects" + identifier);
         if (null == services) {
             services = new HashMap<>();
         }
@@ -155,17 +354,84 @@ public class CacheManager {
     }
 
 
+    /**
+     *
+     * @param key
+     * @param object
+     * @param tenant
+     */
     public static void addContextObject(String key, Object object, Tenant tenant) {
+        addContextObject(key, object, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param object
+     * @param tenant
+     */
+    public static void addContextObject(String key, Object object, String identifier, Tenant tenant) {
 
         Map<String, Object> cache = getCacheAsMap(tenant);
 
-        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects");
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects" + identifier);
         if (null == services) {
             services = new HashMap<>();
-            cache.put("context_objects", services);
+            cache.put("context_objects" + identifier, services);
         }
 
         services.put(key, object);
+    }
+
+    /**
+     *
+     * @param tenant
+     */
+    public static void clearContextObject(Tenant tenant) {
+        clearContextObject(tenant, "");
+    }
+
+    /**
+     *
+     * @param tenant
+     * @param identifier
+     */
+    public static void clearContextObject(Tenant tenant, String identifier) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects" + identifier);
+        if (null != services) {
+            services = new HashMap<>();
+            cache.put("context_objects" + identifier, services);
+        }
+    }
+
+    /**
+     *
+     * @param key
+     * @param tenant
+     */
+    public static void clearContextObject(String key, Tenant tenant) {
+        clearContextObject(key, "", tenant);
+    }
+
+    /**
+     *
+     * @param key
+     * @param identifier
+     * @param tenant
+     */
+    public static void clearContextObject(String key, String identifier, Tenant tenant) {
+
+        Map<String, Object> cache = getCacheAsMap(tenant);
+
+        Map<String, Object> services = (Map<String, Object>) cache.get("context_objects" + identifier);
+        if (null != services) {
+            services.remove(key);
+            cache.put("context_objects" + identifier, services);
+        }
+
     }
 
     public static Map getOrCreateNewCache(Tenant tenant, String name) {
