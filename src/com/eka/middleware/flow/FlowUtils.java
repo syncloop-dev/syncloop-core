@@ -131,7 +131,7 @@ public class FlowUtils {
         try {
             con = placeXPathValue(condition, dp);
             String threadSafeName = dp.getUniqueThreadName();
-            return (boolean) eval(con, threadSafeName, "boolean");
+            return (boolean) eval(con, threadSafeName, "boolean", dp);
         } catch (Exception e) {
             ServiceUtils.printException(dp, "Something went wrong while parsing condition(" + condition + "), " + con, e);
             throw new SnippetException(dp, "Something went wrong while parsing condition(" + condition + "), " + con,
@@ -257,6 +257,7 @@ public class FlowUtils {
 							}
 							break;
 						case "EEV": // Evaluate Expression Variable
+                        case "EEV2":
                             value = resolveExpressions(value, dp);
 							/*for (String expressionKey : expressions) {
                                 Object valueByPointer = dp.getValueByPointer(expressionKey);
@@ -289,14 +290,16 @@ public class FlowUtils {
             }
 
 
-            if ((!typeOfVariable.toUpperCase().contains("LIST") ||
+            if (((!typeOfVariable.toUpperCase().contains("LIST") ||
                     typeOfVariable.toUpperCase().equals("INTEGERLIST") ||
                     typeOfVariable.toUpperCase().equals("STRINGLIST") ||
                     typeOfVariable.toUpperCase().equals("NUMBERLIST") ||
-                    typeOfVariable.toUpperCase().equals("BOOLEANLIST")) && !typeOfVariable.equals("string") && evaluate != null && evaluate.trim().length() > 0) {
+                    typeOfVariable.toUpperCase().equals("BOOLEANLIST")) && !typeOfVariable.equals("string") && evaluate != null && evaluate.trim().length() > 0)
+                    || (typeOfVariable.equals("string") && "EEV2".equals(evaluate))) {
                 try {
                     String threadSafeName = dp.getUniqueThreadName();
-                    Object typeVal = eval(value, threadSafeName, typeOfVariable);
+                    Object typeVal = eval(value, threadSafeName, typeOfVariable, dp);
+//                    Object typeVal = ExpressionExecutor.evaluate(value, dp, typeOfVariable);
                     dp.setValueByPointer(path, typeVal, typePath);
                 } catch (Exception e) {
                     throw new SnippetException(dp,
@@ -388,6 +391,7 @@ public class FlowUtils {
                         if (ctx == null)
                             ctx = ScriptEngineContextManager.getContext(threadSafeName);
                         synchronized (ctx) {
+                            updateContextBinding(ctx, dp);
                             isFunctionAvailable = (leader.getApplyFunction()!=null && leader.getApplyFunction().trim().length()>1 && !leader.getApplyFunction().trim().toLowerCase().equals("none"));
                             if (isFunctionAvailable || expressions != null) {
                                 if (expressions != null)
@@ -448,15 +452,12 @@ public class FlowUtils {
         return successful;
     }
 
-    private static Object eval(String js, String name) throws Exception {
-        return eval(js, name, "string");
-    }
-
-    private static Object eval(String js, String name, String returnType) throws Exception {
+    private static Object eval(String js, String name, String returnType, DataPipeline dataPipeline) throws Exception {
 
         if (name != null) {
             Context ctx = ScriptEngineContextManager.getContext(name);
             synchronized (ctx) {
+                updateContextBinding(ctx, dataPipeline);
                 return eval(js, ctx, returnType);
             }
         } else
@@ -565,6 +566,22 @@ public class FlowUtils {
                 e.printStackTrace();
             throw new RuntimeException(e);
         }
+    }
+
+    public static void updateContextBinding(Context ctx, DataPipeline sourceMap) throws Exception {
+
+        Map<String, Object> SL = sourceMap.getMap();
+
+        Value bindings = ctx.getBindings("js");
+
+        Map dollarMap=new java.util.HashMap<String, Object>();
+        SL.forEach((k,v)->{
+            dollarMap.put(k, v);
+            if(!k.startsWith("*"))
+                bindings.putMember(k,v);
+
+        });
+        bindings.putMember("$",dollarMap);
     }
 
     public static void resetJSCB(String resource) throws SystemException {
@@ -698,7 +715,9 @@ public class FlowUtils {
         }
 
         if (null != assignList && (null == val || StringUtils.isBlank(val.toString()))) {
-            setValue(assignList, dp);
+            if (!assignList.isEmpty() && !"".equals(assignList.get(0).asJsonObject().getString("value", ""))) {
+                setValue(assignList, dp);
+            }
         }
 
         if (key == null)
@@ -713,11 +732,22 @@ public class FlowUtils {
         JsonObject data = jsonValue.asJsonObject().getJsonObject("data");
         JsonValue jv = jsonValue.asJsonObject().get("children");
         List<Object> list = null;
-        if (type.endsWith("List")) {
-            Object o = dp.get(key);
-            if (o instanceof String[]) {
+        Object o = dp.get(key);
+        if (type.endsWith("List") && null != o) {
+            if (!(o instanceof String[] ||
+                    o instanceof Integer[] || o instanceof Double[] ||
+                    o instanceof List)) {
+                list = new ArrayList<>();
+                list.add(o);
+                o = list;
+                dp.put(key, o);
+            } else if (o instanceof String[]) {
                 list = Arrays.stream((String[]) o).collect(Collectors.toList());
-            } else {
+            } else if (o instanceof Integer[]) {
+                list = Arrays.stream((Integer[]) o).collect(Collectors.toList());
+            } else if (o instanceof Double[]) {
+                list = Arrays.stream((Double[]) o).collect(Collectors.toList());
+            }  else {
                 list = (List<Object>) o;
             }
         }
@@ -727,10 +757,12 @@ public class FlowUtils {
                 if (validationRequired) {
                     dataValidator(data, jv, k, typePath, dp, true);
                 }
+                Function.dataAutoboxing(dp, k, typePath);
             }
         } else {
             if (validationRequired)
                 dataValidator(data, jv, key, typePath, dp, true);
+            Function.dataAutoboxing(dp, key, typePath);
         }
     }
 
@@ -757,7 +789,9 @@ public class FlowUtils {
                 }
 
                 if (null != assignList && (null == val || StringUtils.isBlank(val.toString()))) {
-                    setValue(assignList, dp);
+                    if (!assignList.isEmpty() && !"".equals(assignList.get(0).asJsonObject().getString("value", ""))) {
+                        setValue(assignList, dp);
+                    }
                 }
 
             }

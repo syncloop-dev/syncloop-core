@@ -27,6 +27,11 @@ public static void execute(DataPipeline dp,JsonObject mainflowJsonObject) throws
 	JsonArray flows= flowJsonValue.asJsonArray();
 	for (JsonValue jsonValue : flows) {
 		final String type=jsonValue.asJsonObject().getString("type");
+		String status=jsonValue.asJsonObject().getString("status",null);
+		boolean disabled = "disabled".equals(status);
+		if (disabled) {
+			continue;
+		}
 		switch(type) {
 			case "try-catch":
 				TCFBlock tcfBlock=new TCFBlock(jsonValue.asJsonObject());

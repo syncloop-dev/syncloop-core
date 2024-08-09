@@ -956,4 +956,54 @@ public class ServiceUtils {
 			outputStream.close();
 		}
 	}
+
+	/**
+	 *
+	 * @param connectionPropFile
+	 * @param key
+	 * @return
+	 * @throws Exception
+	 */
+	public static String getKeyConnection(String connectionPropFile, String key) throws Exception {
+		try(
+				FileInputStream fileInputStream = new FileInputStream(connectionPropFile);
+		) {
+			Properties properties = new Properties();
+			properties.load(fileInputStream);
+
+			Object assistanceId = properties.get(key);
+
+			if (null == assistanceId) {
+				return null;
+			}
+
+			return assistanceId.toString();
+
+		} finally {}
+	}
+
+	/**
+	 * @param connectionPropFile
+	 * @param key
+	 * @param value
+	 * @throws Exception
+	 */
+	public static void saveOrUpdateKeyInConnection(String connectionPropFile, String key, String value) throws Exception {
+
+		try(
+				FileInputStream fileInputStream = new FileInputStream(connectionPropFile);
+		) {
+			Properties properties = new Properties();
+			properties.load(fileInputStream);
+
+			Object assistanceId = properties.get(key);
+			if (null == assistanceId) {
+				properties.put(key, value);
+				FileOutputStream fileOutputStream = new FileOutputStream(connectionPropFile);
+				properties.store(fileOutputStream, "");
+				fileOutputStream.close();
+			}
+
+		} finally {}
+	}
 }

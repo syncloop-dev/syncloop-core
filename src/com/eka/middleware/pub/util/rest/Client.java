@@ -1,6 +1,7 @@
 package com.eka.middleware.pub.util.rest;
 
 import com.eka.middleware.pub.util.auth.aws.AWS4SignerForChunkedUpload;
+import com.eka.middleware.service.DataPipeline;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -172,10 +173,31 @@ public class Client {
 		return invoke(url, method, formData, reqHeaders, payload, inputStream, queryParameters, new HashMap<String, Object>(), sslValidation);
 	}
 
-
-	public static Map<String, Object> invoke(String url, String method, Map<String, Object> formData,
+	public static Map<String, Object> invoke( String url, String method, Map<String, Object> formData,
 											  Map<String, String> reqHeaders, String payload, InputStream inputStream,
 											  Map<String, String> queryParameters, Map<String, Object> settings, boolean sslValidation) throws Exception {
+
+		return invoke(null, url, method, formData, reqHeaders, payload, inputStream, queryParameters, settings, sslValidation);
+	}
+
+	/**
+	 *
+	 * @param dataPipeline
+	 * @param url
+	 * @param method
+	 * @param formData
+	 * @param reqHeaders
+	 * @param payload
+	 * @param inputStream
+	 * @param queryParameters
+	 * @param settings
+	 * @param sslValidation
+	 * @return
+	 * @throws Exception
+	 */
+	public static Map<String, Object> invoke(DataPipeline dataPipeline, String url, String method, Map<String, Object> formData,
+											 Map<String, String> reqHeaders, String payload, InputStream inputStream,
+											 Map<String, String> queryParameters, Map<String, Object> settings, boolean sslValidation) throws Exception {
 		AtomicBoolean sendBlankParams = new AtomicBoolean(false);
 
 		if (null != settings.get("sendBlankParams")) {
@@ -366,7 +388,7 @@ public class Client {
 		});
 	}
 
-	private static HttpEntity addFormDataV2(Map<String, Object> data, Map<String, String> headers) throws Exception {
+	static HttpEntity addFormDataV2(Map<String, Object> data, Map<String, String> headers) throws Exception {
 
 		String boundary = "------syncloop" + new BigInteger(35, new java.util.Random()).toString();
 

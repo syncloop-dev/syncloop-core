@@ -106,6 +106,8 @@ public class MapUtils {
 			return;
 		} else if(parentMap instanceof DataPipeline) {
 			currentPayload=((DataPipeline)parentMap).getMap();
+		} else {
+			currentPayload = (Map)parentMap;
 		}
 
 		String key;

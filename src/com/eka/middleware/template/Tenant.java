@@ -22,6 +22,13 @@ public class Tenant {
     private static Logger LOGGER = LogManager.getLogger();
     private static final Marker TENANT_MARKER = MarkerManager.getMarker("TENANT");
 
+    public static void reloadTenant(String name) {
+        if (tenantMap.get(name) != null) {
+            tenantMap.remove(name);
+            getTenant(name);
+        }
+    }
+
     public static Tenant getTenant(String name) {
 
         synchronized (syncObject) {

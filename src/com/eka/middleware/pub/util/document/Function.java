@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -122,6 +123,78 @@ public class Function {
 				return "Maximum integer value allowed is " + maxInt;
 		}
 		return null;
+	}
+
+	/**
+	 *
+	 * @param dp
+	 * @param pointer
+	 * @param typePath
+	 * @throws SnippetException
+	 */
+	public static void dataAutoboxing(DataPipeline dp, String pointer, String typePath)
+			throws SnippetException {
+		try {
+
+			Object object = dp.getValueByPointer(pointer);
+			if (object == null)
+				return;
+
+			String type = typePath.substring(typePath.lastIndexOf("/") + 1);
+
+			if (object.getClass().getSimpleName().equalsIgnoreCase(type)) {
+				return ;
+			} else if (object.getClass().getSimpleName().equalsIgnoreCase("hashmap")
+					&& type.equalsIgnoreCase("document")) {
+				return ;
+			} else if (object.getClass().getSimpleName().equalsIgnoreCase("list")
+					&& type.equalsIgnoreCase("documentList")) {
+				return ;
+			}
+
+			LOGGER.trace("TypePath: " + typePath);
+			LOGGER.trace("Type: " + type);
+			switch (type) {
+
+				case "string", "date", "stringList", "dateList": {
+					String value = (String) object;
+					dp.setValueByPointer(pointer, value, typePath);
+					break;
+				}
+				case "integer", "integerList": {
+					Integer value = null;
+					if (StringUtils.isNotBlank(object+"")) {
+						value = Integer.parseInt(object+"");
+					}
+					dp.setValueByPointer(pointer, value, typePath);
+					break;
+				}
+				case "boolean", "booleanList": {
+					Boolean value = null;
+					if (StringUtils.isNotBlank(object+"")) {
+						value = Boolean.parseBoolean(object+"");
+					}
+					dp.setValueByPointer(pointer, value, typePath);
+					break;
+				}
+				case "number", "numberList": {
+					Double value = null;
+					if (StringUtils.isNotBlank(object+"")) {
+						value = Double.parseDouble(object+"");
+					}
+					dp.setValueByPointer(pointer, value, typePath);
+					break;
+				}
+				default:
+					dp.log("Unexpected value: " + type, Level.WARN);
+			}
+
+
+		} catch (Exception e) {
+			ServiceUtils.printException(dp,"Exception while validating "+pointer+" of type "+typePath, e);
+			throw new SnippetException(dp, "Exception while validating "+pointer+" of type "+typePath, e);
+		}
+
 	}
 
 	public static String applyNumberValidations(DataPipeline dp, String pointer, String typePath, double value,

@@ -132,7 +132,7 @@ public class Repeat implements FlowBasicInfo {
                     throw new RuntimeException("Loop exceeded");
                 }
 
-                dp.put(indexVar, index + "");
+                dp.put(indexVar, index);
                 index++;
                 Exception throwable = null;
                 try {
