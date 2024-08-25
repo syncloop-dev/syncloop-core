@@ -81,6 +81,7 @@ public class Transformer implements FlowBasicInfo {
 				} else
 					dp.put("*snapshot", "enabled");
 			}
+			canSnap = canSnap || dp.isRecordTrace();
 			/*if (!canSnap)
 				dp.drop("*snapshot");*/
 			if (canSnap ) {
