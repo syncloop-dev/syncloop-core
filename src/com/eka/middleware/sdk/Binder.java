@@ -76,7 +76,9 @@ public class Binder {
         try (InputStream is = new ByteArrayInputStream(apiServiceJson.getBytes(StandardCharsets.UTF_8));
              JsonReader jsonReader = Json.createReader(is);) {
             JsonObject jsonObject = jsonReader.readObject();
-            dataPipeline.setRecordTrace(true);
+            dataPipeline.setRecordTrace(
+                    Boolean.parseBoolean(ServiceUtils.getServerProperty("middleware.service.api.default-trace"))
+            );
             FlowResolver.execute(dataPipeline, jsonObject);
         } catch (Throwable e) {
             e.printStackTrace();
