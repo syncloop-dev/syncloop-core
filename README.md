@@ -52,7 +52,7 @@ $("#syncloop").syncloop({});
 ```
 
 7. If you can see the API editor on your page, it means that it has been successfully enabled.
-   To learn more about syncloop API building follow this [documentation](https://docs.syncloop.com/docs/user-guide/service/api) or syncloop's [YouTube channel](https://www.youtube.com/@syncloop).
+   To learn more about syncloop API building follow this [documentation](https://docs.syncloop.com/docs/user-guide/dashboard/workspace/services/api/api_page) or syncloop's [YouTube channel](https://www.youtube.com/@syncloop).
 
    ![APIEditor](https://docs.syncloop.com/assets/img/docs/sdk/editor.png)
 
