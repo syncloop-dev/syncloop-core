@@ -35,49 +35,77 @@ Syncloop SDK comes in two forms: **UI SDK** & **Server Runtime**. This document 
 
 You can request a new enterprise or open source license for embedded [Get a license](https://www.syncloop.com/request-enterprise-license.html)
 
-
-
 ### UI SDK
 
-Syncloop UI SDK is used in HTML and it enables Syncloop UI editor which is used to create the API/rule. It enables all UI major components which is
-available in Syncloop workspace and the use of all components is similar. it has the following steps to enable & integrate the editor in your application.
+Syncloop UI SDK is used in HTML. It enables the Syncloop UI editor, which is used to create the API/rule. It enables all the major UI components available in the Syncloop workspace, and the usage of all components is similar. The following steps enable and integrate the editor in your application.
 
 1. Download the [SDK](https://www.syncloop.com/download-sdk.html).
 2. Extract the syncloop-ui-sdk zip. (It would contain 2 zip files inside the SDK zip).
-3. Host UI SDK on a web server where it can be accessible for your application.
-2. Now call the `editor.html` file in an iframe into your HTML page with the following path `<BASE_PATH>/files/gui/middleware/pub/server/ui/workspace/web/editor/editor.html` in an iframe
-   like this: \
-   \
-   `<iframe id="syncloop_iframe" src="<BASE_PATH>/files/gui/middleware/pub/server/ui/workspace/web/editor/editor.html"></iframe>` \
-   \
-   and API editor will look like as the below screenshot.
+3. Host the UI SDK on a web server that can be accessible for your application.
+4. Create an HTML element and assign an HTML id. `<div id="syncloop"></div>`.
+5. Call the `<BASE_PATH>/files/gui/middleware/pub/server/ui/workspace/syncloop.min.js` from the SDK.
+6. Invoke the following javascript code to enable the editor on your HTML page.
 
-![APIEditor](https://docs.syncloop.com/assets/img/docs/sdk/editor.png)
-*Note: The above images have sample components created. For you, the editor will be empty.*
 
-3. If you can see the API editor on your page, it means that it has been successfully enabled.
+```
+$("#syncloop").syncloop({});
+```
+
+7. If you can see the API editor on your page, it means that it has been successfully enabled.
    To learn more about syncloop API building follow this [documentation](https://docs.syncloop.com/docs/user-guide/service/api) or syncloop's [YouTube channel](https://www.youtube.com/@syncloop).
 
-   
-#### JS Functions
-Syncloop Embedded provides the following JS functions:
-1. `save()`: The save() function will extract all Syncloop API in the JSON form. You can later send/save and execute the JSON. \
+   ![APIEditor](https://docs.syncloop.com/assets/img/docs/sdk/editor.png)
 
-   Example: Consider the above iframe integration
+
+
+<h2 id="Syncloop_embedded_integration_js_configurations"> </h2>
+
+#### JS Configurations
+Syncloop Embedded provides the following JS configuration:
+
 ```
-var iframe = document.getElementById("syncloop_iframe");
-var iframeWindow = iframe.contentWindow;
-const apiServiceJson = iframeWindow.save(); // will return json format {...}
-// ... send/save apiServiceJson's data.`
+{
+            unique_id: <UUID>,
+            test: true|false,
+            export: true|false,
+            import: true|false,
+            documentation: true|false,
+            save: true|false,
+            save_callback: function(data) {
+                //save data
+            },
+            load_service_callback: function () {
+                return {...};
+            },
+            width: '100%',
+            height: '100%',
+            config: {
+                service: {
+                    list_options: {
+                        embedded_services_label: "embedded",
+                        embedded_services_context: "contexts",
+                        embedded_services_function: "functions"
+                    }
+                }
+            },
+            service_base_url: <SERVER_RUNTIME_BASEPATH>
+        }
 ```
 
-2. `loadService()`: This function is designed to load data into the editor. It allows you to edit data that has already been saved in a database or elsewhere. To use this function, provide the saved API's JSON as a parameter.
-```
-//Example: Just put saved API's JSON in parameters.
-var iframe = document.getElementById("syncloop_iframe");
-var iframeWindow = iframe.contentWindow;
-iframeWindow.loadService({...})
-```
+1. `service_base_url`: Adds the [server runtime](https://docs.syncloop.com/docs/syncloop-embedded-integration/server-runtime) base path where all the Syncloop APIS are hosted.
+2. `unique_id` provides the unique ID for this configuration. It is used for many internal purposes.
+3. `test`: It requires **true** or **false** values to enable/disable it on the UI. Syncloop provides a test feature where you can test your service/rule on the UI itself.
+4. `export`: It requires **true** or **false** values to enable/disable it on the UI. This option allows you to export the UI service/rule as a file.
+5. `documentation`: The documentation link in the editor requires either **true** or **false** values to enable/disable it.
+6. `save`: To enable/disable the save function on the UI, it requires **true** or **false** values.
+7. `save_callback`: This is the callback function that triggers when you click the save button on the editor. You will have your editor's service in the form of JSON in the **data** variable. Later, you can save it where you want.
+8. `load_service_callback`: This is a callback function that loads your saved/exported service programmatically on the editor.
+9. `width': Defines the width of the editor.
+10. `height': Defines the height of the editor.
+11. `config`: Additional editor's configuration.
+    i. `config.service.list_options`: This is the naming configuration for your [Local Java Function Integration](https://docs.syncloop.com/docs/syncloop-embedded-integration/local-java-function-integration).
+
+
 
 
 
