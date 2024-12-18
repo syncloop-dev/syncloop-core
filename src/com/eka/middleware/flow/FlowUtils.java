@@ -40,6 +40,13 @@ public class FlowUtils {
     private static final String regex = "#\\{([^{}]+)\\}";
     private static final Pattern pattern = Pattern.compile(regex);
 
+    public static boolean isMatch(String caseLabel, DataPipeline dp, String xPathValue) throws SnippetException {
+        caseLabel=caseLabel.substring(7);
+        String label=FlowUtils.placeXPathValue(caseLabel, dp);
+        boolean match=FlowUtils.patternMatches(xPathValue,label);
+        return match;
+    }
+
     public static String placeXPathValue(String xPaths, DataPipeline dp) throws SnippetException {
         try {
             String xPathValues = xPaths;
