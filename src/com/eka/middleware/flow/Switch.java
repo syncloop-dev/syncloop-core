@@ -132,14 +132,9 @@ public class Switch implements FlowBasicInfo {
 					Scope scope=new Scope(jsonValue.asJsonObject());
 					scope.process(dp);
 					return;
-				}else if(xPathValue!=null && caseLabel.toLowerCase().startsWith("#regex:")) {
-					caseLabel=caseLabel.substring(7);
-					String label=FlowUtils.placeXPathValue(caseLabel, dp);
-					boolean match=FlowUtils.patternMatches(xPathValue,label);
-					if(match) {
-						Scope scope=new Scope(jsonValue.asJsonObject());
-						scope.process(dp);
-					}
+				}else if(xPathValue!=null && caseLabel.toLowerCase().startsWith("#regex:") && FlowUtils.isMatch(caseLabel, dp, xPathValue)) {
+					Scope scope=new Scope(jsonValue.asJsonObject());
+					scope.process(dp);
 					return;
 				}else if("#default".equals(caseLabel)) {
 					snapMeta.put("caseLabel", caseLabel + "");

@@ -70,7 +70,7 @@ public class RTCompile {
 
 		String compiledClassPath = path.replace(".java", ".class");
 		File classFile = new File(compiledClassPath);
-		if (!classFile.exists())
+		if (!classFile.isFile())
 			compile = true;
 		String error = null;
 		if (compile) {
