@@ -72,7 +72,7 @@ public class ServiceUtils {
 
 	private static final Map<String, Properties> aliasMap = new ConcurrentHashMap<String, Properties>();
 
-	private static final ObjectMapper om = new ObjectMapper();
+	private static final ObjectMapper om = new ObjectMapper();//CustomObjectSerializer.om;//
 	public static final XmlMapper xmlMapper = new XmlMapper();
 	public static Logger LOGGER = LogManager.getLogger(ServiceUtils.class);
 	private static final String OS = System.getProperty("os.name").toLowerCase();
@@ -130,6 +130,7 @@ public class ServiceUtils {
 		try {
 			om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 			om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+			om.enable(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL);
 			String json = om.writeValueAsString(map);
 			return json;
 		} catch (Exception e) {
@@ -203,6 +204,7 @@ public class ServiceUtils {
 		try {
 			om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 			om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+			om.enable(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL);
 			String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
 			return json;
 		} catch (Exception e) {
@@ -214,6 +216,7 @@ public class ServiceUtils {
 	public static final String objectToJson(Object object) throws Exception {
 		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+		om.enable(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL);
 		String json = om.writeValueAsString(object);
 		return json;
 	}
