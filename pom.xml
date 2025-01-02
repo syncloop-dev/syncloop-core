@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.syncloop.middleware</groupId>
 	<artifactId>core</artifactId>
-	<version>1.6.8</version>
+	<version>1.7.1</version>
 	<packaging>jar</packaging>
 
 	<name>syncloop-core</name>
@@ -47,9 +47,9 @@
 
 
 	<properties>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
-		<java.version>17</java.version>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<java.version>21</java.version>
 		<pac4j.version>5.6.0</pac4j.version>
 		<undertow-pac4j.version>5.0.1</undertow-pac4j.version>
 		<undertow.version>2.3.0.Beta1</undertow.version>
@@ -74,8 +74,8 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.0.0-M5</version>
 				<configuration>
-					<source>17</source>
-					<target>17</target>
+					<source>21</source>
+					<target>21</target>
 					<fork>true</fork>
 					<compilerArgs>
 						<arg>--add-opens</arg>
@@ -358,7 +358,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.26</version>
+			<version>1.18.34</version>
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>
