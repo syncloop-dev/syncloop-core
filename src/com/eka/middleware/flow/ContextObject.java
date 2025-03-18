@@ -3,6 +3,7 @@ package com.eka.middleware.flow;
 import com.eka.middleware.heap.CacheManager;
 import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
+import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 import lombok.Getter;
 
@@ -102,7 +103,7 @@ public class ContextObject implements FlowBasicInfo {
                 if ("async".equals(requestMethod))
                     dp.applyAsync(serviceFqn.trim() + ".main", transformers);
                 else if("asyncQueue".equals(requestMethod)) {
-                    dp.applyAsyncQueue(serviceFqn.trim() + ".main", transformers,true/*enableResponse*/);//TODO enable response value should come from GUI
+                    dp.applyAsyncQueue(serviceFqn.trim() + ".main", transformers);//,true/*enableResponse*/);//TODO enable response value should come from GUI
                 }else
                     dp.apply(serviceFqn.trim() + ".main", transformers);
                 //if(transformers!=null)
@@ -140,7 +141,7 @@ public class ContextObject implements FlowBasicInfo {
             dp.put("invokingObject", o);
 
         } catch ( Exception e ) {
-            e.printStackTrace();
+            ServiceUtils.printException("ContextObject exec failed for fqn:"+fqn, e);
         }
     }
 

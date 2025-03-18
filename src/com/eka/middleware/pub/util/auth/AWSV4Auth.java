@@ -21,16 +21,22 @@ import java.util.TreeMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
 /**
+ * Example: Signing AWS Requests with Signature Version 4 in Java.
  *
+ * @reference: http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html
+ * @author javaQuery
+ * @date 19th January, 2016
+ * @Github: https://github.com/javaquery/Examples
  */
 public class AWSV4Auth {
 
-	private static final String HMACAlgorithm = "AWS4-HMAC-SHA256";
+    private static final String HMACAlgorithm = "AWS4-HMAC-SHA256";
     private static final String aws4Request = "aws4_request";
-    private static String[] prepareCanonicalRequest(String canonicalURI,String httpMethodName,Map<String,String> queryParametes, 
+    private static String[] prepareCanonicalRequest(String canonicalURI,String httpMethodName,Map<String,String> queryParametes,
                                                     Map<String,String> awsHeaders,String payload, byte[] payloadBytes) {
         StringBuilder canonicalURL = new StringBuilder("");
 
@@ -82,19 +88,19 @@ public class AWSV4Auth {
         /* Step 1.6 Use a hash (digest) function like SHA256 to create a hashed value from the payload in the body of the HTTP or HTTPS. */
         String payloadHex="UNSIGNED-PAYLOAD";
         if(payloadBytes!=null && payloadBytes.length>0)
-          payloadHex=bytesToHex(payloadBytes);
+            payloadHex=bytesToHex(payloadBytes);
         else if(payload!=null)
-          payloadHex=generateHex(payload);
+            payloadHex=generateHex(payload);
         canonicalURL.append(payloadHex);
 
         //if (debug) {
-          //  System.out.println("##Canonical Request:\n" + canonicalURL.toString());
+        //  System.out.println("##Canonical Request:\n" + canonicalURL.toString());
         //}
-		String arr[]=new String[]{canonicalURL.toString(),strSignedHeader,payloadHex};
+        String arr[]=new String[]{canonicalURL.toString(),strSignedHeader,payloadHex};
         return arr;
     }
 
-/**
+    /**
      * Task 2: Create a String to Sign for Signature Version 4.
      *
      * @param canonicalURL
@@ -115,8 +121,8 @@ public class AWSV4Auth {
         /* Step 2.4 Append the hash of the canonical request that you created in Task 1: Create a Canonical Request for Signature Version 4. */
         stringToSign += generateHex(canonicalURL);
 
-       // if (debug) {
-            //dataPipeline.log("##String to sign:\n" + stringToSign);
+        // if (debug) {
+        //dataPipeline.log("##String to sign:\n" + stringToSign);
         //}
 
         return stringToSign;
@@ -128,7 +134,7 @@ public class AWSV4Auth {
      * @param stringToSign
      * @return
      */
-    private static String calculateSignature(String stringToSign, String secretAccessKey, String currentDate, String regionName, 
+    private static String calculateSignature(String stringToSign, String secretAccessKey, String currentDate, String regionName,
                                              String serviceName) {
         try {
             /* Step 3.1 Derive your signing key */
@@ -150,50 +156,51 @@ public class AWSV4Auth {
      * Task 4: Add the Signing Information to the Request. We'll return Map of
      * all headers put this headers in your request.
      *
+     * @return
      */
     public static void addAwsHeaders(Map<String, String> headers,String httpMethodName,Map<String,String> queryParametes,
-                                                 String canonicalURI,String accessKeyID, String secretAccessKey, String regionName, 
-                                                 String serviceName,String payload, byte[] payloadBytes) {
-        
-		String currentDate=getDate();
-      	String xAmzDate=getTimeStamp();
-       
+                                     String canonicalURI,String accessKeyID, String secretAccessKey, String regionName,
+                                     String serviceName,String payload, byte[] payloadBytes) {
+
+        String currentDate=getDate();
+        String xAmzDate=getTimeStamp();
+
         //awsHeaders.put("x-amz-date", xAmzDate);
         headers.put("x-amz-date", xAmzDate);
 
         /* Execute Task 1: Create a Canonical Request for Signature Version 4. */
         String arr[] = prepareCanonicalRequest(canonicalURI,httpMethodName,queryParametes,new TreeMap<>(headers),payload,payloadBytes);
-		String canonicalURL=arr[0];
+        String canonicalURL=arr[0];
         String strSignedHeader=arr[1];
-      	String payloadHex=arr[2];
+        String payloadHex=arr[2];
         /* Execute Task 2: Create a String to Sign for Signature Version 4. */
         String stringToSign = prepareStringToSign(canonicalURL,currentDate,regionName,serviceName,xAmzDate);
 
         /* Execute Task 3: Calculate the AWS Signature Version 4. */
-        
+
         String signature = calculateSignature(stringToSign,secretAccessKey,currentDate,regionName,serviceName);
 
         if (signature != null) {
             //Map<String, String> header = new HashMap<String, String>(0);
 
-            
+
 
             headers.put("Authorization", buildAuthorizationString(strSignedHeader,signature,accessKeyID,
-                                                                  currentDate,regionName,serviceName));
-          headers.put("x-amz-content-sha256", payloadHex);
+                    currentDate,regionName,serviceName));
+            headers.put("x-amz-content-sha256", payloadHex);
           /*// if (debug) {
                 for (Map.Entry<String, String> entrySet : headers.entrySet()) {
                 	System.out.println(entrySet.getKey() + " = " + entrySet.getValue());
                 }
            // }*/
-            
+
             //return header;
-       // } else {
-           // if (debug) {
-       //         System.out.println("##Signature:\n" + signature);
-          //  }
+            // } else {
+            // if (debug) {
+            //         System.out.println("##Signature:\n" + signature);
+            //  }
             //return null;
-          
+
         }
     }
 
@@ -203,10 +210,10 @@ public class AWSV4Auth {
      * @param strSignature
      * @return
      */
-    private static String buildAuthorizationString(String strSignedHeader, String strSignature,String accessKeyID, 
+    private static String buildAuthorizationString(String strSignedHeader, String strSignature,String accessKeyID,
                                                    String currentDate, String regionName, String serviceName) {
-      //dataPipeline.log("*********************-------@@@&&&1");  
-      return HMACAlgorithm + " "
+        //dataPipeline.log("*********************-------@@@&&&1");
+        return HMACAlgorithm + " "
                 + "Credential=" + accessKeyID + "/" + getDate() + "/" + regionName + "/" + serviceName + "/" + aws4Request + ","
                 + "SignedHeaders=" + strSignedHeader + ","
                 + "Signature=" + strSignature;
@@ -226,7 +233,7 @@ public class AWSV4Auth {
             byte[] digest = messageDigest.digest();
             return String.format("%064x", new java.math.BigInteger(1, digest));
         } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
-            e.printStackTrace();
+            ServiceUtils.printException("Could not generateHex.", e);
         }
         return null;
     }
@@ -287,15 +294,15 @@ public class AWSV4Auth {
         return new String(hexChars).toLowerCase();
     }
 
-public static String bytesToHex_1(byte[] bytes) { 
- StringBuffer hexString = new StringBuffer();
- for (int j=0; j<bytes.length; j++) {
- String hex=Integer.toHexString(0xff & bytes[j]);
- if(hex.length()==1) hexString.append('0');
- hexString.append(hex);
- }
- return hexString.toString();
- }
+    public static String bytesToHex_1(byte[] bytes) {
+        StringBuffer hexString = new StringBuffer();
+        for (int j=0; j<bytes.length; j++) {
+            String hex=Integer.toHexString(0xff & bytes[j]);
+            if(hex.length()==1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
 
     /**
      * Get timestamp. yyyyMMdd'T'HHmmss'Z'
@@ -322,18 +329,18 @@ public static String bytesToHex_1(byte[] bytes) {
     /**
      * Using {@link URLEncoder#encode(java.lang.String, java.lang.String) } instead of
      * {@link URLEncoder#encode(java.lang.String) }
-     * 
+     *
      * @co-author https://github.com/dotkebi
      * @date 16th March, 2017
      * @git #1
      * @param param
-     * @return 
+     * @return
      */
-     private static String encodeParameter(String param){
-         try {
-             return URLEncoder.encode(param, "UTF-8");
-         } catch (Exception e) {
-             return URLEncoder.encode(param);
-         }
-     }     
+    private static String encodeParameter(String param){
+        try {
+            return URLEncoder.encode(param, "UTF-8");
+        } catch (Exception e) {
+            return URLEncoder.encode(param);
+        }
+    }
 }

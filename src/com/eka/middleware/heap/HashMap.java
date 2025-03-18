@@ -7,7 +7,7 @@ import java.util.Set;
 public class HashMap<K,V> implements Map<K, V>{
 
 	private Map<K, V> map;
-	
+
 	public HashMap(){
 		map=new java.util.HashMap<K,V>();
 	}

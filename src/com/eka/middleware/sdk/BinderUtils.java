@@ -9,7 +9,7 @@ import java.util.*;
 
 public class BinderUtils {
 
-    public static Object convert(String json) {
+    public static JsonEntity convert(String json) {
 
         JsonEntity mainEntity = new JsonEntity();
         mainEntity.setType("object");
@@ -116,9 +116,7 @@ public class BinderUtils {
             }
         }
 
-        Map<String, Object> schemaMap = new HashMap<>();
-        schemaMap.put("schema", mainEntity);
-        return schemaMap;
+        return mainEntity;
 
     }
 

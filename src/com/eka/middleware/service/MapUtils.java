@@ -1,14 +1,14 @@
 package com.eka.middleware.service;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
+import java.util.*;
 //import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.template.SnippetException;
 import org.apache.commons.lang3.math.NumberUtils;
+
+import com.eka.middleware.heap.HashMap;
 
 public class MapUtils {
 	public static Object getValueByPointer(String pointer,final Object parentMap) {
@@ -84,15 +84,15 @@ public class MapUtils {
 
 		String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
 		switch (valueType) {
-		case "integer":
-			value = Integer.parseInt(value + "");
-			break;
-		case "number":
-			value = Double.parseDouble(value + "");
-			break;
-		case "boolean":
-			value = Boolean.parseBoolean(("1".equals(value + "") ? "true" : value + ""));
-			break;
+			case "integer":
+				value = (null == value || "".equals(value.toString().trim())) ? null : Integer.parseInt(value + "");
+				break;
+			case "number":
+				value = (null == value || "".equals(value.toString().trim())) ? null : Double.parseDouble(value + "");
+				break;
+			case "boolean":
+				value = (null == value || "".equals(value.toString().trim())) ? null : Boolean.parseBoolean(("1".equals(value + "") ? "true" : value + ""));
+				break;
 		}
 
 		Object currentPayload=null;
@@ -176,7 +176,12 @@ public class MapUtils {
 			}
 			key = pointerTokens[tokenCount - 2];
 			if (preObj != null){// && ((List<Object>) preObj).size() > index) {
-				newObject = ((List<Object>) preObj);
+				if (ServiceUtils.isArray(preObj)) {
+					newObject = new ArrayList<>();
+					newObject.add(preObj);
+				} else {
+					newObject = ((List<Object>) preObj);
+				}
 			} else {//It may never enter the else block and even if it does then not sure what's the point. preObj will become a local unused object.
 				switch (valueType) {
 				case "integerlist":

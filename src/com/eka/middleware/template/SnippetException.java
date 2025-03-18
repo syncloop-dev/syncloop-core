@@ -1,15 +1,15 @@
 package com.eka.middleware.template;
 
-import com.eka.middleware.heap.HashMap;
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowMeta;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,12 +26,12 @@ public class SnippetException extends Exception {
 
     public SnippetException(DataPipeline dataPipeLine, String errMsg, Exception e) {
         super(e);
-        meta = new HashMap<String, Object>();
+        meta = new HashMap<>();
         propagate = !errMsg.equals(e.getMessage());
         message = e.getMessage();
         this.errorStack = dataPipeLine.getErrorStack();
         if (propagate) {
-            ServiceUtils.printException(dataPipeLine.getSessionId() + "    " + dataPipeLine.getCorrelationId() + "    " + errMsg, this);
+            //ServiceUtils.printException(dataPipeLine.getSessionId() + "    " + dataPipeLine.getCorrelationId() + "    " + errMsg, this);
             ServiceUtils.printException(dataPipeLine, errMsg, this);
         }
     }
@@ -54,7 +54,7 @@ public class SnippetException extends Exception {
         }
 
         if (propagate) {
-            ServiceUtils.printException(dataPipeLine.getSessionId() + "    " + dataPipeLine.getCorrelationId() + "    " + errMsg, this);
+            //ServiceUtils.printException(dataPipeLine.getSessionId() + "    " + dataPipeLine.getCorrelationId() + "    " + errMsg, this);
             ServiceUtils.printException(dataPipeLine, errMsg, this);
         }
     }

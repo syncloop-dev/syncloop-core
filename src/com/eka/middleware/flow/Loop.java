@@ -37,7 +37,7 @@ public class Loop implements FlowBasicInfo {
 	@Getter
 	private String guid;
 
-	private int allowedLoop = 1000;
+	private int allowedLoop = 10000;
 
 	public Loop(JsonObject jo) {
 		loop = jo;
@@ -90,7 +90,7 @@ public class Loop implements FlowBasicInfo {
 		if(canSnap ) {
 			dp.snapBefore(comment, guid);
 		}
-		
+
 		try {
 			inputArrayPath = ("//" + inputArrayPath + "//").replace("///", "").replace("//", "");
 			String outKey = null;
@@ -157,6 +157,13 @@ public class Loop implements FlowBasicInfo {
 //			throw new SnippetException(dp, "Path pointer '"+inputArrayParent+"'. Please loop over parent array first", null);
 			long index = 0;
 			int loopExecutedCount = 0;
+			String globalIndexIdentifier=dp.getString("*globalIndexIdentifier");
+
+			if(globalIndexIdentifier==null)
+				globalIndexIdentifier="";
+			if(list!=null && list.size()>=allowedLoop)
+				throw new SnippetException(dp, "The list("+inputArrayPath+") size("+list.size()+") is more than the allowed size for ForEcah. Allowed size:"+allowedLoop, new Exception("Loop exceeded"));
+			String globalIndexIDBackup=globalIndexIdentifier;
 
 			for (Object object : list) {
 				try {
@@ -166,6 +173,8 @@ public class Loop implements FlowBasicInfo {
 					}
 
 					dp.put(indexVar, index );
+					globalIndexIdentifier=globalIndexIDBackup+index;
+					dp.put("*globalIndexIdentifier", globalIndexIdentifier);
 					index++;
 					if (map != null)
 						map.put(key, object);
@@ -246,6 +255,7 @@ public class Loop implements FlowBasicInfo {
 						continue;
 					}
 				}
+				dp.put("*globalIndexIdentifier", globalIndexIDBackup);
 			}
 
 //		map.put(key, list);

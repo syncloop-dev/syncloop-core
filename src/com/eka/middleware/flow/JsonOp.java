@@ -27,15 +27,15 @@ public class JsonOp {
 		jsFunction = jsonop.getString("jsFunction",null);
 		loop_id = jsonop.getString("loop_Id",null);
 		follow = jsonop.getString("follow",null);
-        setApplyFunction(jsonop.getString("applyFunction",null));
-      	setJsFunctionSig(jsonop.getString("jsFunctionSig",null));
+		setApplyFunction(jsonop.getString("applyFunction",null));
+		setJsFunctionSig(jsonop.getString("jsFunctionSig",null));
 		if(!jsonop.isNull("outTypePath"))
 			outTypePath = jsonop.getString("outTypePath",null);
 		if(!jsonop.isNull("inTypePath"))
 			inTypePath = jsonop.getString("inTypePath",null);
 		id=((from+" to "+to).hashCode() & 0xfffffff);
 	}
-	
+
 	private JsonOp(JsonOp jsonValue) {
 		jsonop=jsonValue.getJsonop();
 		loop_id = jsonValue.getLoop_id();
@@ -48,37 +48,37 @@ public class JsonOp {
 		outTypePath=jsonValue.getOutTypePath();
 		inTypePath=jsonValue.getInTypePath();
 		setApplyFunction(jsonValue.getApplyFunction());
-      	setJsFunctionSig(jsonValue.getJsFunctionSig());
-      	id=jsonValue.getId();
+		setJsFunctionSig(jsonValue.getJsFunctionSig());
+		id=jsonValue.getId();
 	}
-	
+
 	public JsonOp clone() {
 		return new JsonOp(this);
 	}
-	
+
 	public String getOutTypePath() {
 		return outTypePath;
 	}
-	
+
 	public void setOutTypePath(String outTypePath) {
 		this.outTypePath = outTypePath;
 	}
-	
+
 	public JsonObject getJsonop() {
 		return jsonop;
 	}
-	
+
 	public void setJsonop(JsonObject jsonop) {
 		this.jsonop = jsonop;
 	}
-	
+
 	public void applyIndex(String index, String loopId) {
-		if(from!=null) 
+		if(from!=null)
 			from=from.replace("#{"+loopId+"}", index);
-		if(to!=null) 
+		if(to!=null)
 			to=to.replace("#{"+loopId+"}", index);
 	}
-	
+
 	public String getLoop_id() {
 		return loop_id;
 	}

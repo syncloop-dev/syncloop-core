@@ -7,7 +7,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -21,6 +23,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eka.middleware.server.ServiceManager;
 import com.eka.middleware.template.SnippetException;
 
 public class CustomClassLoader extends ClassLoader {
@@ -184,7 +187,7 @@ public class CustomClassLoader extends ClassLoader {
 			}
 		} catch (SnippetException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			ServiceUtils.printException("Failed to find class named: "+name, e);
 		}
 		throw new ClassNotFoundException(name);
 
@@ -242,7 +245,7 @@ public class CustomClassLoader extends ClassLoader {
 					byteStream.write(nextValue);
 				}
 			} catch (IOException e) {
-				e.printStackTrace();
+				ServiceUtils.printException("Unable load class from file:"+path, e);
 			}
 			buffer = byteStream.toByteArray();
 			try {
@@ -271,6 +274,12 @@ public class CustomClassLoader extends ClassLoader {
 	
 	public Class findMyLoadedClass(String name) throws ClassNotFoundException {
 		Class aClass = findLoadedClass(name);
+		if(null == aClass) try {
+			aClass=findClass(name);
+		} catch (Exception e) {
+			ServiceUtils.printQuiteException(null,"Reloading class named: "+name, e);
+		}
+
 		if (null == aClass) {
 			aClass = loadClass(name);
 		}

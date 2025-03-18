@@ -91,8 +91,6 @@ public class PropertyManager {
 				propertiesMap.put(path, props);
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 			throw new SnippetException(dataPipeLine, "Error while getting property file '" + fileName + "'", e);
 		}
 		return props;
@@ -187,7 +185,6 @@ public class PropertyManager {
 				propertiesMap.put(absoluteFilePath, props);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
 			throw new SystemException("EKA_MWS_1006", e);
 		}
 		return props;
@@ -253,8 +250,8 @@ public class PropertyManager {
 				return bytes;
 			}
 		} catch (Exception e) {
-			ServiceUtils.printException("EKA_MWS_1000 : " + file.getAbsolutePath(), e);
-			throw new SystemException("EKA_MWS_1000", e);
+			ServiceUtils.printQuiteException(null,"EKA_MWS_1000 : " + file.getAbsolutePath(), e);
+			//throw new SystemException("EKA_MWS_1000", e);
 		}
 		return null;
 	}

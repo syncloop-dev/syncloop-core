@@ -26,40 +26,49 @@ public abstract class AWS4SignerBase {
     /** SHA256 hash of an empty request body **/
     public static final String EMPTY_BODY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     public static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
-    
+
     public static final String SCHEME = "AWS4";
     public static final String ALGORITHM = "HMAC-SHA256";
     public static final String TERMINATOR = "aws4_request";
-    
+
     /** format strings for the date/time and date stamps required during signing **/
     public static final String ISO8601BasicFormat = "yyyyMMdd'T'HHmmss'Z'";
     public static final String DateStringFormat = "yyyyMMdd";
-    
+
     protected URL endpointUrl;
     protected String httpMethod;
     protected String serviceName;
     protected String regionName;
-    
+
     protected final SimpleDateFormat dateTimeFormat;
     protected final SimpleDateFormat dateStampFormat;
-    
+
     /**
      * Create a new AWS V4 signer.
      *
+     * @param endpointUrl
+     *            The service endpoint, including the path to any resource.
+     * @param httpMethod
+     *            The HTTP verb for the request, e.g. GET.
+     * @param serviceName
+     *            The signing name of the service, e.g. 's3'.
+     * @param regionName
+     *            The system name of the AWS region associated with the
+     *            endpoint, e.g. us-east-1.
      */
     public AWS4SignerBase(URL endpointUrl, String httpMethod,
-            String serviceName, String regionName) {
+                          String serviceName, String regionName) {
         this.endpointUrl = endpointUrl;
         this.httpMethod = httpMethod;
         this.serviceName = serviceName;
         this.regionName = regionName;
-        
+
         dateTimeFormat = new SimpleDateFormat(ISO8601BasicFormat);
         dateTimeFormat.setTimeZone(new SimpleTimeZone(0, "UTC"));
         dateStampFormat = new SimpleDateFormat(DateStringFormat);
         dateStampFormat.setTimeZone(new SimpleTimeZone(0, "UTC"));
     }
-    
+
     /**
      * Returns the canonical collection of header names that will be included in
      * the signature. For AWS4, all header names must be included in the process
@@ -78,7 +87,7 @@ public abstract class AWS4SignerBase {
 
         return buffer.toString();
     }
-    
+
     /**
      * Computes the canonical headers with values for the request. For AWS4, all
      * headers must be included in the signing process.
@@ -87,14 +96,14 @@ public abstract class AWS4SignerBase {
         if ( headers == null || headers.isEmpty() ) {
             return "";
         }
-        
+
         // step1: sort the headers by case-insensitive order
         List<String> sortedHeaders = new ArrayList<String>();
         sortedHeaders.addAll(headers.keySet());
         Collections.sort(sortedHeaders, String.CASE_INSENSITIVE_ORDER);
 
-        // step2: form the canonical header:value entries in sorted order. 
-        // Multiple white spaces in the values should be compressed to a single 
+        // step2: form the canonical header:value entries in sorted order.
+        // Multiple white spaces in the values should be compressed to a single
         // space.
         StringBuilder buffer = new StringBuilder();
         for (String key : sortedHeaders) {
@@ -104,20 +113,20 @@ public abstract class AWS4SignerBase {
 
         return buffer.toString();
     }
-    
+
     /**
-     * Returns the canonical request string to go into the signer process; this 
-       consists of several canonical sub-parts.
+     * Returns the canonical request string to go into the signer process; this
+     consists of several canonical sub-parts.
      * @return
      */
-    protected static String getCanonicalRequest(URL endpoint, 
-                                         String httpMethod,
-                                         String queryParameters, 
-                                         String canonicalizedHeaderNames,
-                                         String canonicalizedHeaders, 
-                                         String bodyHash) {
+    protected static String getCanonicalRequest(URL endpoint,
+                                                String httpMethod,
+                                                String queryParameters,
+                                                String canonicalizedHeaderNames,
+                                                String canonicalizedHeaders,
+                                                String bodyHash) {
         String canonicalRequest =
-                        httpMethod + "\n" +
+                httpMethod + "\n" +
                         getCanonicalizedResourcePath(endpoint) + "\n" +
                         queryParameters + "\n" +
                         canonicalizedHeaders + "\n" +
@@ -125,7 +134,7 @@ public abstract class AWS4SignerBase {
                         bodyHash;
         return canonicalRequest;
     }
-    
+
     /**
      * Returns the canonicalized resource path for the service endpoint.
      */
@@ -137,7 +146,7 @@ public abstract class AWS4SignerBase {
         if ( path == null || path.isEmpty() ) {
             return "/";
         }
-        
+
         String encodedPath = HttpUtils.urlEncode(path, true);
         if (encodedPath.startsWith("/")) {
             return encodedPath;
@@ -145,14 +154,25 @@ public abstract class AWS4SignerBase {
             return "/".concat(encodedPath);
         }
     }
-    
+
     /**
+     * Examines the specified query string parameters and returns a
+     * canonicalized form.
+     * <p>
+     * The canonicalized query string is formed by first sorting all the query
+     * string parameters, then URI encoding both the key and value and then
+     * joining them, in order, separating key value pairs with an '&'.
+     *
+     * @param parameters
+     *            The query string parameters to be canonicalized.
+     *
+     * @return A canonicalized form for the specified query string parameters.
      */
     public static String getCanonicalizedQueryString(Map<String, String> parameters) {
         if ( parameters == null || parameters.isEmpty() ) {
             return "";
         }
-        
+
         SortedMap<String, String> sorted = new TreeMap<String, String>();
 
         Iterator<Map.Entry<String, String>> pairs = parameters.entrySet().iterator();
@@ -177,16 +197,16 @@ public abstract class AWS4SignerBase {
 
         return builder.toString();
     }
-    
+
     protected static String getStringToSign(String scheme, String algorithm, String dateTime, String scope, String canonicalRequest) {
         String stringToSign =
-                        scheme + "-" + algorithm + "\n" +
+                scheme + "-" + algorithm + "\n" +
                         dateTime + "\n" +
                         scope + "\n" +
                         BinaryUtils.toHex(hash(canonicalRequest));
         return stringToSign;
     }
-    
+
     /**
      * Hashes the string contents (assumed to be UTF-8) using the SHA-256
      * algorithm.
@@ -200,7 +220,7 @@ public abstract class AWS4SignerBase {
             throw new RuntimeException("Unable to compute hash while signing request: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Hashes the byte array using the SHA-256 algorithm.
      */
@@ -213,7 +233,7 @@ public abstract class AWS4SignerBase {
             throw new RuntimeException("Unable to compute hash while signing request: " + e.getMessage(), e);
         }
     }
-    
+
     protected static byte[] sign(String stringData, byte[] key, String algorithm) {
         try {
             byte[] data = stringData.getBytes("UTF-8");

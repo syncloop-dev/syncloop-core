@@ -1,10 +1,6 @@
 package com.eka.middleware.flow;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 //import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,13 +36,6 @@ public class FlowUtils {
     private static final String regex = "#\\{([^{}]+)\\}";
     private static final Pattern pattern = Pattern.compile(regex);
 
-    public static boolean isMatch(String caseLabel, DataPipeline dp, String xPathValue) throws SnippetException {
-        caseLabel=caseLabel.substring(7);
-        String label=FlowUtils.placeXPathValue(caseLabel, dp);
-        boolean match=FlowUtils.patternMatches(xPathValue,label);
-        return match;
-    }
-
     public static String placeXPathValue(String xPaths, DataPipeline dp) throws SnippetException {
         try {
             String xPathValues = xPaths;
@@ -72,7 +61,7 @@ public class FlowUtils {
             xPathValues=val;
             return xPathValues;
             /*
-            
+
             String params[] = extractExpressions(xPaths, dp);// xPaths.split(Pattern.quote("}"));
             if (params != null)
                 for (String param : params) {
@@ -107,6 +96,13 @@ public class FlowUtils {
             ServiceUtils.printException(dp, "Something went wrong while parsing xpath(" + xPaths + ")", e);
             throw new SnippetException(dp, "Something went wrong while parsing xpath(" + xPaths + ")", e);
         }
+    }
+
+    public static boolean isMatch(String caseLabel, DataPipeline dp, String xPathValue) throws SnippetException {
+        caseLabel=caseLabel.substring(7);
+        String label=FlowUtils.placeXPathValue(caseLabel, dp);
+        boolean match=FlowUtils.patternMatches(xPathValue,label);
+        return match;
     }
 
     public static String placeXPathInternalVariables(String xPaths, DataPipeline dp) throws SnippetException {
@@ -213,9 +209,9 @@ public class FlowUtils {
                 String key = matcher.group(1); // Extract the key
                 Object value = MapUtils.getValueByPointer(key, parentMap);
                 if(value==null)
-                	value="null";
+                    value="null";
                 if(value instanceof Map || value instanceof List) {
-                	value=ServiceUtils.toJson(value);
+                    value=ServiceUtils.toJson(value);
                 }
                 ; // Get its value
                 if(value.equals("null") && parentMap instanceof DataPipeline) {
@@ -248,23 +244,23 @@ public class FlowUtils {
                 Map<String, String> map = new HashMap<String, String>();
                 String expressions[] = extractExpressions(value, dp);
                 if (expressions != null) {
-					switch (evaluate) {
-						case "ELV": // Evaluate Local Variable
-							for (String expressionKey : expressions) {
-								String expressionValue = dp.getMyConfig(expressionKey);
-								if (expressionValue != null)
-									map.put(expressionKey, expressionValue);
-							}
-							break;
-						case "EGV": // Evaluate Global Variable
-							for (String expressionKey : expressions) {
-								String expressionValue = dp.getGlobalConfig(expressionKey);
-								if (expressionValue != null)
-									map.put(expressionKey, expressionValue);
-							}
-							break;
-						case "EEV": // Evaluate Expression Variable
-                        case "EEV2":
+                    switch (evaluate) {
+                        case "ELV": // Evaluate Local Variable
+                            for (String expressionKey : expressions) {
+                                String expressionValue = dp.getMyConfig(expressionKey);
+                                if (expressionValue != null)
+                                    map.put(expressionKey, expressionValue);
+                            }
+                            break;
+                        case "EGV": // Evaluate Global Variable
+                            for (String expressionKey : expressions) {
+                                String expressionValue = dp.getGlobalConfig(expressionKey);
+                                if (expressionValue != null)
+                                    map.put(expressionKey, expressionValue);
+                            }
+                            break;
+                        case "EEV": // Evaluate Expression Variable
+                        case "EEV2": // Evaluate Expression Variable
                             value = resolveExpressions(value, dp);
 							/*for (String expressionKey : expressions) {
                                 Object valueByPointer = dp.getValueByPointer(expressionKey);
@@ -275,15 +271,15 @@ public class FlowUtils {
 									map.put(expressionKey, expressionValue);
 								}
 							}*/
-							break;
-						case "EPV": // Evaluate Package Variable
-							for (String expressionKey : expressions) {
-								String expressionValue = dp.getMyPackageConfig(expressionKey);
-								if (expressionValue != null)
-									map.put(expressionKey, expressionValue);
-							}
-							break;
-					}
+                            break;
+                        case "EPV": // Evaluate Package Variable
+                            for (String expressionKey : expressions) {
+                                String expressionValue = dp.getMyPackageConfig(expressionKey);
+                                if (expressionValue != null)
+                                    map.put(expressionKey, expressionValue);
+                            }
+                            break;
+                    }
                     if(!evaluate.equals("EEV")) {
                         for (String expressionKey : expressions) {
                             if (map.get(expressionKey) != null)
@@ -293,7 +289,7 @@ public class FlowUtils {
                                         new Exception("Could not resolve expression '#{" + expressionKey + "}' for " + path + "."));
                         }
                     }
-				}
+                }
             }
 
 
@@ -437,7 +433,7 @@ public class FlowUtils {
                                 } else {
                                     jdata=ServiceUtils.toJson(val);
                                 }
-                            	val = eval(functionName + "(" + jdata + ");", ctx, typeOfVariable);//ServiceUtils.toJson(val)
+                                val = eval(functionName + "(" + jdata + ");", ctx, typeOfVariable);//ServiceUtils.toJson(val)
                             }
                             if (val != null)
                                 dp.setValueByPointer(leader.getTo(), val, leader.getOutTypePath());
@@ -450,11 +446,8 @@ public class FlowUtils {
                     successful = copy(leader.getFrom(), leader.getTo(), leader.getOutTypePath(), dp);
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            ServiceUtils.printException(dp,
-                    "Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'", e);
-            throw new Exception(
-                    "Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'");
+            throw new SnippetException(dp,
+                    "Failed to perform " + op + " from '" + leader.getFrom() + "' to '" + leader.getTo() + "'",e);
         }
         return successful;
     }
@@ -463,6 +456,7 @@ public class FlowUtils {
 
         if (name != null) {
             Context ctx = ScriptEngineContextManager.getContext(name);
+
             synchronized (ctx) {
                 updateContextBinding(ctx, dataPipeline);
                 return eval(js, ctx, returnType);
@@ -477,12 +471,12 @@ public class FlowUtils {
                 case "string":
                     return ctx.eval("js", js).asString();
                 case "integer":
-                	Value value=ctx.eval("js", js);
-                	if(value.fitsInDouble())
-                		return (int) value.asDouble();
+                    Value value=ctx.eval("js", js);
+                    if(value.fitsInDouble())
+                        return (int) value.asDouble();
                     if(value.fitsInLong())
                         return (int) value.asLong();//(int)Bodmas.eval(js);//
-                	else {
+                    else {
                         String v = value.asString();
 //                        return (int) value.asInt();//(int)Bodmas.eval(js);//
                         return Integer.parseInt(v);
@@ -564,13 +558,13 @@ public class FlowUtils {
                     return null;
                 case "object":
                 default:
-                	result=ctx.eval("js", js);
+                    result=ctx.eval("js", js);
                     return ServiceUtils.convertPolyglotValue(result);
             }
         } catch (Exception e) {
             // System.out.println(e.getMessage());
-            if (!e.getMessage().contains("applyLogic is not defined"))
-                e.printStackTrace();
+            //if (!e.getMessage().contains("applyLogic is not defined"))
+
             throw new RuntimeException(e);
         }
     }
@@ -589,6 +583,15 @@ public class FlowUtils {
 
         });
         bindings.putMember("$",dollarMap);
+
+        Set<String> currentInputVariables = sourceMap.getCurrentInputVariables();
+
+        for (String currentInputVariable: currentInputVariables) {
+            if (null == sourceMap.get(currentInputVariable)) {
+                bindings.putMember(currentInputVariable, null);
+            }
+        }
+
     }
 
     public static void resetJSCB(String resource) throws SystemException {
@@ -654,7 +657,7 @@ public class FlowUtils {
     }
 
     public static void validateDocuments(DataPipeline dp, JsonValue jv, Boolean validationRequired) throws SnippetException {
-         JsonArray jva = jv.asJsonArray();
+        JsonArray jva = jv.asJsonArray();
         if (jva.isEmpty())
             return;
 
@@ -672,10 +675,14 @@ public class FlowUtils {
         final Map<String, JsonObject> mapPointerData = new HashMap<>();
         if (jva != null) {
             // outPutData=
+            Set<String> inputVariables = new HashSet<>();
             for (JsonValue jsonValue : jva) {
                 //getKeyTypePair(jsonValue, null, null, mapPointers, mapPointerData);
                 validationParser(jsonValue, null, null, dp, validationRequired);
+
+                inputVariables.add(jsonValue.asJsonObject().getString("text"));
             }
+            dp.setCurrentInputVariables(inputVariables);
         }/*
 		dp.log("Document pointers:-");// , Level.TRACE);
 		mapPointers.forEach((k, v) -> dp.log(k + " : " + v));// , Level.TRACE));

@@ -55,123 +55,191 @@ public class Await implements FlowBasicInfo {
 		comment = data.getString("comment", null);
 //		inputArrayPath = data.getString("inArray", null);
 //		outPutArrayPath = data.getString("outArray", null);
-		snapshot=data.getString("snap",null);
-		if(snapshot!=null && snapshot.equals("disabled"))
-			snapshot=null;
-		snapCondition=data.getString("snapCondition",null);
+		snapshot = data.getString("snap", null);
+		if (snapshot != null && snapshot.equals("disabled"))
+			snapshot = null;
+		snapCondition = data.getString("snapCondition", null);
 		indexVar = data.getString("indexVar", "*index");
-		String timeOut = data.getString("timeout_seconds_each_thread", null);
-		if(timeOut!=null && timeOut.trim().length()>0) {
+		String timeOut = data.getString("timeout_seconds_each_thread", "10");
+		if (timeOut != null && timeOut.trim().length() > 0) {
 			try {
-				timeout_seconds_each_thread=Long.parseLong(timeOut);
-				if(timeout_seconds_each_thread<=0)
-					timeout_seconds_each_thread=Long.MAX_VALUE;
+				timeout_seconds_each_thread = Long.parseLong(timeOut);
+				if (timeout_seconds_each_thread <= 0)
+					timeout_seconds_each_thread = Long.MAX_VALUE;
 			} catch (Exception e) {
-				ServiceUtils.printException("On Await step timeout seconds value is not set properly hence setting default value of '"+timeout_seconds_each_thread+"'", e);
+				ServiceUtils.printException(
+						"On Await step timeout seconds value is not set properly hence setting default value of '"
+								+ timeout_seconds_each_thread + "'",
+						e);
 			}
 		}
 //		outArrayType = data.getString("outArrayType", "document");
 
-		guid = data.getString("guid",null);
-		name = await.getString("text",null);
-		type = await.getString("type",null);
+		guid = data.getString("guid", null);
+		name = await.getString("text", null);
+		type = await.getString("type", null);
 	}
 
 	public void process(DataPipeline dp) throws SnippetException {
-		if(dp.isDestroyed())
-			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+		if (dp.isDestroyed())
+			throw new SnippetException(dp, "User aborted the service thread",
+					new Exception("Service runtime pipeline destroyed manually"));
 		if (disabled)
 			return;
 
 		dp.addErrorStack(this);
-		
-		String snap=dp.getString("*snapshot");
+
+		String snap = dp.getString("*snapshot");
 		boolean canSnap = false;
-		if(snap!=null || snapshot!=null) {
+		if (snap != null || snapshot != null) {
 			canSnap = true;
-			//snap=snapshot;
-			if(snapshot!=null && snapshot.equals("conditional") && snapCondition!=null){
-				canSnap =FlowUtils.evaluateCondition(snapCondition,dp);
-				if(canSnap)
-					dp.put("*snapshot","enabled");
-			}else
-				dp.put("*snapshot","enabled");
+			// snap=snapshot;
+			if (snapshot != null && snapshot.equals("conditional") && snapCondition != null) {
+				canSnap = FlowUtils.evaluateCondition(snapCondition, dp);
+				if (canSnap)
+					dp.put("*snapshot", "enabled");
+			} else
+				dp.put("*snapshot", "enabled");
 		}
 		canSnap = canSnap || dp.isRecordTrace();
-
-		/*if(!canSnap)
-			dp.drop("*snapshot");*/
-		if(canSnap ) {
+		/*
+		 * if(!canSnap) dp.drop("*snapshot");
+		 */
+		if (canSnap) {
 			dp.snapBefore(comment, guid);
 		}
-		
+
 		try {
-			final List<Map<String, Object>> list = dp.getFuture();
-			if (list == null || list.size()<=0)
+			final List<List<Map<String, Object>>> list = dp.getFuture();
+			if (list == null || list.size() <= 0)
 				return;
-			final AtomicBoolean continueLoop=new AtomicBoolean();
+			final AtomicBoolean continueLoop = new AtomicBoolean();
 			continueLoop.set(true);
-			final AtomicInteger listSize=new AtomicInteger(list.size());
-			final Long timeout_ms=timeout_seconds_each_thread*1000;
-			while(continueLoop.get()) {
+			final AtomicInteger listSize = new AtomicInteger(list.size());
+			final Long timeout_ms = timeout_seconds_each_thread * 1000;
+			final AtomicBoolean skip = new AtomicBoolean(true);
+			final AtomicBoolean allDone = new AtomicBoolean(true);
+			while (continueLoop.get() && !Thread.currentThread().isInterrupted()) {
 				try {
-					//final DataPipeline dp=this;
-					final AtomicInteger index=new AtomicInteger(0);
-					//dp.put(indexVar, index.get());
-					list.forEach(map->{
-						//futureList.add(map);
-						dp.clearServicePayload();
-						int indexValue=index.getAndIncrement();
-						dp.getServicePayload().put(indexVar, indexValue);
-						Map<String, Object> asyncOutputDoc=map;
-						final Map<String, Object> metaData=(Map<String, Object>) asyncOutputDoc.get("*metaData");
-						final JsonArray transformers=(JsonArray) asyncOutputDoc.get("*futureTransformers");
-						String batchID=(String)metaData.get("batchId");
-						dp.updateQueuedTaskStatus(batchID, transformers, asyncOutputDoc, metaData);
-						String status=(String)metaData.get("status");
-						//metaData.put("*timeout_ms", timeout_ms);
-						Long timeOut=metaData.get("*timeout_ms") == null?null:metaData.get("*timeout_ms") instanceof Long ?(Long)metaData.get("*timeout_ms"):((Integer)metaData.get("*timeout_ms")).longValue();// (Long)metaData.get("*timeout_ms");
-						Long timedOut=0l;
-						Long startTime=metaData.get("*start_time_ms") == null?null: metaData.get("*start_time_ms") instanceof Long?(Long)metaData.get("*start_time_ms"):((Integer)metaData.get("*start_time_ms")).longValue();
-						if(startTime==null)
-							startTime=System.currentTimeMillis();
-						
-						Boolean closed=(Boolean)metaData.get("*Closed");
-						if(timeOut==null)
-							metaData.put("*timeout_ms", timeout_ms);
-						if(startTime!=null) {
-							timedOut=(long)(((timeout_ms)+startTime)-System.currentTimeMillis());
-						}
-						if(startTime!=null && timedOut<=0 && metaData.get("*timedout")==null) {
-							listSize.decrementAndGet();
-							metaData.put("*timedout",Boolean.TRUE);
-						}
-						if(startTime!=null && timedOut>0 && !Boolean.TRUE.equals(closed)) {
-							try {
-								Thread.sleep(1);
-								if(!"Active".equals(status)) {
-									listSize.decrementAndGet();
-									metaData.put("*Closed",Boolean.TRUE);
+					// final DataPipeline dp=this;
+					final AtomicInteger index = new AtomicInteger(0);
+					// dp.put(indexVar, index.get());
+					final Map<String, String> seqGroupStatus=new HashMap<>();
+					list.forEach(mapList -> {
+						// futureList.add(map);
+						if(listSize.get()>0) {
+							int indexValue = index.getAndIncrement();
+							allDone.set(true);
+							skip.set(true);
+							final StringBuilder allStatuses=new StringBuilder();
+							final StringBuilder sequence=new StringBuilder();
+							mapList.forEach(map -> {
+								dp.clearServicePayload();
+
+								Map<String, Object> asyncOutputDoc = map;
+								final Map<String, Object> metaData = (Map<String, Object>) asyncOutputDoc.get("*metaData");
+								String seq=(String) asyncOutputDoc.get("*sequence");
+								dp.put(indexVar, seq);
+								if(sequence.length()<=0)
+									sequence.append(seq);
+								final JsonArray transformers = (JsonArray) asyncOutputDoc.get("*futureTransformers");
+								String batchID = (String) metaData.get("batchId");
+								Boolean checkResponse= (Boolean) metaData.get("*enableResponse");
+								if(checkResponse!=null && checkResponse==true) {
+									dp.updateQueuedTaskStatus(batchID, transformers, asyncOutputDoc, metaData);
 								}
-								if("Completed".equals(status)) {
 
-									//dp.clearServicePayload();
-									//servicePayload.clear();
-									asyncOutputDoc.forEach((k,v)->{
-										if(k!=null & v!=null)
-											dp.getServicePayload().put(k, v);
+								String status = (String) metaData.get("status");
+								// metaData.put("*timeout_ms", timeout_ms);
+								Long timeOut = metaData.get("*timeout_ms") == null ? null
+										: metaData.get("*timeout_ms") instanceof Long ? (Long) metaData.get("*timeout_ms")
+										: ((Integer) metaData.get("*timeout_ms")).longValue();// (Long)metaData.get("*timeout_ms");
+								Long timedOut = 0l;
+								Long startTime = metaData.get("*start_time_ms") == null ? null
+										: metaData.get("*start_time_ms") instanceof Long
+										? (Long) metaData.get("*start_time_ms")
+										: ((Integer) metaData.get("*start_time_ms")).longValue();
+								if (startTime == null)
+									startTime = System.currentTimeMillis();
+
+								Boolean closed = (Boolean) metaData.get("*Closed");
+								if (timeOut == null)
+									metaData.put("*timeout_ms", timeout_ms);
+								if (startTime != null) {
+									timedOut = (long) (((timeout_ms) + startTime) - System.currentTimeMillis());
+								}
+								if (startTime != null && timedOut <= 0 && metaData.get("*timedout") == null) {
+									// listSize.decrementAndGet();
+									//skip.set(true);
+									allStatuses.append("true");
+									metaData.put("*timedout", Boolean.TRUE);
+								}//else
+								//skip.set(false);
+								if (!Boolean.TRUE.equals(closed)) {
+									try {
+										Thread.sleep(1);
+										//System.out.println("Sequence: "+seq+", Batch ID : " + batchID + " " + status);
+										if (!"Active".equals(status)) {
+											// listSize.decrementAndGet();
+											//skip.set(true);
+											allStatuses.append("true");
+											metaData.put("*Closed", Boolean.TRUE);
+										}else
+											allStatuses.append("false");
+										if ("Completed".equals(status)) {
+											allStatuses.append("true");
+										} else
+											allStatuses.append("false");
+										if ("Failed".equals(status))
+											dp.log("Batch ID : " + batchID + " " + status);
+									} catch (Exception e) {
+										LOGGER.debug("Value of time_out is " + metaData.get("*timeout_ms"));
+										try {
+											ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
+										} catch (Exception e2) {
+											ServiceUtils.printException("Nested exception in await", e);
+										}
+										allStatuses.append("false");
+									}
+								}
+							});
+							if(allStatuses.toString().contains("false"))
+								allDone.set(false);
+							else {
+								allDone.set(true);
+								if(seqGroupStatus.get(sequence.toString())==null)
+									seqGroupStatus.put(sequence.toString(),"Completed");
+							}
+							String currentType="Not started";
+							try {
+								if (allDone.get() && "Completed".equals(seqGroupStatus.get(sequence.toString()))) {
+									listSize.decrementAndGet();
+									seqGroupStatus.put(sequence.toString(),"Closed");
+									//System.out.println("Sequence: "+sequence.toString()+" closed");
+									mapList.forEach(map->{
+										Map<String, Object> asyncOutputDoc = map;
+										final JsonArray transformers = (JsonArray) asyncOutputDoc.get("*futureTransformers");
+										asyncOutputDoc.forEach((k, v) -> {
+											if (k != null & v != null)
+												dp.getServicePayload().put(k, v);
+										});
+										dp.getServicePayload().put("asyncOutputDoc", asyncOutputDoc);
+										if (transformers != null)
+											try {
+												FlowUtils.mapAfter(transformers, dp);
+											} catch (SnippetException e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											}
+
 									});
-									dp.getServicePayload().put("asyncOutputDoc", asyncOutputDoc);
-									if(transformers!=null)
-										FlowUtils.mapAfter(transformers, dp);
-
-									//dp.getServicePayload().put(indexVar, );
 									JsonArray flows = await.getJsonArray("children");
 									for (JsonValue jsonValue : flows) {
 										final String type = jsonValue.asJsonObject().getString("type");
-										JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-										String stepStatus=jov.getString("status",null);
-										if(!"disabled".equals(stepStatus))
+										currentType=type;
+										JsonObject jov = jsonValue.asJsonObject().get("data").asJsonObject();
+										String stepStatus = jov.getString("status", null);
+										if (!"disabled".equals(stepStatus))
 											switch (type) {
 												case "try-catch":
 													TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
@@ -212,29 +280,22 @@ public class Await implements FlowBasicInfo {
 													break;
 											}
 									}
-									//dp.drop("asyncOutputDoc");
-									//dp.clearServicePayload();
 								}
-								if("Failed".equals(status))
-									dp.log("Batch ID : "+batchID+" "+status);
 							} catch (Exception e) {
-								LOGGER.debug("Value of time_out is "+metaData.get("*timeout_ms"));
-								try {
-									ServiceUtils.printException(ServiceUtils.toJson(asyncOutputDoc), e);
-								} catch (Exception e2) {
-									ServiceUtils.printException("Nested exception in await", e);
-								}
-							}finally {
-								//index.getAndIncrement();
+								ServiceUtils.printException("Nested exception in await for: step "+currentType, e);
+							} finally {
+								// index.getAndIncrement();
 								dp.clearServicePayload();
+								allDone.set(true);
+								skip.set(true);
 							}
 						}
 					});
-				}catch (Exception e) {
+				} catch (Exception e) {
 					ServiceUtils.printException("Internal error inside async service call", e);
-				}finally {
+				} finally {
 					dp.drop("asyncOutputDoc");
-					if(listSize.get()<=0)
+					if (listSize.get() <= 0)
 						continueLoop.set(false);
 				}
 			}
@@ -249,8 +310,8 @@ public class Await implements FlowBasicInfo {
 				if (null != snapshot || null != snapCondition) {
 					dp.drop("*snapshot");
 				}
-			}else if(snap!=null)
-				dp.put("*snapshot",snap);
+			} else if (snap != null)
+				dp.put("*snapshot", snap);
 		}
 	}
 
@@ -277,5 +338,4 @@ public class Await implements FlowBasicInfo {
 	public void setLabel(String label) {
 		this.label = label;
 	}
-
 }

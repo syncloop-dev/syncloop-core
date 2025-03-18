@@ -4,38 +4,33 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.UUID;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import javax.json.JsonArray;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-
-import com.eka.middleware.heap.CacheManager;
-import com.eka.middleware.heap.HashMap;
-import com.eka.middleware.template.MultiPart;
-
 import com.eka.middleware.flow.FlowUtils;
 import com.eka.middleware.flow.JsonOp;
-
+import com.eka.middleware.heap.CacheManager;
+import com.eka.middleware.heap.HashMap;
 import com.eka.middleware.server.ServiceManager;
+import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.template.Tenant;
 
 import lombok.Getter;
+import lombok.Setter;
 
 public class DataPipeline {
 	private static Logger LOGGER = LogManager.getLogger(DataPipeline.class);
@@ -54,12 +49,16 @@ public class DataPipeline {
 	private int recursiveDepth;
 	private final int allowedRecursionDepth = 100;
 	private List<Map<String, Object>> futureList = new ArrayList<>();
+	private ConcurrentMap<String, List<Map<String, Object>>> futureTransformers = new ConcurrentHashMap<>();
 	private boolean allowGlobal = false;
 	private Map<String, Object> servicePayload = new HashMap<>();
 	private final Map<String, Object> globalPayload = new HashMap<>();
 	private boolean recordTrace;
 	// private final List<JsonArray> futureTransformers=new ArrayList<>();
 	private final Object syncObject = new Object();
+
+	@Getter @Setter
+	private Set<String> currentInputVariables = new HashSet<>();  //TODO : Check if correctly working or not
 
 	@Getter
 	public List<String> snapData = new ArrayList<>();
@@ -453,8 +452,6 @@ public class DataPipeline {
 				}
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 			ServiceUtils.printException(this, "Could not save pipeline", e);
 		}
 	}
@@ -472,14 +469,12 @@ public class DataPipeline {
 			else
 				payloadStack.put(currentResource, payload);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 			ServiceUtils.printException(this, "Could not save pipeline", e);
 		}
 	}
 
 	public void snapBefore(String comment, String guid) {
-		snap(comment, guid, true, new HashMap<String, Object>());
+		snap(comment, guid, true, new java.util.HashMap<>());
 	}
 
 	public void snapAfter(String comment, String guid, Map<String, Object> meta) {
@@ -503,7 +498,7 @@ public class DataPipeline {
 				rp.writeSnapshot(resource, json);
 			}
 		} catch (Exception e) {
-			ServiceUtils.printException(this, "Exception while taking snapshot.", e);
+			//ServiceUtils.printException(this, "Exception while taking snapshot.", e);
 		}
 	}
 
@@ -567,11 +562,12 @@ public class DataPipeline {
 	}
 
 	public void apply(String fqnOfMethod) throws SnippetException {
+		if(!"packages.middleware.pub.service.utils.execute".equalsIgnoreCase(fqnOfMethod));
 		apply(fqnOfMethod, null);
 	}
 
 	public void apply(String fqnOfMethod, final JsonArray transformers) throws SnippetException {
-		if (fqnOfMethod == null)
+		if (fqnOfMethod == null || "packages.middleware.pub.service.utils.execute".equalsIgnoreCase(fqnOfMethod))
 			return;
 		boolean recursionDetected = false;
 		try {
@@ -654,13 +650,14 @@ public class DataPipeline {
 		}
 	}
 
-	public List<Map<String, Object>> getFuture() {
-		final List<Map<String, Object>> futureList = new ArrayList<>();
-		if (this.futureList != null && this.futureList.size() > 0) {
-			this.futureList.forEach(map -> {
-				futureList.add(map);
+	public List<List<Map<String,Object>>> getFuture() {
+		final List<List<Map<String,Object>>> futureList = new ArrayList<>();
+		if (this.futureTransformers != null && this.futureTransformers.size() > 0) {
+			this.futureTransformers.forEach((k,v) -> {
+				futureList.add(v);
 			});
-			this.futureList.clear();
+			this.futureTransformers.clear();
+			this.futureTransformers=new ConcurrentHashMap<>();
 		}
 		this.futureList = new ArrayList<>();
 		return futureList;
@@ -668,9 +665,9 @@ public class DataPipeline {
 
 	AtomicInteger atIntRemoved = new AtomicInteger(0);
 	public void updateQueuedTaskStatus(String batchId, final JsonArray transformers,
-			final Map<String, Object> asyncOutputDoc, final Map<String, Object> metaData) {
+									   final Map<String, Object> asyncOutputDoc, final Map<String, Object> metaData) {
 		if (batchId != null) {
-			Map<String, Object> cache = CacheManager.getCacheAsMap(rp.getTenant());
+			Map<String, Object> cache = CacheManager.getTenantDistributedCache(rp.getTenant());
 			Object data = cache.get(batchId);
 			String json = (String) data;
 			if (json != null) {
@@ -713,7 +710,7 @@ public class DataPipeline {
 					ServiceUtils.printException("Removing batch from cache failed. batchID: "+batchId, e);
 				}finally {
 					try {
-						Thread.sleep(100);
+						//Thread.sleep(100);
 						cache.remove(batchId);
 						LOGGER.debug("Completed batch number counter:"+ atIntRemoved.incrementAndGet());
 					} catch (Exception e) {
@@ -777,9 +774,23 @@ public class DataPipeline {
 	}
 
 	public void applyAsync(String fqnOfMethod, final JsonArray transformers) throws SnippetException {
-		if (fqnOfMethod == null)
+		if (fqnOfMethod == null || "packages.middleware.pub.service.utils.execute".equalsIgnoreCase(fqnOfMethod))
 			return;
 		fqnOfMethod = fqnOfMethod.replace("/", ".");
+		String globalIndexIdentifier=getString("*globalIndexIdentifier");
+		List<Map<String, Object>> asyncOutputDocList=null;
+		if(globalIndexIdentifier!=null) {
+			asyncOutputDocList=futureTransformers.get(globalIndexIdentifier);
+			if(asyncOutputDocList==null) {
+				asyncOutputDocList=Collections.synchronizedList(new ArrayList<>());
+				futureTransformers.put(globalIndexIdentifier, asyncOutputDocList);
+			}
+		}
+		else {
+			globalIndexIdentifier="root";
+			asyncOutputDocList=Collections.synchronizedList(new ArrayList<>());
+			futureTransformers.put(globalIndexIdentifier, asyncOutputDocList);
+		}
 		if (!fqnOfMethod.endsWith(".main"))
 			fqnOfMethod += ".main";
 		final Map cache = CacheManager.getCacheAsMap(this.rp.getTenant());
@@ -849,12 +860,12 @@ public class DataPipeline {
 					String[] typeTokens = typePath.split("/");
 					String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
 					switch (valueType) {
-					case "documentlist":
-						value = new ArrayList<Object>();
-						break;
-					case "document":
-						value = new HashMap<>();
-						break;
+						case "documentlist":
+							value = new ArrayList<Object>();
+							break;
+						case "document":
+							value = new HashMap<>();
+							break;
 					}
 					if (value != null) {
 						final Object newFinalObj = value;
@@ -881,6 +892,7 @@ public class DataPipeline {
 
 				metaData.put("*start_time", new Date().toString());
 				metaData.put("*start_time_ms", System.currentTimeMillis());
+				metaData.put("*rpAsync", rpAsync);
 				final DataPipeline dpAsync = rpAsync.dataPipeLine;
 				String json = null;
 				if (asyncInputDoc != null && asyncInputDoc.size() > 0) {
@@ -894,11 +906,11 @@ public class DataPipeline {
 							});
 						}
 					} /*
-						 * //Don't delete this code it will required later at some point of time. json =
-						 * ServiceUtils.toJson(asyncInputDoc); Map<String, Object> mapIn =
-						 * ServiceUtils.jsonToMap(json); if (mapIn != null && mapIn.size() > 0)
-						 * mapIn.forEach((k, v) -> { dpAsync.put(k, v); });
-						 */
+					 * //Don't delete this code it will required later at some point of time. json =
+					 * ServiceUtils.toJson(asyncInputDoc); Map<String, Object> mapIn =
+					 * ServiceUtils.jsonToMap(json); if (mapIn != null && mapIn.size() > 0)
+					 * mapIn.forEach((k, v) -> { dpAsync.put(k, v); });
+					 */
 					asyncInputDoc.forEach((k, v) -> {
 						if (v != null)
 							dpAsync.put(k, v);
@@ -962,23 +974,43 @@ public class DataPipeline {
 						cache.remove(taskList);
 				}
 				asyncOutputDoc.put("*metaData", metaData);
+				Thread.sleep(1);
+				if(metaData.get("*futureMap")!=null)
+					rpRef.setFutureMap((Future) metaData.get("*futureMap"));
+				metaData.remove("*futureMap");
 				rpRef.destroy();
 			}
 		});
-
-		// currentResource = curResourceBkp;
-		// refresh();
-		// put("asyncOutputDoc", asyncOutputDoc);
+		metaData.put("*futureMap",futureMap);
 		asyncOutputDoc.put("*futureTransformers", transformers);
+		asyncOutputDoc.put("*sequence",""+(futureTransformers.size()-1));
 		futureList.add(asyncOutputDoc);
+		asyncOutputDocList.add(asyncOutputDoc);
 	}
 
-	public void applyAsyncQueue(String fqnOfMethod, final JsonArray transformers,boolean enableResponse) throws SnippetException {
-		if (fqnOfMethod == null)
+
+
+	public void applyAsyncQueue(String fqnOfMethod, final JsonArray transformers) throws SnippetException {
+		boolean enableResponse=false;
+		if (fqnOfMethod == null || "packages.middleware.pub.service.utils.execute".equalsIgnoreCase(fqnOfMethod))
 			return;
 		fqnOfMethod = fqnOfMethod.replace("/", ".");
 		if (!fqnOfMethod.endsWith(".main"))
 			fqnOfMethod += ".main";
+		String globalIndexIdentifier=getString("*globalIndexIdentifier");
+		List<Map<String, Object>> asyncOutputDocList=null;
+		if(globalIndexIdentifier!=null) {
+			asyncOutputDocList=futureTransformers.get(globalIndexIdentifier);
+			if(asyncOutputDocList==null) {
+				asyncOutputDocList=Collections.synchronizedList(new ArrayList<>());
+				futureTransformers.put(globalIndexIdentifier, asyncOutputDocList);
+			}
+		}
+		else {
+			globalIndexIdentifier="root";
+			asyncOutputDocList=Collections.synchronizedList(new ArrayList<>());
+			futureTransformers.put(globalIndexIdentifier, asyncOutputDocList);
+		}
 		final Map cache = CacheManager.getCacheAsMap(this.rp.getTenant());
 		List<Map> asyncTaskList = (List<Map>) cache.get(rp.getSessionID());
 		synchronized (syncObject) {
@@ -1030,6 +1062,8 @@ public class DataPipeline {
 				Map<String, List<JsonOp>> map = FlowUtils.split(transformers, "out");
 				// futureTransformers.add(transformers);
 				List<JsonOp> leaders = map.get("leaders");
+				if(leaders!=null && leaders.size()>0)
+					enableResponse=true;
 				for (JsonOp jsonValue : leaders) {
 					String srcPath = jsonValue.getFrom();
 					if (srcPath.contains("*metaData") || srcPath.equals("/asyncOutputDoc"))
@@ -1046,12 +1080,12 @@ public class DataPipeline {
 					String[] typeTokens = typePath.split("/");
 					String valueType = (typeTokens[typeTokens.length - 1]).toLowerCase();
 					switch (valueType) {
-					case "documentlist":
-						value = new ArrayList<Object>();
-						break;
-					case "document":
-						value = new HashMap<>();
-						break;
+						case "documentlist":
+							value = new ArrayList<Object>();
+							break;
+						case "document":
+							value = new HashMap<>();
+							break;
 					}
 					if (value != null) {
 						final Object newFinalObj = value;
@@ -1064,13 +1098,14 @@ public class DataPipeline {
 			throw new SnippetException(this, uuidAsync, e);
 		}
 		final String currResrc = currentResource;
+		final boolean enableResultResponse=enableResponse;
 		final Future<Map<String, Object>> futureMap = rp.getExecutor().submit(() -> {
 			// RuntimePipeline rpRef=null;
 			// final List<Map> taskList = (List<Map>) cache.get(rp.getSessionID());
 			// taskList.add(metaData);
 			metaData.put("*resource", fqnOfFunction);
 			metaData.put("*initiatedBy", currResrc);
-			long startTime = System.currentTimeMillis();
+			//long startTime = System.currentTimeMillis();
 			String json = null;
 			try {
 
@@ -1096,10 +1131,12 @@ public class DataPipeline {
 					metaData.put("*uuidAsync", uuidAsync);
 					metaData.put("*correlationID", correlationID);
 					metaData.put("*fqnOfFunction", fqnOfFunction);
-					metaData.put("*enableResponse", enableResponse);
+					metaData.put("*enableResponse", enableResultResponse);
 					asyncInputDoc.put("*metaData", metaData);
 
 					json = ServiceUtils.toJson(asyncInputDoc);
+
+
 				}
 
 				return asyncOutputDoc;
@@ -1115,10 +1152,15 @@ public class DataPipeline {
 			}
 		});
 		if (enableResponse) {
+			metaData.put("*futureMap",futureMap);
 			asyncOutputDoc.put("*futureTransformers", transformers);
+			asyncOutputDoc.put("*sequence",""+(futureTransformers.size()-1));
 			futureList.add(asyncOutputDoc);
+			asyncOutputDocList.add(asyncOutputDoc);
 		}
 	}
+
+
 
 	public List<Map> listAsyncRunningTasks(String sid) {
 		Map cache = CacheManager.getCacheAsMap(this.rp.getTenant());
@@ -1151,7 +1193,18 @@ public class DataPipeline {
 		}
 
 		expressionValue = props.getProperty(key);
-		
+
+		if (key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
+			expressionValue = expressionValue.replace("[#]", "");
+			String privKey = getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if (key != null)
+				try {
+					expressionValue = Security.getNormalString(expressionValue, privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this,
+							"Could not decrypt property '" + key + "' for '" + rp.getTenant() + "'", e);
+				}
+		}
 		return expressionValue;
 	}
 
@@ -1160,6 +1213,14 @@ public class DataPipeline {
 		String expressionValue = props.getProperty(key);
 		if (key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
 			expressionValue = expressionValue.replace("[#]", "");
+			String privKey = getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if (key != null)
+				try {
+					expressionValue = Security.getNormalString(expressionValue, privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this,
+							"Could not decrypt property '" + key + "' for '" + rp.getTenant() + "'", e);
+				}
 		}
 
 		return expressionValue;
@@ -1177,6 +1238,11 @@ public class DataPipeline {
 			for (Object key : keys) {
 				if (key.toString().toLowerCase().startsWith("secure.")) {
 					String value = props.getProperty((String) key);
+					if (!value.startsWith("[#]")) {
+						String publicKey = getGlobalConfig(Security.PUBLIC_PROPERTY_KEY_NAME);
+						value = "[#]" + Security.getSecureString(value, publicKey);
+						props.setProperty((String) key, value);
+					}
 				}
 			}
 			PropertyManager.saveProperties(path, props, "Properties saved at " + new Date().toString());
@@ -1210,7 +1276,7 @@ public class DataPipeline {
 	}
 
 	public void logException(Throwable exception) throws SnippetException {
-        throw new SnippetException(this, "Exception reported by " + getCurrentResource(), new Exception(exception));
+		throw new SnippetException(this, "Exception reported by " + getCurrentResource(), new Exception(exception));
 	}
 
 	public void logDataPipeline() {
@@ -1267,6 +1333,14 @@ public class DataPipeline {
 		String expressionValue = props.getProperty(key);
 		if (key.toLowerCase().startsWith("secure.") && expressionValue.startsWith("[#]")) {
 			expressionValue = expressionValue.replace("[#]", "");
+			String privKey = getGlobalConfig(Security.PRIVATE_PROPERTY_KEY_NAME);
+			if (key != null)
+				try {
+					expressionValue = Security.getNormalString(expressionValue, privKey);
+				} catch (Exception e) {
+					throw new SnippetException(this,
+							"Could not decrypt property '" + key + "' for '" + rp.getTenant() + "'", e);
+				}
 		}
 		return expressionValue;
 	}
@@ -1285,17 +1359,5 @@ public class DataPipeline {
 
 	public void setRecordTrace(boolean recordTrace) {
 		this.recordTrace = recordTrace;
-	}
-
-	public List<FlowMeta> getErrorStack() {
-		return errorStack;
-	}
-
-	public List<String> getSnapData() {
-		return snapData;
-	}
-
-	public void setSnapData(List<String> snapData) {
-		this.snapData = snapData;
 	}
 }
