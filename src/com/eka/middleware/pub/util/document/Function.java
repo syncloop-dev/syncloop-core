@@ -13,8 +13,8 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.flow.FlowUtils;
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
@@ -57,28 +57,28 @@ public class Function {
 			String response = null;
 			switch (type) {
 
-			case "string": {
-				String value = (String) object;
-				response = applyStringValidations(value, data);
-				break;
-			}
-			case "integer": {
-				int value = Integer.parseInt(object+"");
-				response = applyIntegerValidations(value, data);
-				break;
-			}
-			case "number": {
-				double value = Double.parseDouble(object+"");
-				response = applyNumberValidations(dp, pointer, typePath, value, data);
-				break;
-			}
-			case "date": {
-				String value = (String) object;
-				response = applyDateValidations(dp, pointer, typePath, value, data);
-				break;
-			}
-			default:
-				dp.log("Unexpected value: " + type, Level.WARN);
+				case "string": {
+					String value = (String) object;
+					response = applyStringValidations(value, data);
+					break;
+				}
+				case "integer": {
+					int value = Integer.parseInt(object+"");
+					response = applyIntegerValidations(value, data);
+					break;
+				}
+				case "number": {
+					double value = Double.parseDouble(object+"");
+					response = applyNumberValidations(dp, pointer, typePath, value, data);
+					break;
+				}
+				case "date": {
+					String value = (String) object;
+					response = applyDateValidations(dp, pointer, typePath, value, data);
+					break;
+				}
+				default:
+					dp.log("Unexpected value: " + type, Level.WARN);
 			}
 
 			String description = "";
@@ -100,29 +100,6 @@ public class Function {
 			throw new SnippetException(dp, "Exception while validating "+pointer+" of type "+typePath, e);
 		}
 
-	}
-
-	public static String applyIntegerValidations(int value, Map<String, String> data) {
-
-		if (data == null)
-			return null;
-
-		String minimumInteger = data.get("minimumInteger");
-		int minInt = 0;
-		if (minimumInteger != null) {
-			minInt = Integer.parseInt(minimumInteger.trim());
-			if (value < minInt)
-				return "Minimum integer value allowed is " + minInt;
-		}
-
-		String maximumInteger = data.get("maximumInteger");
-		int maxInt = 0;
-		if (maximumInteger != null) {
-			maxInt = Integer.parseInt(maximumInteger.trim());
-			if (value > maxInt)
-				return "Maximum integer value allowed is " + maxInt;
-		}
-		return null;
 	}
 
 	/**
@@ -197,8 +174,31 @@ public class Function {
 
 	}
 
+	public static String applyIntegerValidations(int value, Map<String, String> data) {
+
+		if (data == null)
+			return null;
+
+		String minimumInteger = data.get("minimumInteger");
+		int minInt = 0;
+		if (minimumInteger != null) {
+			minInt = Integer.parseInt(minimumInteger.trim());
+			if (value < minInt)
+				return "Minimum integer value allowed is " + minInt;
+		}
+
+		String maximumInteger = data.get("maximumInteger");
+		int maxInt = 0;
+		if (maximumInteger != null) {
+			maxInt = Integer.parseInt(maximumInteger.trim());
+			if (value > maxInt)
+				return "Maximum integer value allowed is " + maxInt;
+		}
+		return null;
+	}
+
 	public static String applyNumberValidations(DataPipeline dp, String pointer, String typePath, double value,
-			Map<String, String> data) {
+												Map<String, String> data) {
 
 		if (data == null)
 			return null;
@@ -271,7 +271,7 @@ public class Function {
 	}
 
 	public static String applyDateValidations(DataPipeline dp, String pointer, String typePath, String value,
-			Map<String, String> data) {
+											  Map<String, String> data) {
 
 		if (data == null)
 			return null;
@@ -324,7 +324,7 @@ public class Function {
 
 		return null;
 	}
-	
+
 	private static ZonedDateTime getZonedDateTime(String dateValue,DateTimeFormatter dtf) {
 		LocalDate date = LocalDate.parse(dateValue, dtf);
 		ZonedDateTime startDateTime = date.atStartOfDay(ZoneId.systemDefault());

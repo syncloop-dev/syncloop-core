@@ -25,7 +25,8 @@ public class AWSHeaders {
         URL endpointUrl = new URL(canonicalURI);
         Map<String, String> awsHeaders = new TreeMap<>();
         final int userDataBlockSize = 64 * 1024;
-        String contentLengthHeader = "content-length";
+//        String contentLengthHeader = "content-length";
+        String contentLengthHeader = "x-amz-decoded-content-length";
         String contentHashString = AWS4SignerBase.EMPTY_BODY_SHA256;
         if ((payload == null || payload.length == 0)) {
             if ((null == queryParameters || queryParameters.isEmpty()) || service.equalsIgnoreCase("s3")) {
@@ -39,7 +40,7 @@ public class AWSHeaders {
                 contentLengthHeader = "x-amz-decoded-content-length";
                 contentHashString = AWS4SignerForChunkedUpload.STREAMING_BODY_SHA256;
                 long totalLength = AWS4SignerForChunkedUpload.calculateChunkedContentLength(payload.length, userDataBlockSize);
-                headers.put("content-length", "" + totalLength);
+                //headers.put("content-length", "" + totalLength);
             }
             awsHeaders.put("x-amz-content-sha256", contentHashString);
             awsHeaders.put(contentLengthHeader, "" + payload.length);

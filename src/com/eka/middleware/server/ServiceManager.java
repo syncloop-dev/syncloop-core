@@ -56,6 +56,10 @@ public class ServiceManager {
 	}
 
 	public static Class compileJava(final String fqn, final DataPipeline dataPipeLine) throws Throwable {
+		return compileJava(fqn, dataPipeLine, true);
+	}
+
+	private static Class compileJava(final String fqn, final DataPipeline dataPipeLine, boolean force) throws Throwable {
 
 		String classFile = getClassFilePath(fqn, dataPipeLine);
 		String fqnClass = classFile.replace(".java", "").replace("/", ".");
@@ -65,8 +69,13 @@ public class ServiceManager {
 		File file = getTenantFile(dataPipeLine, classFile);
 
 		String classID = tid + "-" + fqn;// + "." + lastChangedTime;
+		Long lastModifiedDate=lastModified.get(classID);
+		if(lastModifiedDate!=null && lastModifiedDate.compareTo(file.lastModified())!=0) {
+			classMap.remove(classID);
+			force=true;
+		}
 		Class cls = classMap.get(classID);
-		cls = RTCompile.getClassRef(fqnClass, file.getAbsolutePath(), true, dataPipeLine);
+		cls = RTCompile.getClassRef(fqnClass, file.getAbsolutePath(), force, dataPipeLine);
 		lastModified.put(classID, file.lastModified());
 		classMap.put(classID, cls);
 		return cls;
@@ -103,9 +112,8 @@ public class ServiceManager {
 				if (null == cls || lastChangedTimeSaved==null || lastChangedTimeSaved < lastChangedTime) {
 					try {
 						ScriptEngineContextManager.clear();
-						cls = compileJava(fqn, dataPipeLine);
+						cls = compileJava(fqn, dataPipeLine,false);
 					} catch (Throwable e) {
-						e.printStackTrace();
 						throw new SnippetException(dataPipeLine, "Error during compilation", new Exception(e));
 					}
 				}

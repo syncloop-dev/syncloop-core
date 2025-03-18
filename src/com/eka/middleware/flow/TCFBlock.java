@@ -35,7 +35,7 @@ public class TCFBlock implements FlowBasicInfo {
 	private String guid;
 
 	public TCFBlock(JsonObject jo) {
-		tcfBlock=jo;	
+		tcfBlock=jo;
 		data=tcfBlock.get("data").asJsonObject();
 		condition=data.getString("condition",null);
 		String status=data.getString("status",null);
@@ -51,7 +51,7 @@ public class TCFBlock implements FlowBasicInfo {
 		name = tcfBlock.getString("text",null);
 		type = tcfBlock.getString("type",null);
 	}
-	
+
 	public void process(DataPipeline dp) throws SnippetException {
 		if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
@@ -115,7 +115,7 @@ public class TCFBlock implements FlowBasicInfo {
 				dp.put("*snapshot",snap);
 		}
 	}
-	
+
 	public Scope getTRY() {
 		return TRY;
 	}

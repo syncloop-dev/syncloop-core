@@ -6,21 +6,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import com.eka.middleware.heap.CacheManager;
-import com.eka.middleware.template.Tenant;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
+import com.eka.middleware.template.SnippetException;
+import com.eka.middleware.template.Tenant;
 
 
 public class RuntimePipeline {
@@ -32,19 +35,20 @@ public class RuntimePipeline {
 	private boolean isDestroyed = false;
 	private Thread currentThread;
 	private BufferedWriter bw = null;
-	private Tenant tenant=null;
-	private String user=null;
-	private Date createDate=null;
+	private Tenant tenant = null;
+	private String user = null;
+	private Date createDate = null;
+	private Future<Map<String, Object>> futureMap = null;
 	public final Map<String, Object> payload = new ConcurrentHashMap<String, Object>();
 
-	private final ThreadPoolExecutor executor;
+	private static final ExecutorService executor=Executors.newFixedThreadPool(200);
 
-	public ThreadPoolExecutor getExecutor() {
+	public static ExecutorService getExecutor() {
 		return executor;
 	}
 
 	public void writeSnapshot(String resource, String json) {
-		String packagePath=PropertyManager.getPackagePath(getTenant());
+		String packagePath = PropertyManager.getPackagePath(getTenant());
 		try {
 			if (bw == null) {
 				String name = sessionId + ".snap";
@@ -61,10 +65,10 @@ public class RuntimePipeline {
 				bw = bufferedWriter;
 				bw.write("[");
 			}
-			bw.write(json+",");
+			bw.write(json + ",");
 			bw.newLine();
 		} catch (Exception e) {
-			ServiceUtils.printException(getTenant(),"Exception while saving snapshot.", e);
+			ServiceUtils.printException(getTenant(), "Exception while saving snapshot.", e);
 		}
 	}
 
@@ -82,17 +86,19 @@ public class RuntimePipeline {
 		return sessionId;
 	}
 
-	public RuntimePipeline(Tenant tenant, String requestId, String correlationId, String resource,
-						   String urlPath) {
-		//Securitycont
+
+
+	public RuntimePipeline(Tenant tenant, String requestId, String correlationId,
+						   String resource, String urlPath) {
+		// Securitycont
 
 		String threadAllowed = ServiceUtils.getServerProperty("middleware.server.datapipeline.async.threads");
-		int numberOfThreadAllowed = 50;
+		int numberOfThreadAllowed = 5;
 		if (StringUtils.isNotBlank(threadAllowed)) {
 			numberOfThreadAllowed = Integer.parseInt(threadAllowed);
 		}
-		executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numberOfThreadAllowed);
-		this.tenant=tenant;
+		//executor = Executors.newFixedThreadPool(numberOfThreadAllowed);
+		this.tenant = tenant;
 		currentThread = Thread.currentThread();
 		sessionId = requestId;
 		if (correlationId == null)
@@ -112,7 +118,7 @@ public class RuntimePipeline {
 		if (rp == null) {
 			rp = new RuntimePipeline(tenant,requestId, correlationId, resource, urlPath);
 			pipelines.put(requestId, rp);
-		}else {
+		} else {
 			ServiceUtils.printException(tenant, "Unable to create unique runtime pipeline", null);
 			return null;
 		}
@@ -124,40 +130,74 @@ public class RuntimePipeline {
 		return rp;
 	}
 
-	public static List<RuntimePipeline> listActivePipelines() {
+	public static List<RuntimePipeline> listActivePipelines(DataPipeline dp) {
+		Tenant tenant = dp.rp.tenant;
 		List<RuntimePipeline> list = new ArrayList<>();
-		Set<Entry<String, RuntimePipeline>>  rtSet=pipelines.entrySet();
+		Set<Entry<String, RuntimePipeline>> rtSet = pipelines.entrySet();
 		for (Entry<String, RuntimePipeline> entry : rtSet) {
-			list.add(entry.getValue());
+			RuntimePipeline arp = entry.getValue();
+			if (tenant.getName().equalsIgnoreCase("default")
+					|| tenant.getName().equalsIgnoreCase(arp.getTenant().getName()))
+				list.add(entry.getValue());
 		}
 		return list;
 	}
 
 	public void destroy() {
-		if(bw!=null) try{
-			bw.write("{}]");
-			bw.flush();
-			bw.close();
-			bw=null;
-		}catch (Exception e) {
-			ServiceUtils.printException(getTenant(),"Exception while closing snapshot file.", e);
-		}
-		Map cache=CacheManager.getCacheAsMap(tenant);
-		cache.remove(sessionId);
+		if (bw != null)
+			try {
+				bw.write("{}]");
+				bw.flush();
+				bw.close();
+				bw = null;
+			} catch (Exception e) {
+				ServiceUtils.printException(getTenant(), "Exception while closing snapshot file.", e);
+			}
 		RuntimePipeline rtp = pipelines.get(sessionId);
-		ScriptEngineContextManager.removeContext(dataPipeLine.getUniqueThreadName());
-		ScriptEngineContextManager.removeContext(rtp.dataPipeLine.getUniqueThreadName());
-		rtp.currentThread.interrupt();
-		rtp.setDestroyed(true);
-		pipelines.get(sessionId).payload.clear();
-		pipelines.remove(sessionId);
 		try {
-			executor.shutdown();
+			Map cache = CacheManager.getCacheAsMap(tenant);
+			cache.remove(sessionId);
+			ScriptEngineContextManager.removeContext(dataPipeLine.getUniqueThreadName());
+			ScriptEngineContextManager.removeContext(rtp.dataPipeLine.getUniqueThreadName());
 		} catch (Exception e) {
-			ServiceUtils.printException(getTenant(),"Exception while finishing appLogger.", e);
+
+		}finally {
+			try {
+				rtp.currentThread.interrupt();
+			} catch (Exception e2) {
+				// TODO: handle exception
+			}
+			rtp.setDestroyed(true);
+			pipelines.get(sessionId).payload.clear();
+			pipelines.remove(sessionId);
 		}
+		try {
+			/*executor.shutdown();
+			try {
+				// Wait for existing tasks to complete within the timeout
+				if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+					// Forcefully shutdown if tasks did not finish in time
+					executor.shutdownNow();
+
+					// Wait for tasks to respond to cancellation
+					if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+						ServiceUtils.printException("Executor did not terminate for tenant:" + getTenant().getName(),
+								new Exception("Executor did not terminate"));// ();
+					}
+				}
+			} catch (InterruptedException ie) {
+				// Re-cancel if current thread also interrupted
+				executor.shutdownNow();
+			}*/
+			if (futureMap != null && !(futureMap.isDone() || futureMap.isCancelled())) {
+				futureMap.cancel(true);
+			}
+		} catch (Exception e) {
+			ServiceUtils.printException(getTenant(), "Exception while finishing appLogger.", e);
+		}
+
 	}
-	
+
 	@Override
 	protected void finalize() throws Throwable {
 		destroy();
@@ -191,5 +231,8 @@ public class RuntimePipeline {
 		this.user = user;
 	}
 
-	
+	public void setFutureMap(Future<Map<String, Object>> futureMap) {
+		this.futureMap = futureMap;
+	}
+
 }

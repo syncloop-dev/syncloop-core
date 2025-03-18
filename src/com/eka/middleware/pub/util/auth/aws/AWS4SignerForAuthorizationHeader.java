@@ -13,14 +13,14 @@ import com.eka.middleware.pub.util.rest.BinaryUtils;
 public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 
     public AWS4SignerForAuthorizationHeader(URL endpointUrl, String httpMethod,
-            String serviceName, String regionName) {
+                                            String serviceName, String regionName) {
         super(endpointUrl, httpMethod, serviceName, regionName);
     }
-    
+
     /**
      * Computes an AWS4 signature for a request, ready for inclusion as an
      * 'Authorization' header.
-     * 
+     *
      * @param headers
      *            The request headers; 'Host' and 'X-Amz-Date' will be added to
      *            this set.
@@ -51,22 +51,22 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 
         // update the headers with required 'x-amz-date' and 'host' values
         headers.put("x-amz-date", dateTimeStamp);
-        
+
         String hostHeader = endpointUrl.getHost();
         int port = endpointUrl.getPort();
         if ( port > -1 ) {
             hostHeader = hostHeader.concat(":" + Integer.toString(port));
         }
         headers.put("Host", hostHeader);
-        
+
         // canonicalize the headers; we need the set of header names as well as the
         // names and values to go into the signature process
         String canonicalizedHeaderNames = getCanonicalizeHeaderNames(headers);
         String canonicalizedHeaders = getCanonicalizedHeaderString(headers);
-        
+
         // if any query string parameters have been supplied, canonicalize them
         String canonicalizedQueryParameters = getCanonicalizedQueryString(queryParameters);
-        
+
         // canonicalize the various components of the request
         String canonicalRequest = getCanonicalRequest(endpointUrl, httpMethod,
                 canonicalizedQueryParameters, canonicalizedHeaderNames,
@@ -84,7 +84,7 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
         byte[] kService = sign(serviceName, kRegion, "HmacSHA256");
         byte[] kSigning = sign(TERMINATOR, kService, "HmacSHA256");
         byte[] signature = sign(stringToSign, kSigning, "HmacSHA256");
-        
+
         String credentialsAuthorizationHeader =
                 "Credential=" + awsAccessKey + "/" + scope;
         String signedHeadersAuthorizationHeader =

@@ -56,7 +56,7 @@ public class ClassReloader extends ClassLoader {
 			} else {
 				LOGGER.trace("Loading class from bytes'" + name + "'");
 				try {
-					
+
 				} catch (Exception e) {
 					return parent.findMyLoadedClass(name);
 				}
@@ -68,7 +68,7 @@ public class ClassReloader extends ClassLoader {
 			throw new ClassNotFoundException(name);
 		}
 	}
-	
+
 	private byte[] loadClassFromFile(String fileName, DataPipeline dp) throws SnippetException {
 		// System.out.println(fileName);
 
@@ -99,7 +99,7 @@ public class ClassReloader extends ClassLoader {
 					byteStream.write(nextValue);
 				}
 			} catch (IOException e) {
-				e.printStackTrace();
+				ServiceUtils.printException("Unable to load file for classloader. Path:"+path, e);
 			}
 			buffer = byteStream.toByteArray();
 			try {

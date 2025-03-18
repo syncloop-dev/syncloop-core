@@ -28,7 +28,7 @@ public class Scope implements FlowBasicInfo {
 	private String guid;
 
 	public Scope(JsonObject jo) {
-		scope=jo;		
+		scope=jo;
 		data=scope.get("data").asJsonObject();
 		condition=data.getString("condition",null);
 		String status=data.getString("status",null);
@@ -45,7 +45,7 @@ public class Scope implements FlowBasicInfo {
 		name = scope.getString("text",null);
 		type = scope.getString("type",null);
 	}
-	
+
 	public void process(DataPipeline dp) throws SnippetException{
 		Map<String, Object> snapMeta = new HashMap<String, Object>();
 		snapMeta.put("GROUP_SEQUENCE_CONDITION_EVAL", evaluateCondition);
@@ -197,6 +197,7 @@ public class Scope implements FlowBasicInfo {
 									function.process(dp);
 							}
 							break;
+
 						case "object":
 							ContextObject contextObject = new ContextObject(jsonValue.asJsonObject());
 							if(!evaluateCondition) {
@@ -225,7 +226,7 @@ public class Scope implements FlowBasicInfo {
 				dp.put("*snapshot",snap);
 		}
 	}
-	
+
 	public List<Scope> getScopes() {
 		return scopes;
 	}
@@ -291,7 +292,7 @@ public class Scope implements FlowBasicInfo {
 	private List<Api> invokes;
 	private List<Repeat> repeats;
 	private List<Loop> loops;
-	private List<Transformer> transformers;	
+	private List<Transformer> transformers;
 	private boolean disabled=false;
 	private String condition;
 	private String label;

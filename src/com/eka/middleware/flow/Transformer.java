@@ -37,7 +37,7 @@ public class Transformer implements FlowBasicInfo {
 	private String guid;
 
 	public Transformer(JsonObject jo) {
-		transformer=jo;		
+		transformer=jo;
 		data=transformer.get("data").asJsonObject();
 		condition=data.getString("condition",null);
 		String status=data.getString("status",null);
@@ -65,10 +65,10 @@ public class Transformer implements FlowBasicInfo {
 		Map<String, Object> snapMeta = new HashMap<String, Object>();
     	if(dp.isDestroyed())
 			throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
-    	if(disabled)
+		if(disabled)
 			return;
 		dp.addErrorStack(this);
-    	String snap=dp.getString("*snapshot");
+		String snap=dp.getString("*snapshot");
 		boolean canSnap = false;
 		try {
 			if (snap != null || snapshot != null) {
@@ -108,7 +108,7 @@ public class Transformer implements FlowBasicInfo {
 				dp.put("*snapshot",snap);
 		}
 	}
-	
+
 	public boolean isDisabled() {
 		return disabled;
 	}

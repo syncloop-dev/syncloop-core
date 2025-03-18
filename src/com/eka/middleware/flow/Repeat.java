@@ -8,12 +8,12 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.FlowBasicInfo;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
+import com.eka.middleware.service.DataPipeline;
 import com.eka.middleware.service.ServiceUtils;
 import com.eka.middleware.template.SnippetException;
 
@@ -116,6 +116,7 @@ public class Repeat implements FlowBasicInfo {
         try {
             long index = 0;
             boolean canExecute = true;
+            dp.put(indexVar, 0);
             if (repeatTimes < 0 && getCondition() != null) {
                 canExecute = FlowUtils.evaluateCondition(getCondition(), dp);
                 snapMeta.put("condition", getCondition());
@@ -127,6 +128,11 @@ public class Repeat implements FlowBasicInfo {
             snapMeta.put("repeatOn", repeatOn);
             snapMeta.put("interval", interval);
             int loopExecutedCount = 0;
+            String globalIndexIdentifier=dp.getString("*globalIndexIdentifier");
+
+            if(globalIndexIdentifier==null)
+                globalIndexIdentifier="";
+            String globalIndexIDBackup=globalIndexIdentifier;
             while (repeatOn != null && canExecute) {
                 loopExecutedCount++;
                 if (loopExecutedCount > allowedLoop) {
@@ -136,7 +142,10 @@ public class Repeat implements FlowBasicInfo {
                 dp.put(indexVar, index);
                 index++;
                 Exception throwable = null;
+                globalIndexIdentifier=globalIndexIDBackup+index;
+                dp.put("*globalIndexIdentifier", globalIndexIdentifier);
                 try {
+
                     action(dp);
                     if ("error".equals(repeatOn))
                         repeatOn = null;
@@ -164,6 +173,7 @@ public class Repeat implements FlowBasicInfo {
                     } else
                         dp.putGlobal("lastErrorDump", ServiceUtils.getExceptionMap(new Exception(e)));
                 }
+                dp.put("*globalIndexIdentifier", globalIndexIDBackup);
                 repeatTimes--;
                 if (repeatTimes == 0)
                     repeatOn = null;
@@ -183,6 +193,8 @@ public class Repeat implements FlowBasicInfo {
 
                 if (dp.isDestroyed())
                     throw new SnippetException(dp, "User aborted the service thread", new Exception("Service runtime pipeline destroyed manually"));
+
+
             }
             dp.putGlobal("*hasError", false);
         } catch (Exception e) {
@@ -202,128 +214,131 @@ public class Repeat implements FlowBasicInfo {
 
     public void action(DataPipeline dp) throws SnippetException {
         JsonArray flows = repeat.getJsonArray("children");
+        dp.put("*ForEach", flows);
+
         for (JsonValue jsonValue : flows) {
+
             String type = jsonValue.asJsonObject().getString("type", null);
             JsonObject jov=jsonValue.asJsonObject().get("data").asJsonObject();
-			String status=jov.getString("status",null);
-			if(!"disabled".equals(status))
-            switch (type) {
-                case "try-catch":
-                    TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        tcfBlock.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(tcfBlock.getCondition(), dp);
-                        if (canExecute)
+            String status=jov.getString("status",null);
+            if(!"disabled".equals(status))
+                switch (type) {
+                    case "try-catch":
+                        TCFBlock tcfBlock = new TCFBlock(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             tcfBlock.process(dp);
-                    }
-                    break;
-                case "sequence":
-                case "group":
-                    Scope scope = new Scope(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        scope.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(scope.getCondition(), dp);
-                        if (canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(tcfBlock.getCondition(), dp);
+                            if (canExecute)
+                                tcfBlock.process(dp);
+                        }
+                        break;
+                    case "sequence":
+                    case "group":
+                        Scope scope = new Scope(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             scope.process(dp);
-                    }
-                    break;
-                case "switch":
-                    Switch swich = new Switch(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        swich.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(swich.getCondition(), dp);
-                        if (canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(scope.getCondition(), dp);
+                            if (canExecute)
+                                scope.process(dp);
+                        }
+                        break;
+                    case "switch":
+                        Switch swich = new Switch(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             swich.process(dp);
-                    }
-                    break;
-                case "ifelse":
-                    IfElse ifElse = new IfElse(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        ifElse.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(ifElse.getCondition(), dp);
-                        if (canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(swich.getCondition(), dp);
+                            if (canExecute)
+                                swich.process(dp);
+                        }
+                        break;
+                    case "ifelse":
+                        IfElse ifElse = new IfElse(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             ifElse.process(dp);
-                    }
-                    break;
-                case "loop":
-                case "foreach":
-                    Loop loop = new Loop(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        loop.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(loop.getCondition(), dp);
-                        if (canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(ifElse.getCondition(), dp);
+                            if (canExecute)
+                                ifElse.process(dp);
+                        }
+                        break;
+                    case "loop":
+                    case "foreach":
+                        Loop loop = new Loop(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             loop.process(dp);
-                    }
-                    break;
-                case "repeat":
-                case "redo":
-                    Repeat repeat = new Repeat(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        repeat.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(repeat.getCondition(), dp);
-                        if (canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(loop.getCondition(), dp);
+                            if (canExecute)
+                                loop.process(dp);
+                        }
+                        break;
+                    case "repeat":
+                    case "redo":
+                        Repeat repeat = new Repeat(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             repeat.process(dp);
-                    }
-                    break;
-                case "invoke":
-                case "service":
-                    Api invoke = new Api(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        invoke.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(invoke.getCondition(), dp);
-                        if (canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(repeat.getCondition(), dp);
+                            if (canExecute)
+                                repeat.process(dp);
+                        }
+                        break;
+                    case "invoke":
+                    case "service":
+                        Api invoke = new Api(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             invoke.process(dp);
-                    }
-                    break;
-                case "map":
-                case "transformer":
-                    Transformer transformer = new Transformer(jsonValue.asJsonObject());
-                    if (!evaluateCondition) {
-                        transformer.process(dp);
-                    } else {
-                        boolean canExecute = FlowUtils.evaluateCondition(transformer.getCondition(), dp);
-                        if (canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(invoke.getCondition(), dp);
+                            if (canExecute)
+                                invoke.process(dp);
+                        }
+                        break;
+                    case "map":
+                    case "transformer":
+                        Transformer transformer = new Transformer(jsonValue.asJsonObject());
+                        if (!evaluateCondition) {
                             transformer.process(dp);
-                    }
-                    break;
-                case "await":
-					Await await=new Await(jsonValue.asJsonObject());
-					if(!evaluateCondition) {
-						await.process(dp);
-					}else { 
-						boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
-						if(canExecute)
-							await.process(dp);
-					}
-				break;
-                case "function":
-                    Function function = new Function(jsonValue.asJsonObject());
-                    if(!evaluateCondition) {
-                        function.process(dp);
-                    }else {
-                        boolean canExecute =FlowUtils.evaluateCondition(function.getCondition(),dp);
-                        if(canExecute)
+                        } else {
+                            boolean canExecute = FlowUtils.evaluateCondition(transformer.getCondition(), dp);
+                            if (canExecute)
+                                transformer.process(dp);
+                        }
+                        break;
+                    case "await":
+                        Await await=new Await(jsonValue.asJsonObject());
+                        if(!evaluateCondition) {
+                            await.process(dp);
+                        }else {
+                            boolean canExecute =FlowUtils.evaluateCondition(await.getCondition(),dp);
+                            if(canExecute)
+                                await.process(dp);
+                        }
+                        break;
+                    case "function":
+                        Function function = new Function(jsonValue.asJsonObject());
+                        if(!evaluateCondition) {
                             function.process(dp);
-                    }
-                    break;
-                case "object":
-                    ContextObject contextObject = new ContextObject(jsonValue.asJsonObject());
-                    if(!evaluateCondition) {
-                        contextObject.process(dp);
-                    }else {
-                        boolean canExecute =FlowUtils.evaluateCondition(contextObject.getCondition(),dp);
-                        if(canExecute)
+                        }else {
+                            boolean canExecute =FlowUtils.evaluateCondition(function.getCondition(),dp);
+                            if(canExecute)
+                                function.process(dp);
+                        }
+                        break;
+                    case "object":
+                        ContextObject contextObject = new ContextObject(jsonValue.asJsonObject());
+                        if(!evaluateCondition) {
                             contextObject.process(dp);
-                    }
-                    break;
-            }
+                        }else {
+                            boolean canExecute =FlowUtils.evaluateCondition(contextObject.getCondition(),dp);
+                            if(canExecute)
+                                contextObject.process(dp);
+                        }
+                        break;
+                }
         }
     }
 

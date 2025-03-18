@@ -1,9 +1,10 @@
 package com.eka.middleware.server;
 
+import com.eka.middleware.service.DataPipeline;
+import com.eka.middleware.service.ServiceUtils;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.eka.middleware.service.DataPipeline;
 
 import java.io.*;
 import java.net.URL;
@@ -29,7 +30,7 @@ public class Build {
         try {
             BootBuild.bootBuild(version);
         } catch (Exception e) {
-            e.printStackTrace();
+            ServiceUtils.printException("Download build failed", e);
         }
     }
 
@@ -133,35 +134,35 @@ public class Build {
 
                 LOGGER.info("Unzipping build...");
                 byte[] buffer = new byte[1024];
-               try( ZipInputStream zis = new ZipInputStream(new FileInputStream("./" + distributionName))) {
-                   ZipEntry zipEntry = zis.getNextEntry();
-                   while (zipEntry != null) {
-                       File newFile = newFile(new File(""), zipEntry);
-                       if (zipEntry.isDirectory()) {
-                           if (!newFile.isDirectory() && !newFile.mkdirs()) {
-                               throw new IOException("Failed to create directory " + newFile);
-                           }
-                       } else {
-                           // fix for Windows-created archives
-                           File parent = newFile.getParentFile();
-                           if (!parent.isDirectory() && !parent.mkdirs()) {
-                               throw new IOException("Failed to create directory " + parent);
-                           }
+                try( ZipInputStream zis = new ZipInputStream(new FileInputStream("./" + distributionName))) {
+                    ZipEntry zipEntry = zis.getNextEntry();
+                    while (zipEntry != null) {
+                        File newFile = newFile(new File(""), zipEntry);
+                        if (zipEntry.isDirectory()) {
+                            if (!newFile.isDirectory() && !newFile.mkdirs()) {
+                                throw new IOException("Failed to create directory " + newFile);
+                            }
+                        } else {
+                            // fix for Windows-created archives
+                            File parent = newFile.getParentFile();
+                            if (!parent.isDirectory() && !parent.mkdirs()) {
+                                throw new IOException("Failed to create directory " + parent);
+                            }
 
-                           // write file content
-                           try(FileOutputStream fos = new FileOutputStream(newFile)) {
-                               int len;
-                               while ((len = zis.read(buffer)) > 0) {
-                                   fos.write(buffer, 0, len);
-                               }
-                               fos.close();
-                           }
-                       }
-                       zipEntry = zis.getNextEntry();
-                   }
-                   zis.closeEntry();
-                   zis.close();
-               }
+                            // write file content
+                            try(FileOutputStream fos = new FileOutputStream(newFile)) {
+                                int len;
+                                while ((len = zis.read(buffer)) > 0) {
+                                    fos.write(buffer, 0, len);
+                                }
+                                fos.close();
+                            }
+                        }
+                        zipEntry = zis.getNextEntry();
+                    }
+                    zis.closeEntry();
+                    zis.close();
+                }
             }
         }
 

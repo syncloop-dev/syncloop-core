@@ -104,7 +104,7 @@ public class Api implements FlowBasicInfo {
 				if ("async".equals(requestMethod))
 					dp.applyAsync(serviceFqn.trim() + ".main", transformers);
 				else if("asyncQueue".equals(requestMethod)) {
-					dp.applyAsyncQueue(serviceFqn.trim() + ".main", transformers,true/*enableResponse*/);//TODO enable response value should come from GUI
+					dp.applyAsyncQueue(serviceFqn.trim() + ".main", transformers);//,true/*enableResponse*/);//TODO enable response value should come from GUI
 				}else
 					dp.apply(serviceFqn.trim() + ".main", transformers);
 				//if(transformers!=null)

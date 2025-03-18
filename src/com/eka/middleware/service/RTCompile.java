@@ -25,7 +25,7 @@ import com.eka.middleware.flow.FlowUtils;
 
 public class RTCompile {
 	public static Logger LOGGER = LogManager.getLogger(RTCompile.class);
-	public static final Map<String, CustomClassLoader> classLoaderMap=new ConcurrentHashMap<String, CustomClassLoader>();
+	public static final Map<String, CustomClassLoader> classLoaderMap = new ConcurrentHashMap<String, CustomClassLoader>();
 
 	public static Class getClassRef(String fqn, String path, boolean compile, DataPipeline dp) throws Throwable {
 		List<String> options = new ArrayList<String>();
@@ -62,8 +62,9 @@ public class RTCompile {
 					globalJarsPath += jp + sep;
 			}
 		options.add(localJarsPath + globalJarsPath + currentPath);
-		//System.setProperty("java.class.path", localJarsPath + globalJarsPath + currentPath);
-		LOGGER.trace("newClassPath: "+localJarsPath+globalJarsPath+currentPath);
+		// System.setProperty("java.class.path", localJarsPath + globalJarsPath +
+		// currentPath);
+		LOGGER.trace("newClassPath: " + localJarsPath + globalJarsPath + currentPath);
 		options.add(path);
 
 		int result = 0;
@@ -112,23 +113,31 @@ public class RTCompile {
 					//URLs.addAll(Arrays.asList(globalURLs));
 				}
 
-				String jarPaths[] = new String[pathArrays.size()];
-				jarPaths = pathArrays.toArray(jarPaths);
-				
-				//URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
-				//URLClassLoader child = new URLClassLoader (URLs.toArray(new URL[URLs.size()]), ClassLoader.getSystemClassLoader());
-				//cls=Class.forName (fqn, true, child);
-				CustomClassLoader classLoader=classLoaderMap.get(dp.rp.getTenant().getName());
-				if(classLoader==null) {
-					classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);// (CustomClassLoader)
+			String jarPaths[] = new String[pathArrays.size()];
+			jarPaths = pathArrays.toArray(jarPaths);
+
+			// URLClassLoader classLoader = (URLClassLoader)
+			// ClassLoader.getSystemClassLoader();
+			// URLClassLoader child = new URLClassLoader (URLs.toArray(new
+			// URL[URLs.size()]), ClassLoader.getSystemClassLoader());
+			// cls=Class.forName (fqn, true, child);
+			synchronized (classLoaderMap) {
+				CustomClassLoader classLoader = classLoaderMap.get(dp.rp.getTenant().getName());
+				if (classLoader == null) {
+					classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(), dp);// (CustomClassLoader)
 					classLoaderMap.put(dp.rp.getTenant().getName(), classLoader);
-				}else {
-					classLoader.resetClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);
+				} else {
+					classLoader.resetClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(), dp);
+					if(!compile)
+						cls=classLoader.findMyLoadedClass(fqn);
 				}
-				//CustomClassLoader classLoader = new CustomClassLoader(fqn, jarPaths, ClassLoader.getSystemClassLoader(),dp);// (CustomClassLoader)
-				cls = classLoader.findClass(fqn);
-			} else
-				throw new Exception("Compilation failed '" + fqn + "'\n " + error);
+				// CustomClassLoader classLoader = new CustomClassLoader(fqn, jarPaths,
+				// ClassLoader.getSystemClassLoader(),dp);// (CustomClassLoader)
+				if(cls==null)
+					cls = classLoader.findClass(fqn);
+			}
+		} else
+			throw new Exception("Compilation failed '" + fqn + "'\n " + error);
 		return cls;
 	}
 	

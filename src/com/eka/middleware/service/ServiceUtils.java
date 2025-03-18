@@ -7,25 +7,42 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 //import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
@@ -35,6 +52,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -43,6 +61,7 @@ import javax.json.JsonReader;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -54,9 +73,9 @@ import com.eka.middleware.template.Tenant;
 import com.eka.middleware.flow.FlowResolver;
 import com.eka.middleware.pooling.ScriptEngineContextManager;
 import com.eka.middleware.server.ServiceManager;
+import com.eka.middleware.template.MultiPart;
 import com.eka.middleware.template.SnippetException;
 import com.eka.middleware.template.SystemException;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -82,7 +101,7 @@ public class ServiceUtils {
 	}
 
 	public static List<String> searchEndpoints(final String keyword, Tenant tenant) {
-		Properties urlMappings = getUrlAliasMapping(tenant);
+		Properties urlMappings = getUrlAliasMapping(tenant, false);
 		Set endpoints = urlMappings.keySet();
 		final List<String> endpointList = new ArrayList<>();
 		endpoints.forEach((k) -> {
@@ -130,67 +149,54 @@ public class ServiceUtils {
 		try {
 			om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 			om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-			om.enable(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL);
 			String json = om.writeValueAsString(map);
 			return json;
 		} catch (Exception e) {
-			e.printStackTrace();
 			throw new Exception(e);
 		}
 	}
-	
-	public static final String ObjectToJson(Object obj) throws Exception {
-		try {
-			om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-			om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-			String json = om.writeValueAsString(obj);
-			return json;
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new Exception(e);
+
+	public static Object convertPolyglotValue(Value value) {
+		if (value.isNumber()) {
+			if (value.fitsInInt()) {
+				return value.asInt();
+			} else if (value.fitsInLong()) {
+				return value.asLong();
+			} else {
+				return value.asDouble();
+			}
+		} else if (value.isBoolean()) {
+			return value.asBoolean();
+		} else if (value.isString()) {
+			return value.asString();
+		} else if (value.hasArrayElements()) {
+			return convertArray(value);
+		} else if (value.hasMembers()) {
+			return convertObject(value);
 		}
+		return null;
 	}
-	
-    public static Object convertPolyglotValue(Value value) {
-        if (value.isNumber()) {
-            if (value.fitsInInt()) {
-                return value.asInt();
-            } else if (value.fitsInLong()) {
-                return value.asLong();
-            } else {
-                return value.asDouble();
-            }
-        } else if (value.isBoolean()) {
-            return value.asBoolean();
-        } else if (value.isString()) {
-            return value.asString();
-        } else if (value.hasArrayElements()) {
-            return convertArray(value);
-        } else if (value.hasMembers()) {
-            return convertObject(value);
-        }
-        return null;
-    }
 
-    private static Map<String, Object> convertObject(Value value) {
-        Map<String, Object> map = new HashMap<>();
-        for (String key : value.getMemberKeys()) {
-            map.put(key, convertPolyglotValue(value.getMember(key)));
-        }
-        return map;
-    }
+	private static Map<String, Object> convertObject(Value value) {
+		Map<String, Object> map = new HashMap<>();
+		for (String key : value.getMemberKeys()) {
+			map.put(key, convertPolyglotValue(value.getMember(key)));
+		}
+		return map;
+	}
 
-    private static List<Object> convertArray(Value value) {
-        List<Object> list = new ArrayList<>();
-        for (int i = 0; i < value.getArraySize(); i++) {
-            list.add(convertPolyglotValue(value.getArrayElement(i)));
-        }
-        return list;
-    }
+	private static List<Object> convertArray(Value value) {
+		List<Object> list = new ArrayList<>();
+		for (int i = 0; i < value.getArraySize(); i++) {
+			list.add(convertPolyglotValue(value.getArrayElement(i)));
+		}
+		return list;
+	}
 
 	public static final String toJson(Object obj) {
 		om.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+		om.enable(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL);
 		String json = null;
 		try {
 			json = om.writeValueAsString(obj);
@@ -208,7 +214,6 @@ public class ServiceUtils {
 			String json = om.writerWithDefaultPrettyPrinter().writeValueAsString(map);
 			return json;
 		} catch (Exception e) {
-			e.printStackTrace();
 			throw new Exception(e);
 		}
 	}
@@ -258,7 +263,7 @@ public class ServiceUtils {
 	}
 
 	public static final String xmlToString(Object o, String rootName) throws Exception {
-		Map<String, Object> root = new HashMap<String, Object>();
+		Map<String, Object> root = new java.util.HashMap<>();
 		XmlMapper xmlMapper = new XmlMapper();
 		if (StringUtils.isBlank(rootName)) {
 			rootName = "";
@@ -365,25 +370,55 @@ public class ServiceUtils {
 		}
 	}
 
+	private static final void notify(String content, String title) {
+
+	}
+
+	public static String checksumForString(String data) throws Exception {
+		MessageDigest digest = MessageDigest.getInstance("SHA-1");
+		digest.update(data.getBytes());
+		byte[] hashBytes = digest.digest();
+		StringBuilder sb = new StringBuilder();
+		for (byte b : hashBytes) {
+			sb.append(String.format("%02x", b));
+		}
+		return sb.toString();
+	}
+
 	public static final void printException(String msg, Exception e) {
 		String logLine = getLogLine(e, msg);
+		notify(logLine, msg);
 		LOGGER.error(logLine);
 	}
 
 	public static final void printException(Tenant tenant, String msg, Exception e) {
 		String logLine = getLogLine(e, msg);
 		tenant.logError(null, logLine);
+		notify(logLine, String.format("[%s] msg", tenant.getName(), msg));
 		LOGGER.error(logLine);
 	}
 
 	public static final void printException(DataPipeline dp, String msg, Exception e) {
 		String logLine = getLogLine(e, msg);
 		dp.log(logLine, Level.ERROR);
-		LOGGER.error(logLine);
-
+		notify(logLine, String.format("[%s] %s", dp.rp.getTenant().getName(), dp.getCurrentResourceName()));
+		dp.appLog("ERROR_MSG", msg);
+		dp.appLog("ERROR_STACKTRACE", ExceptionUtils.getStackTrace(e));
+		// LOGGER.error(logLine);
 	}
 
-	private static String getLogLine(Exception e, String msg) {
+	public static final void printQuiteException(DataPipeline dp, String msg, Exception e) {
+		String logLine = getLogLine(e, msg);
+		if (dp != null) {
+			dp.log(logLine, Level.ERROR);
+			dp.appLog("ERROR_MSG", msg);
+			dp.appLog("ERROR_STACKTRACE", ExceptionUtils.getStackTrace(e));
+		} else {
+			LOGGER.error(logLine);
+		}
+	}
+
+	public static String getLogLine(Exception e, String msg) {
 		StringBuilder sb = new StringBuilder();
 		StackTraceElement[] stackTrace = null;// e.getStackTrace();
 		sb.append(msg);
@@ -409,14 +444,16 @@ public class ServiceUtils {
 			Properties props = PropertyManager.getServerProperties("server.properties");
 			val = props.getProperty(key);
 		} catch (SystemException e) {
-			e.printStackTrace();
+			ServiceUtils.printException("System exception while getting server property", e);
 		}
 
 		return val;
 	}
 
-	private static Properties getUrlAliasMapping(Tenant tenant) {
+	public static Properties getUrlAliasMapping(Tenant tenant, boolean reload) {
 		Properties urlMappings = aliasMap.get(tenant.getName());
+		if (reload)
+			urlMappings = null;
 		if (urlMappings == null) {
 			urlMappings = new Properties();
 			aliasMap.put(tenant.getName(), urlMappings);
@@ -527,6 +564,38 @@ public class ServiceUtils {
 		return secretKey;
 	}
 
+	public static String encrypt(final String strToEncrypt, final String tenantName) {
+		try {
+			// setKey(secret);
+			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+			RSAPublicKey rsaPublicKey = (RSAPublicKey) keyFactory
+					.generatePublic(new X509EncodedKeySpec(Tenant.getTenant(tenantName).getPublicKey().getEncoded()));
+
+			Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, rsaPublicKey);
+			return Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes("UTF-8")));
+		} catch (Exception e) {
+			printException(Tenant.getTenant(tenantName), "Error while encrypting: ", e);
+		}
+		return null;
+	}
+
+	public static String decrypt(final String strToDecrypt, final String tenantName) throws Exception {
+		try {
+			// setKey(secret);
+			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+			RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) keyFactory.generatePrivate(
+					new PKCS8EncodedKeySpec(Tenant.getTenant(tenantName).getPrivateKey().getEncoded()));
+
+			Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+			cipher.init(Cipher.DECRYPT_MODE, rsaPrivateKey);
+			return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
+		} catch (Exception e) {
+			printException(Tenant.getTenant(tenantName), "Error while decrypting: ", e);
+			throw e;
+		}
+	}
+
 	public static Date addHoursToDate(Date date, int hours) {
 		Calendar calendar = Calendar.getInstance();
 		calendar.setTime(date);
@@ -580,7 +649,7 @@ public class ServiceUtils {
 			}
 			return;
 		}
-		try(FileInputStream fis = new FileInputStream(fileToZip)) {
+		try (FileInputStream fis = new FileInputStream(fileToZip)) {
 			ZipEntry zipEntry = new ZipEntry(fileName);
 			zipOut.putNextEntry(zipEntry);
 			byte[] bytes = new byte[1024];
@@ -589,10 +658,12 @@ public class ServiceUtils {
 				zipOut.write(bytes, 0, length);
 			}
 			fis.close();
-		}catch (IOException e) {
-			e.printStackTrace();
+		} catch (IOException e) {
+			ServiceUtils.printException("Failed to zip file:" + fileName, e);
 		}
 	}
+
+
 
 	public static String replaceAllIgnoreRegx(String source, String search, String replace) {
 
@@ -668,36 +739,35 @@ public class ServiceUtils {
 
 	public static void unzipBuildFile(String srcZip, String destinationBasePath) throws IOException {
 		byte[] buffer = new byte[1024];
-		try(ZipInputStream zis = new ZipInputStream(new FileInputStream(srcZip))){
-		ZipEntry zipEntry = zis.getNextEntry();
-		while (zipEntry != null) {
-			File newFile = newFile(new File(destinationBasePath), zipEntry);
-			if (zipEntry.isDirectory()) {
-				if (!newFile.isDirectory() && !newFile.mkdirs()) {
-					throw new IOException("Failed to create directory " + newFile);
-				}
-			} else {
-				// fix for Windows-created archives
-				File parent = newFile.getParentFile();
-				if (!parent.isDirectory() && !parent.mkdirs()) {
-					throw new IOException("Failed to create directory " + parent);
-				}
-
-				// write file content
-				try(FileOutputStream fos = new FileOutputStream(newFile)) {
-					int len;
-					while ((len = zis.read(buffer)) > 0) {
-						fos.write(buffer, 0, len);
+		try (ZipInputStream zis = new ZipInputStream(new FileInputStream(srcZip))) {
+			ZipEntry zipEntry = zis.getNextEntry();
+			while (zipEntry != null) {
+				File newFile = newFile(new File(destinationBasePath), zipEntry);
+				if (zipEntry.isDirectory()) {
+					if (!newFile.isDirectory() && !newFile.mkdirs()) {
+						throw new IOException("Failed to create directory " + newFile);
 					}
-					fos.close();
+				} else {
+					// fix for Windows-created archives
+					File parent = newFile.getParentFile();
+					if (!parent.isDirectory() && !parent.mkdirs()) {
+						throw new IOException("Failed to create directory " + parent);
+					}
+
+					// write file content
+					try (FileOutputStream fos = new FileOutputStream(newFile)) {
+						int len;
+						while ((len = zis.read(buffer)) > 0) {
+							fos.write(buffer, 0, len);
+						}
+						fos.close();
+					}
 				}
+				zipEntry = zis.getNextEntry();
 			}
-			zipEntry = zis.getNextEntry();
-		}
-		zis.closeEntry();
-		zis.close();
-		}catch (IOException e) {
-			e.printStackTrace();
+			zis.closeEntry();
+			zis.close();
+		} catch (IOException e) {
 			throw e;
 		}
 	}
@@ -723,6 +793,30 @@ public class ServiceUtils {
 		return destFile;
 	}
 
+	public static String runAPI(String tenantName, String fqn, final Map<String, Object> payload) {
+		final Tenant tenantObjd = Tenant.getTenant(tenantName);
+		final StringBuilder sbResult = new StringBuilder();
+		String uuid = UUID.randomUUID().toString();
+		final RuntimePipeline rp = RuntimePipeline.create(tenantObjd, uuid, uuid, fqn, "/" + fqn);
+		try {
+			LOGGER.trace("RP created for " + tenantName);
+			LOGGER.trace("Executing requested service (" + fqn + ") for " + tenantName);
+			if(payload!=null)
+				payload.forEach((k,v)->{
+					rp.dataPipeLine.put(k, v);
+				});
+			rp.dataPipeLine.apply(fqn);
+			sbResult.append(rp.dataPipeLine.toJson());
+		} catch (Exception e) {
+			ServiceUtils.printException("Could not execute service (" + fqn + ") for tenant: " + tenantName, e);
+			sbResult.append(
+					"Could not execute service (" + fqn + ") for tenant: " + tenantName + ". Error: " + e.getMessage());
+		} finally {
+			rp.destroy();
+		}
+		return sbResult.toString();
+	}
+
 	public static void beforeServiceExecution(DataPipeline dp, String fqn, Map<String, Object> passThroughData)
 			throws Exception {
 		String logRequest = null;
@@ -743,7 +837,10 @@ public class ServiceUtils {
 		String gql = null;
 		Object rootObject = null;
 		Map<String, Object> gqlData = new HashMap<>();
-
+		Map<String, Object> trackingData = new HashMap<>();
+		trackingData.put("TENANT_NAME", dp.rp.getTenant().getName());
+		dp.put("*trackingData", trackingData);
+		passThroughData.put("*trackingData", trackingData);
 		if (resetServiceInMS != null) {
 
 			String flowRef = (String) passThroughData.get("flowRef");
@@ -833,61 +930,8 @@ public class ServiceUtils {
 		}
 	}
 
-	public static void afterServiceExecution(DataPipeline dp, String fqn, Map<String, Object> passThroughData)
-			throws Exception {
-		Long nanoSec = (Long) passThroughData.get("nanoSec");
-		String logRequest = (String) passThroughData.get("logRequest");
-		String logResponse = (String) passThroughData.get("logResponse");
-		String requestJson = (String) passThroughData.get("requestJson");
-		String responseJson = (String) passThroughData.get("responseJson");
-		Date dateTimeStmp = (Date) passThroughData.get("dateTimeStmp");
-		Long startTime = (Long) passThroughData.get("startTime");
-		String stopRecursiveLogging = (String) passThroughData.get("stopRecursiveLogging");
-		if (stopRecursiveLogging == null && !fqn.equalsIgnoreCase("packages.middleware.pub.service.auditLogging")) {
-			if ("true".equalsIgnoreCase(logResponse))
-				responseJson = dp.toJson();
-			long endTime = System.currentTimeMillis();
-			Map<String, String> auditLog = new HashMap<String, String>();
-			auditLog.put("correlationId", dp.getCorrelationId());
-			auditLog.put("sessionId", dp.getSessionId());
-			auditLog.put("dateTimeStmp", dateTimeStmp + "");
-			auditLog.put("duration", (endTime - startTime) + "");
-			if (null == dp.getString("error")) {
-				auditLog.put("error", "");
-			} else {
-				auditLog.put("error", dp.getString("error"));
-			}
-
-			auditLog.put("fqn", fqn);
-			auditLog.put("request", requestJson);
-			auditLog.put("response", responseJson);
-			auditLog.put("nanoInstance", nanoSec + "");
-
-			try {
-				auditLog.put("hostName", InetAddress.getLocalHost().getHostName());
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
-			String nodeName = dp.getGlobalConfig("nodeName");
-			auditLog.put("nodeName", nodeName);
-
-			//auditLog.put("remoteAddr", dp.getRemoteIpAddr());
-			//auditLog.put("userId", dp.getCurrentUserProfile().getId());
-			auditLog.put("urlPath", dp.getUrlPath());
-
-			Map<String, Object> asyncInputDoc = new HashMap();
-			asyncInputDoc.put("auditLog", auditLog);
-			asyncInputDoc.put("stopRecursiveLogging", "true");
-			dp.put("asyncInputDoc", asyncInputDoc);
-			dp.applyAsync("packages.middleware.pub.service.auditLogging");
-			dp.drop("asyncInputDoc");
-			dp.drop("asyncOutputDoc");
-
-		}
-	}
-
 	private static JsonObject configureServiceStartup(DataPipeline dataPipeline, Long timeout,
-			JsonObject mainflowJsonObject, Integer resetServiceInMS, String flowRef) throws Exception {
+													  JsonObject mainflowJsonObject, Integer resetServiceInMS, String flowRef) throws Exception {
 		Map<String, Object> chache = CacheManager.getCacheAsMap(dataPipeline.rp.getTenant());// -----reset fix
 		Boolean resetEnabled = (Boolean) chache.get("ekamw.promote.runtime.service.reload");// -----reset fix
 		if (timeout < System.currentTimeMillis() && (resetEnabled == null || resetEnabled == true))// -----reset fix
@@ -907,7 +951,7 @@ public class ServiceUtils {
 		// Splitting the JWT Token into parts
 		String[] parts = jwtToken.split("\\.");
 		if (parts.length < 2) {
-			return new HashMap<String, Object>(); // Not enough parts for a valid JWT
+			return new HashMap<>(); // Not enough parts for a valid JWT
 		}
 
 		// Decoding the payload
@@ -917,11 +961,11 @@ public class ServiceUtils {
 
 		// Converting JSON string to Map
 		ObjectMapper objectMapper = new ObjectMapper();
-		Map<String, Object> tokenData = new HashMap<String, Object>();
+		Map<String, Object> tokenData = new HashMap<>();
 		try {
 			tokenData = objectMapper.readValue(decodedString, Map.class);
 		} catch (Exception e) {
-			e.printStackTrace();
+			ServiceUtils.printException("Could not decodeJWT", e);
 		}
 
 		return tokenData;
@@ -939,7 +983,7 @@ public class ServiceUtils {
 
 		Properties props = new Properties();
 		String filePath = PropertyManager.getConfigFolderPath() + "server.properties";
-		try(FileInputStream inputStream = new FileInputStream(filePath)) {
+		try (FileInputStream inputStream = new FileInputStream(filePath)) {
 			props.load(inputStream);
 			inputStream.close();
 		}
@@ -953,7 +997,7 @@ public class ServiceUtils {
 			}
 		}
 
-		try(FileOutputStream outputStream = new FileOutputStream(filePath)) {
+		try (FileOutputStream outputStream = new FileOutputStream(filePath)) {
 			props.store(outputStream, "");
 			outputStream.flush();
 			outputStream.close();
@@ -968,9 +1012,7 @@ public class ServiceUtils {
 	 * @throws Exception
 	 */
 	public static String getKeyConnection(String connectionPropFile, String key) throws Exception {
-		try(
-				FileInputStream fileInputStream = new FileInputStream(connectionPropFile);
-		) {
+		try (FileInputStream fileInputStream = new FileInputStream(connectionPropFile);) {
 			Properties properties = new Properties();
 			properties.load(fileInputStream);
 
@@ -982,7 +1024,8 @@ public class ServiceUtils {
 
 			return assistanceId.toString();
 
-		} finally {}
+		} finally {
+		}
 	}
 
 	/**
@@ -991,11 +1034,10 @@ public class ServiceUtils {
 	 * @param value
 	 * @throws Exception
 	 */
-	public static void saveOrUpdateKeyInConnection(String connectionPropFile, String key, String value) throws Exception {
+	public static void saveOrUpdateKeyInConnection(String connectionPropFile, String key, String value)
+			throws Exception {
 
-		try(
-				FileInputStream fileInputStream = new FileInputStream(connectionPropFile);
-		) {
+		try (FileInputStream fileInputStream = new FileInputStream(connectionPropFile);) {
 			Properties properties = new Properties();
 			properties.load(fileInputStream);
 
@@ -1007,6 +1049,12 @@ public class ServiceUtils {
 				fileOutputStream.close();
 			}
 
-		} finally {}
+		} finally {
+		}
 	}
+
+	public static boolean isArray(Object obj) {
+		return obj != null && obj.getClass().isArray();
+	}
+
 }
